@@ -8,6 +8,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "build:static": "node scripts/build-static.mjs",
+    "build:sites": "node scripts/build-sites.mjs",
     "seed": "node --env-file=.env scripts/seed.mjs",
     "preview": "astro preview",
     "astro": "astro"
