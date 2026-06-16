@@ -6,9 +6,11 @@
 export type ThemeName = 'botanik' | 'klar' | 'warm' | 'nacht';
 
 // Layout. Bestimmt die Grundstruktur, unabhaengig vom Theme:
-//  'standard' = Kopfleiste oben (Default)
-//  'sidebar'  = feste Seitenleiste am Desktop, Hamburger-Menue am Handy
-export type LayoutName = 'standard' | 'sidebar';
+//  'standard'  = Kopfleiste oben mit horizontaler Navigation (Default)
+//  'sidebar'   = feste Seitenleiste am Desktop, Hamburger-Menue am Handy
+//  'zentriert' = zentrierter Masthead mit mittiger Navigation (formell)
+// Alle Layouts nutzen am Handy ein Hamburger-Menue.
+export type LayoutName = 'standard' | 'sidebar' | 'zentriert';
 
 export interface Ansprechpartner {
   name: string;

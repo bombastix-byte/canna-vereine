@@ -18,7 +18,7 @@ const dist = join(root, 'dist');
 const SITES = [
   { id: 'goerlitz', name: 'Anbauvereinigung Goerlitz', stadt: 'Goerlitz', theme: 'botanik', layout: 'Kopfleiste' },
   { id: 'goerlitz2', name: 'CSC Goerlitz', stadt: 'Goerlitz', theme: 'klar', layout: 'Sidebar' },
-  { id: 'leipzig', name: 'Anbauvereinigung Leipzig', stadt: 'Leipzig', theme: 'warm', layout: 'Kopfleiste' },
+  { id: 'leipzig', name: 'Anbauvereinigung Leipzig', stadt: 'Leipzig', theme: 'warm', layout: 'Zentriert' },
 ];
 
 // Basis-Pfad des Repos (z. B. /canna-vereine/). Lokal Default '/'.

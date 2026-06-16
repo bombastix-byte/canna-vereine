@@ -70,7 +70,7 @@ const layout = site.layout ?? 'standard';
         </>
       ) : (
         <>
-          <Kopf />
+          <Kopf variant={layout === 'zentriert' ? 'zentriert' : 'standard'} />
           {hatHero && <slot name="hero" />}
           <main id="inhalt" class="inhalt">
             <slot />

@@ -3,19 +3,30 @@ import { site, navigation } from '../config';
 import { pfad } from '../lib/url';
 import Mark from './Mark.astro';
 
+interface Props {
+  variant?: 'standard' | 'zentriert';
+}
+const { variant = 'standard' } = Astro.props;
+
 const hier = Astro.url.pathname;
 const home = pfad('/');
 const istAktiv = (href: string) =>
   href === '/' ? hier === home : hier.startsWith(pfad(href));
 ---
 
-<header class="kopf">
+<header class:list={['kopf', variant === 'zentriert' && 'kopf--zentriert']}>
+  <input type="checkbox" id="kopf-nav" class="kopf-toggle" tabindex="-1" />
   <div class="kopf__innen">
-    <Mark class="kopf__mark" />
     <a class="kopf__wort" href={pfad('/')}>
-      <span class="kopf__name">{site.kurzname}</span>
-      <span class="kopf__unterzeile">Anbauvereinigung in {site.stadt}</span>
+      <Mark class="kopf__mark" />
+      <span class="kopf__wort-text">
+        <span class="kopf__name">{site.kurzname}</span>
+        <span class="kopf__unterzeile">Anbauvereinigung in {site.stadt}</span>
+      </span>
     </a>
+    <label class="kopf-burger" for="kopf-nav" aria-label="Menue oeffnen oder schliessen">
+      <span></span><span></span><span></span>
+    </label>
   </div>
   <nav class="nav" aria-label="Hauptnavigation">
     <ul>

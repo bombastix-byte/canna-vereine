@@ -5,6 +5,7 @@ import type { SiteConfig } from './types';
 export const leipzig: SiteConfig = {
   id: 'leipzig',
   theme: 'warm',
+  layout: 'zentriert',
   vereinsname: 'Anbauvereinigung Leipzig e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'Anbauvereinigung Leipzig',
   stadt: 'Leipzig',
