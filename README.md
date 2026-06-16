@@ -45,6 +45,20 @@ Feinheiten je Theme (gesammelt in themes.css).
 `?theme=nacht` durchschaltbar. Im Echtbetrieb steht das Theme fest in der
 Vereins-Config.
 
+## Layouts (Grundstruktur)
+
+Unabhaengig vom Theme bestimmt das Feld `layout` in der `SiteConfig` die
+Grundstruktur:
+
+- `standard` (Default) — Kopfleiste oben mit horizontaler Navigation.
+- `sidebar` — feste Seitenleiste am Desktop, Hamburger-Schublade am Handy
+  (reines CSS, kein JS). Modern und schlank.
+
+Beide Layouts nutzen dieselben Theme-Token, jede Theme/Layout-Kombination ist
+also moeglich. Struktur in `src/layouts/Basis.astro` (Weiche), Sidebar in
+`src/components/Sidebar.astro` und `src/styles/sidebar.css`. Die Inhaltsseiten
+bleiben unveraendert, sie nutzen weiter nur `Basis`.
+
 ## Befehle
 
 ```bash

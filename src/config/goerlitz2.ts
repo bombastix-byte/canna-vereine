@@ -5,6 +5,7 @@ import type { SiteConfig } from './types';
 export const goerlitz2: SiteConfig = {
   id: 'goerlitz2',
   theme: 'klar',
+  layout: 'sidebar',
   vereinsname: 'Cannabis Social Club Goerlitz e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'CSC Goerlitz',
   stadt: 'Goerlitz',

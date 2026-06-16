@@ -1,9 +1,13 @@
 ---
 import '../styles/themes.css';
 import '../styles/global.css';
+import '../styles/sidebar.css';
 import Kopf from '../components/Kopf.astro';
 import Fuss from '../components/Fuss.astro';
+import Sidebar from '../components/Sidebar.astro';
+import Mark from '../components/Mark.astro';
 import { site } from '../config';
+import { pfad } from '../lib/url';
 
 interface Props {
   titel: string;
@@ -13,18 +17,18 @@ interface Props {
 const { titel, beschreibung } = Astro.props;
 const seitentitel = `${titel} | ${site.kurzname}`;
 const hatHero = Astro.slots.has('hero');
+const layout = site.layout ?? 'standard';
 ---
 
 <!doctype html>
-<html lang="de" data-theme={site.theme}>
+<html lang="de" data-theme={site.theme} data-layout={layout}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{seitentitel}</title>
     {beschreibung && <meta name="description" content={beschreibung} />}
     <meta name="robots" content="index, follow" />
-    {/* Im Echtbetrieb steht das Theme fest in der Vereins-Konfiguration.
-       Dieser Schalter dient nur der Angebots-/Demo-Ansicht: ?theme=klar usw. */}
+    <meta name="theme-color" content="#1e3a2c" />
     <script is:inline>
       (function () {
         var erlaubt = ['botanik', 'klar', 'warm', 'nacht'];
@@ -37,11 +41,43 @@ const hatHero = Astro.slots.has('hero');
   </head>
   <body>
     <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
-    <Kopf />
-    {hatHero && <slot name="hero" />}
-    <main id="inhalt" class="inhalt">
-      <slot />
-    </main>
-    <Fuss />
+    {
+      layout === 'sidebar' ? (
+        <>
+          <input type="checkbox" id="nav-toggle" class="sb-toggle" tabindex="-1" />
+          <div class="sb-shell">
+            <header class="sb-topbar">
+              <a class="sb-brand sb-brand--top" href={pfad('/')}>
+                <Mark class="sb-mark" />
+                <span class="sb-name">{site.kurzname}</span>
+              </a>
+              <label class="sb-burger" for="nav-toggle" aria-label="Menue oeffnen oder schliessen">
+                <span /> <span /> <span />
+              </label>
+            </header>
+            <label class="sb-overlay" for="nav-toggle" aria-hidden="true" />
+            <aside class="sb-sidebar">
+              <Sidebar />
+            </aside>
+            <div class="sb-haupt">
+              {hatHero && <slot name="hero" />}
+              <main id="inhalt" class="inhalt">
+                <slot />
+              </main>
+              <Fuss />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <Kopf />
+          {hatHero && <slot name="hero" />}
+          <main id="inhalt" class="inhalt">
+            <slot />
+          </main>
+          <Fuss />
+        </>
+      )
+    }
   </body>
 </html>

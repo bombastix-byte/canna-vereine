@@ -1,0 +1,38 @@
+---
+import { site, navigation } from '../config';
+import { pfad } from '../lib/url';
+import Mark from './Mark.astro';
+
+const hier = Astro.url.pathname;
+const home = pfad('/');
+const istAktiv = (href: string) =>
+  href === '/' ? hier === home : hier.startsWith(pfad(href));
+---
+
+<a class="sb-brand sb-brand--side" href={pfad('/')}>
+  <Mark class="sb-mark" />
+  <span class="sb-brand__text">
+    <span class="sb-name">{site.kurzname}</span>
+    <span class="sb-stadt">Anbauvereinigung in {site.stadt}</span>
+  </span>
+</a>
+
+<nav class="sb-nav" aria-label="Hauptnavigation">
+  <ul>
+    {
+      navigation.map((p) => (
+        <li>
+          <a href={pfad(p.href)} aria-current={istAktiv(p.href) ? 'page' : undefined}>
+            {p.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<div class="sb-info">
+  <a href={pfad('/mitglieder')}>Mitgliederbereich</a>
+  <a href={pfad('/impressum')}>Impressum</a>
+  <a href={pfad('/datenschutz')}>Datenschutz</a>
+</div>

@@ -1,0 +1,209 @@
+/*
+  Layout-Variante "sidebar". Alle Regeln sind auf [data-layout="sidebar"]
+  begrenzt, das Standard-Layout bleibt unberuehrt. Themeneutral: nutzt dieselben
+  Token wie global.css, daher wirken alle vier Themes auch hier.
+  Mobile-first: Hamburger-Schublade (reines CSS), Desktop feste Seitenleiste.
+*/
+
+/* versteckte Checkbox steuert die mobile Schublade */
+[data-layout='sidebar'] .sb-toggle {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* ---------- Mobile (Basis) ---------- */
+[data-layout='sidebar'] .sb-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  background: var(--bg-rein);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+[data-layout='sidebar'] .sb-burger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  cursor: pointer;
+}
+[data-layout='sidebar'] .sb-burger span {
+  display: block;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+[data-layout='sidebar'] .sb-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 82%;
+  max-width: 300px;
+  padding: 1.6rem 1.3rem;
+  background: var(--bg-rein);
+  border-right: 1px solid var(--line);
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  z-index: 50;
+  overflow-y: auto;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.16);
+}
+
+[data-layout='sidebar'] .sb-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 45;
+  border: 0;
+}
+
+[data-layout='sidebar'] .sb-toggle:checked ~ .sb-shell .sb-sidebar {
+  transform: none;
+}
+[data-layout='sidebar'] .sb-toggle:checked ~ .sb-shell .sb-overlay {
+  display: block;
+}
+
+/* Marke */
+[data-layout='sidebar'] .sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+[data-layout='sidebar'] .sb-brand--side {
+  margin-bottom: 1.6rem;
+}
+[data-layout='sidebar'] .sb-mark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  color: var(--brand);
+}
+[data-layout='sidebar'] .sb-name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: var(--display-letter);
+}
+[data-layout='sidebar'] .sb-stadt {
+  display: block;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Navigation */
+[data-layout='sidebar'] .sb-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+[data-layout='sidebar'] .sb-nav li {
+  margin: 0 0 0.15rem;
+}
+[data-layout='sidebar'] .sb-nav a {
+  display: block;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.95rem;
+  border-left: 3px solid transparent;
+}
+[data-layout='sidebar'] .sb-nav a:hover {
+  background: var(--line-soft);
+  color: var(--brand);
+}
+[data-layout='sidebar'] .sb-nav a[aria-current='page'] {
+  background: var(--line-soft);
+  color: var(--brand-strong);
+  font-weight: 600;
+  border-left-color: var(--accent);
+}
+
+/* Info-Block unten */
+[data-layout='sidebar'] .sb-info {
+  margin-top: 1.6rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+[data-layout='sidebar'] .sb-info a {
+  display: block;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+[data-layout='sidebar'] .sb-info a:hover {
+  color: var(--brand);
+}
+
+/* Hauptbereich */
+[data-layout='sidebar'] .sb-haupt {
+  min-width: 0;
+}
+[data-layout='sidebar'] .inhalt {
+  max-width: none;
+  margin: 0;
+  padding: 2.4rem 1.5rem 3.5rem;
+}
+
+/* ---------- Desktop ---------- */
+@media (min-width: 900px) {
+  [data-layout='sidebar'] .sb-topbar {
+    display: none;
+  }
+  [data-layout='sidebar'] .sb-overlay {
+    display: none !important;
+  }
+  [data-layout='sidebar'] .sb-shell {
+    display: flex;
+    align-items: stretch;
+  }
+  [data-layout='sidebar'] .sb-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    width: 264px;
+    max-width: none;
+    flex: none;
+    transform: none;
+    transition: none;
+    box-shadow: none;
+    padding: 2rem 1.4rem;
+  }
+  [data-layout='sidebar'] .sb-haupt {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-layout='sidebar'] .sb-haupt .fuss {
+    margin-top: auto;
+  }
+  [data-layout='sidebar'] .inhalt {
+    padding: 3rem 3rem 4rem;
+  }
+  [data-layout='sidebar'] .hero__innen {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}

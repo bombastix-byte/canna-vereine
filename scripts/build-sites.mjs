@@ -16,9 +16,9 @@ const dist = join(root, 'dist');
 
 // Welche Vereine, in welcher Reihenfolge, mit welchem Theme (nur fuer Anzeige).
 const SITES = [
-  { id: 'goerlitz', name: 'Anbauvereinigung Goerlitz', stadt: 'Goerlitz', theme: 'botanik' },
-  { id: 'goerlitz2', name: 'CSC Goerlitz', stadt: 'Goerlitz', theme: 'klar' },
-  { id: 'leipzig', name: 'Anbauvereinigung Leipzig', stadt: 'Leipzig', theme: 'warm' },
+  { id: 'goerlitz', name: 'Anbauvereinigung Goerlitz', stadt: 'Goerlitz', theme: 'botanik', layout: 'Kopfleiste' },
+  { id: 'goerlitz2', name: 'CSC Goerlitz', stadt: 'Goerlitz', theme: 'klar', layout: 'Sidebar' },
+  { id: 'leipzig', name: 'Anbauvereinigung Leipzig', stadt: 'Leipzig', theme: 'warm', layout: 'Kopfleiste' },
 ];
 
 // Basis-Pfad des Repos (z. B. /canna-vereine/). Lokal Default '/'.
@@ -51,7 +51,7 @@ function landing() {
     (s) => `      <li class="karte">
         <a href="${repoBase}${s.id}/">
           <span class="karte__name">${s.name}</span>
-          <span class="karte__meta">${s.stadt} &middot; Design: ${s.theme}</span>
+          <span class="karte__meta">${s.stadt} &middot; Design: ${s.theme} &middot; Layout: ${s.layout}</span>
         </a>
       </li>`,
   ).join('\n');

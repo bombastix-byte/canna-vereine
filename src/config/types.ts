@@ -2,9 +2,13 @@
 // Alle sichtbaren Inhalte einer Seite stammen aus genau einer SiteConfig,
 // damit eine weitere Vereinsseite nur eine neue Config-Datei benoetigt.
 
-// Visuelles Theme. Struktur und Inhalt bleiben identisch, das Theme aendert
-// nur Schrift, Farbe und Anmutung. So bekommt jeder Verein ein eigenes Gesicht.
+// Visuelles Theme. Aendert Schrift, Farbe und Anmutung (Token-Ebene).
 export type ThemeName = 'botanik' | 'klar' | 'warm' | 'nacht';
+
+// Layout. Bestimmt die Grundstruktur, unabhaengig vom Theme:
+//  'standard' = Kopfleiste oben (Default)
+//  'sidebar'  = feste Seitenleiste am Desktop, Hamburger-Menue am Handy
+export type LayoutName = 'standard' | 'sidebar';
 
 export interface Ansprechpartner {
   name: string;
@@ -30,6 +34,8 @@ export interface SiteConfig {
   id: string;
   /** visuelles Theme dieser Vereinsseite */
   theme: ThemeName;
+  /** Grundlayout (Default: standard) */
+  layout?: LayoutName;
   /** vollstaendiger Vereinsname laut Satzung */
   vereinsname: string;
   /** kurzer Name fuer Kopfzeile/Titel */
