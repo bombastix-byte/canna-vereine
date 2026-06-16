@@ -1,0 +1,528 @@
+/*
+  Themeneutrale Struktur. Farbe, Schrift und Anmutung liefert themes.css
+  ueber das data-theme am <html>. Hier nur Layout, Raster, Abstaende und
+  Komponenten. Bewusst: keine Animationen, keine Effekte, ruhiges Editorial.
+*/
+
+:root {
+  --mass: 38rem; /* optimale Textbreite */
+  --rahmen: 70rem; /* Layoutbreite */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 18px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.7;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-letter);
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(2rem, 4.5vw, 2.7rem);
+  margin: 0 0 1rem;
+}
+
+h2 {
+  font-size: clamp(1.4rem, 2.6vw, 1.7rem);
+  margin: 2.8rem 0 0.8rem;
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin: 1.8rem 0 0.5rem;
+}
+
+p,
+ul,
+ol {
+  margin: 0 0 1.1rem;
+}
+
+ul,
+ol {
+  padding-left: 1.3rem;
+}
+
+li {
+  margin-bottom: 0.45rem;
+}
+
+a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-soft);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: var(--brand);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  text-transform: var(--eyebrow-transform);
+  letter-spacing: var(--eyebrow-spacing);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--eyebrow-color);
+  margin: 0 0 0.9rem;
+}
+
+/* ---------- Masthead ---------- */
+.kopf {
+  background: var(--bg-rein);
+  border-bottom: 1px solid var(--line);
+}
+
+.kopf__innen {
+  max-width: var(--rahmen);
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.kopf__mark {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  color: var(--brand);
+}
+
+.kopf__wort {
+  text-decoration: none;
+  line-height: 1.15;
+}
+
+.kopf__name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: var(--display-letter);
+  color: var(--ink);
+}
+
+.kopf__unterzeile {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.nav {
+  max-width: var(--rahmen);
+  margin: 0 auto;
+  padding: 0.6rem 1.5rem 1.1rem;
+}
+
+.nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.6rem;
+}
+
+.nav a {
+  display: inline-block;
+  padding: 0.3rem 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: var(--nav-spacing);
+  text-transform: var(--nav-transform);
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.nav a:hover {
+  color: var(--brand);
+}
+
+.nav a[aria-current='page'] {
+  color: var(--nav-active);
+  border-bottom-color: var(--accent);
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  background: var(--hero-bg);
+  color: var(--hero-ink);
+  border-bottom: 3px solid var(--hero-rule);
+}
+
+.hero__innen {
+  max-width: var(--rahmen);
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem 4rem;
+}
+
+.hero .eyebrow {
+  color: var(--hero-eyebrow);
+}
+
+.hero h1 {
+  color: var(--hero-ink);
+  max-width: 20ch;
+  font-size: clamp(2.3rem, 5.2vw, 3.4rem);
+  margin: 0 0 1.2rem;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.hero p {
+  color: var(--hero-sub);
+  font-size: 1.16rem;
+  max-width: 46ch;
+  margin: 0;
+}
+
+/* ---------- Inhalt ---------- */
+.inhalt {
+  max-width: var(--rahmen);
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 4.5rem;
+}
+
+.inhalt > h1,
+.inhalt > h2,
+.inhalt > h3,
+.inhalt > p,
+.inhalt > ul,
+.inhalt > ol,
+.inhalt > dl,
+.inhalt > .hinweis,
+.inhalt > .seitenkopf {
+  max-width: var(--mass);
+}
+
+.seitenkopf {
+  margin-bottom: 2.5rem;
+}
+
+.einleitung {
+  font-size: 1.18rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Karten / Kaesten */
+.kasten {
+  background: var(--kasten-bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--kasten-accent);
+  border-radius: var(--radius);
+  padding: 1.6rem 1.8rem;
+  margin: 1.8rem 0;
+  max-width: var(--mass);
+}
+
+.kasten > :first-child {
+  margin-top: 0;
+}
+
+.kasten > :last-child {
+  margin-bottom: 0;
+}
+
+.kasten h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+}
+
+/* Themen-Kachelraster */
+.kacheln {
+  list-style: none;
+  padding: 0;
+  margin: 1.8rem 0;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+}
+
+.kacheln li {
+  margin: 0;
+  background: var(--bg-rein);
+}
+
+.kachel {
+  display: block;
+  padding: 1.4rem 1.5rem;
+  height: 100%;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.kachel:hover {
+  background: var(--line-soft);
+}
+
+.kachel__titel {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: var(--display-letter);
+  color: var(--brand-strong);
+  margin: 0 0 0.3rem;
+}
+
+.kachel__text {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* Hinweisband */
+.hinweis {
+  background: var(--hinweis-bg);
+  border: 1px solid var(--hinweis-line);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  margin: 1.8rem 0;
+  font-size: 0.98rem;
+  max-width: var(--mass);
+}
+
+.hinweis strong {
+  color: var(--brand-strong);
+}
+
+.platzhalter {
+  color: #9a6b16;
+  font-style: italic;
+}
+
+/* Definitionslisten */
+.fakten {
+  margin: 1.4rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.fakten dt {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 0.9rem 0 0.1rem;
+}
+
+.fakten dd {
+  margin: 0;
+  padding: 0 0 0.9rem;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Tabelle */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.96rem;
+  margin: 1.4rem 0;
+  max-width: var(--mass);
+}
+
+caption {
+  text-align: left;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  border-bottom: 2px solid var(--brand);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-strong);
+}
+
+/* ---------- Fusszeile ---------- */
+.fuss {
+  background: var(--footer-bg);
+  color: var(--footer-ink);
+  font-size: 0.9rem;
+  border-top: 3px solid var(--footer-accent);
+}
+
+.fuss__innen {
+  max-width: var(--rahmen);
+  margin: 0 auto;
+  padding: 2.8rem 1.5rem 2.4rem;
+}
+
+.fuss__mark {
+  width: 34px;
+  height: 34px;
+  color: var(--footer-accent);
+  margin-bottom: 0.8rem;
+}
+
+.fuss strong {
+  color: var(--footer-strong);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.fuss ul {
+  list-style: none;
+  padding: 0;
+  margin: 1.2rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.6rem;
+}
+
+.fuss a {
+  color: var(--footer-ink);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.78rem;
+}
+
+.fuss a:hover {
+  color: var(--footer-strong);
+}
+
+.fuss__klein {
+  margin-top: 1.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--footer-ink);
+  opacity: 0.85;
+  font-size: 0.82rem;
+}
+
+/* ---------- Formular / Login ---------- */
+.feld {
+  margin-bottom: 1.1rem;
+}
+
+.feld label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--brand-strong);
+  margin-bottom: 0.4rem;
+}
+
+.feld input {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-rein);
+  color: var(--ink);
+}
+
+.feld input:focus {
+  border-color: var(--brand);
+}
+
+.knopf {
+  display: inline-block;
+  padding: 0.75rem 1.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--font-body);
+  color: var(--on-brand);
+  background: var(--brand-strong);
+  border: 1px solid var(--brand-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.knopf:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+}
+
+.skip-link:focus {
+  position: static;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--brand-strong);
+  color: var(--on-brand);
+}
+
+@media (max-width: 640px) {
+  .kopf__innen {
+    padding-top: 1.2rem;
+  }
+  .hero__innen {
+    padding: 3rem 1.5rem 2.8rem;
+  }
+  .hero h1 {
+    font-size: clamp(1.9rem, 8vw, 2.3rem);
+  }
+  .inhalt {
+    padding-top: 2.5rem;
+  }
+}

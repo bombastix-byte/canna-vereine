@@ -1,0 +1,51 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+const p = site.praeventionsbeauftragter;
+---
+
+<Basis
+  titel="Praevention und Beratung"
+  beschreibung="Praeventionsbeauftragte Person und externe Sucht- und Beratungsstellen."
+>
+  <h1>Praevention und Beratung</h1>
+  <p class="einleitung">
+    Der Verein benennt eine praeventionsbeauftragte Person und weist auf
+    unabhaengige Beratungsangebote hin. Diese Informationen dienen dem
+    Gesundheitsschutz.
+  </p>
+
+  <h2>Praeventionsbeauftragte Person</h2>
+  <dl class="fakten">
+    <dt>Name</dt>
+    <dd>{p.name}</dd>
+    <dt>Funktion</dt>
+    <dd>{p.rolle}</dd>
+    {p.email && (<><dt>E-Mail</dt><dd><a href={`mailto:${p.email}`}>{p.email}</a></dd></>)}
+    {p.telefon && (<><dt>Telefon</dt><dd>{p.telefon}</dd></>)}
+  </dl>
+
+  <h2>Externe Sucht- und Beratungsstellen</h2>
+  <p>
+    Die folgenden Stellen beraten unabhaengig vom Verein, kostenfrei und auf
+    Wunsch anonym.
+  </p>
+  <ul>
+    {
+      site.externeBeratung.map((b) => (
+        <li>
+          <strong>{b.name}</strong>: {b.beschreibung}
+          {b.telefon && <> Telefon: {b.telefon}.</>}
+          {b.url && (
+            <> <a href={b.url} rel="noopener">{b.url.replace('https://', '')}</a></>
+          )}
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="hinweis">
+    Bei akuten Krisen wenden Sie sich bitte an den aerztlichen Notdienst (116117)
+    oder im Notfall an 112.
+  </div>
+</Basis>

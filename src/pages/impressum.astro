@@ -1,0 +1,42 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+const k = site.kontakt;
+const i = site.impressum;
+---
+
+<Basis titel="Impressum" beschreibung="Impressum nach Paragraf 5 DDG.">
+  <h1>Impressum</h1>
+  <p>Angaben gemaess Paragraf 5 Digitale-Dienste-Gesetz (DDG).</p>
+
+  <dl class="fakten">
+    <dt>Diensteanbieter</dt>
+    <dd>{site.vereinsname}</dd>
+    <dt>Anschrift</dt>
+    <dd>{k.strasse}, {k.plz} {k.ort}</dd>
+    {site.registereintrag && (<><dt>Registereintrag</dt><dd>{site.registereintrag}</dd></>)}
+    <dt>Vertretungsberechtigt</dt>
+    <dd>{i.vertretungsberechtigt}</dd>
+    <dt>E-Mail</dt>
+    <dd><a href={`mailto:${k.email}`}>{k.email}</a></dd>
+    {i.ustId && (<><dt>Umsatzsteuer-ID</dt><dd>{i.ustId}</dd></>)}
+    <dt>Inhaltlich verantwortlich</dt>
+    <dd>{i.inhaltlichVerantwortlich}</dd>
+  </dl>
+
+  {
+    site.erlaubnisHinweis && (
+      <div class="kasten">
+        <h2>Erlaubnis</h2>
+        <p>{site.erlaubnisHinweis}</p>
+      </div>
+    )
+  }
+
+  <h2>Streitschlichtung</h2>
+  <p>
+    Der Verein ist nicht verpflichtet und nicht bereit, an
+    Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+    teilzunehmen.
+  </p>
+</Basis>

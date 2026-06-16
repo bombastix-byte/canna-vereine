@@ -1,0 +1,36 @@
+---
+import { site, navigation } from '../config';
+import { pfad } from '../lib/url';
+import Mark from './Mark.astro';
+
+const hier = Astro.url.pathname;
+const home = pfad('/');
+const istAktiv = (href: string) =>
+  href === '/' ? hier === home : hier.startsWith(pfad(href));
+---
+
+<header class="kopf">
+  <div class="kopf__innen">
+    <Mark class="kopf__mark" />
+    <a class="kopf__wort" href={pfad('/')}>
+      <span class="kopf__name">{site.kurzname}</span>
+      <span class="kopf__unterzeile">Anbauvereinigung in {site.stadt}</span>
+    </a>
+  </div>
+  <nav class="nav" aria-label="Hauptnavigation">
+    <ul>
+      {
+        navigation.map((punkt) => (
+          <li>
+            <a
+              href={pfad(punkt.href)}
+              aria-current={istAktiv(punkt.href) ? 'page' : undefined}
+            >
+              {punkt.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</header>

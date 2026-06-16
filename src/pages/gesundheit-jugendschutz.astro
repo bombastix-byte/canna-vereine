@@ -1,0 +1,56 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+import { pfad } from '../lib/url';
+const d = site.dokumente;
+---
+
+<Basis
+  titel="Gesundheit und Jugendschutz"
+  beschreibung="Gesundheits- und Jugendschutzkonzept der Anbauvereinigung nach KCanG."
+>
+  <h1>Gesundheit und Jugendschutz</h1>
+  <p class="einleitung">
+    Anbauvereinigungen sind gesetzlich verpflichtet, ein Gesundheits- und
+    Jugendschutzkonzept vorzuhalten (Paragraf 23 KCanG). Die folgenden Angaben
+    fassen die wesentlichen Inhalte zusammen.
+  </p>
+
+  <h2>Jugendschutz</h2>
+  <ul>
+    <li>Abgabe ausschliesslich an Mitglieder ab 18 Jahren.</li>
+    <li>Kein Zutritt Minderjaehriger zu den Anbau- und Abgaberaeumen.</li>
+    <li>Mengen- und Abgabegrenzen nach Paragraf 11 und Paragraf 19 KCanG, mit gesonderten Grenzen fuer 18- bis 21-Jaehrige.</li>
+    <li>Neutrale, nicht zum Konsum anregende Gestaltung saemtlicher Informationen.</li>
+  </ul>
+
+  <h2>Gesundheitsschutz</h2>
+  <ul>
+    <li>Aufklaerung ueber Risiken des Cannabiskonsums, insbesondere fuer junge Menschen.</li>
+    <li>Sachliche Information zu Wirkstoffgehalten der angebauten Sorten.</li>
+    <li>Benennung einer praeventionsbeauftragten Person als Ansprechperson.</li>
+    <li>Verweis auf externe Beratungs- und Suchthilfeangebote.</li>
+  </ul>
+
+  <div class="kasten">
+    <h2>Dokumente</h2>
+    {
+      d.gesundheitskonzeptPdf ? (
+        <p><a href={d.gesundheitskonzeptPdf}>Gesundheitskonzept als PDF</a></p>
+      ) : (
+        <p class="platzhalter">Platzhalter: Gesundheitskonzept als PDF.</p>
+      )
+    }
+    {
+      d.jugendschutzkonzeptPdf ? (
+        <p><a href={d.jugendschutzkonzeptPdf}>Jugendschutzkonzept als PDF</a></p>
+      ) : (
+        <p class="platzhalter">Platzhalter: Jugendschutzkonzept als PDF.</p>
+      )
+    }
+    <p>
+      Naehere Informationen und Beratung finden Sie unter
+      <a href={pfad('/praevention-beratung')}>Praevention und Beratung</a>.
+    </p>
+  </div>
+</Basis>

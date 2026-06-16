@@ -1,0 +1,43 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { pfad } from '../lib/url';
+---
+
+<Basis
+  titel="Rechtliche Hinweise"
+  beschreibung="Gesetzliche Grundlagen und Pflichthinweise nach KCanG."
+>
+  <h1>Rechtliche Hinweise</h1>
+
+  <h2>Gesetzliche Grundlage</h2>
+  <p>
+    Grundlage der Taetigkeit ist das Gesetz zum kontrollierten Umgang mit
+    Cannabis (Konsumcannabisgesetz, KCanG). Massgeblich sind insbesondere die
+    Regelungen zu Anbauvereinigungen (Paragraf 11 ff. KCanG) sowie das Werbe-
+    und Sponsoringverbot (Paragraf 6 KCanG).
+  </p>
+
+  <h2>Werbeverbot</h2>
+  <p>
+    Fuer Cannabis und fuer Anbauvereinigungen gilt ein umfassendes Werbe- und
+    Sponsoringverbot. Diese Website dient ausschliesslich der sachlichen
+    Information. Sie enthaelt keine kommerzielle Kommunikation, die den Konsum
+    oder die Weitergabe von Cannabis unmittelbar oder mittelbar foerdern soll
+    (Paragraf 1 Nummer 14, Paragraf 6 KCanG).
+  </p>
+
+  <h2>Jugendschutz</h2>
+  <p>
+    Die Abgabe von Cannabis erfolgt ausschliesslich an Mitglieder, die das 18.
+    Lebensjahr vollendet haben. Fuer Mitglieder bis zur Vollendung des 21.
+    Lebensjahres gelten zusaetzliche Beschraenkungen.
+  </p>
+
+  <h2>Gesundheitlicher Hinweis</h2>
+  <p>
+    Der Konsum von Cannabis kann insbesondere bei jungen Menschen die
+    Gehirnentwicklung beeintraechtigen und gesundheitliche Risiken mit sich
+    bringen. Beratungsangebote finden Sie unter
+    <a href={pfad('/praevention-beratung')}>Praevention und Beratung</a>.
+  </p>
+</Basis>

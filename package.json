@@ -1,0 +1,20 @@
+{
+  "name": "canna-vereine",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Konfigurationsgetriebenes, KCanG-konformes Website-Template fuer Cannabis-Anbauvereinigungen",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "build:static": "node scripts/build-static.mjs",
+    "seed": "node --env-file=.env scripts/seed.mjs",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.5",
+    "astro": "^5.2.5",
+    "pocketbase": "^0.27.0"
+  }
+}

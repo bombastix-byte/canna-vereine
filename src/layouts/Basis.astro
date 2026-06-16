@@ -1,0 +1,47 @@
+---
+import '../styles/themes.css';
+import '../styles/global.css';
+import Kopf from '../components/Kopf.astro';
+import Fuss from '../components/Fuss.astro';
+import { site } from '../config';
+
+interface Props {
+  titel: string;
+  beschreibung?: string;
+}
+
+const { titel, beschreibung } = Astro.props;
+const seitentitel = `${titel} | ${site.kurzname}`;
+const hatHero = Astro.slots.has('hero');
+---
+
+<!doctype html>
+<html lang="de" data-theme={site.theme}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{seitentitel}</title>
+    {beschreibung && <meta name="description" content={beschreibung} />}
+    <meta name="robots" content="index, follow" />
+    {/* Im Echtbetrieb steht das Theme fest in der Vereins-Konfiguration.
+       Dieser Schalter dient nur der Angebots-/Demo-Ansicht: ?theme=klar usw. */}
+    <script is:inline>
+      (function () {
+        var erlaubt = ['botanik', 'klar', 'warm', 'nacht'];
+        var t = new URLSearchParams(location.search).get('theme');
+        if (t && erlaubt.indexOf(t) !== -1) {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+    <Kopf />
+    {hatHero && <slot name="hero" />}
+    <main id="inhalt" class="inhalt">
+      <slot />
+    </main>
+    <Fuss />
+  </body>
+</html>

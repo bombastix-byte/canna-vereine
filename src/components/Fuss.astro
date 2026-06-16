@@ -1,0 +1,28 @@
+---
+import { site } from '../config';
+import { pfad } from '../lib/url';
+import Mark from './Mark.astro';
+const jahr = 2026;
+---
+
+<footer class="fuss">
+  <div class="fuss__innen">
+    <Mark class="fuss__mark" />
+    <p>
+      <strong>{site.vereinsname}</strong><br />
+      {site.kontakt.plz} {site.kontakt.ort}
+    </p>
+    <ul>
+      <li><a href={pfad('/mitglieder')}>Mitgliederbereich</a></li>
+      <li><a href={pfad('/impressum')}>Impressum</a></li>
+      <li><a href={pfad('/datenschutz')}>Datenschutz</a></li>
+      <li><a href={pfad('/rechtliche-hinweise')}>Rechtliche Hinweise</a></li>
+    </ul>
+    <p class="fuss__klein">
+      Diese Website dient ausschliesslich der sachlichen Information und enthaelt
+      keine Werbung im Sinne von Paragraf 6 KCanG. Abgabe ausschliesslich an
+      Mitglieder ab 18 Jahren. Kein Verkauf, keine Abgabe an Dritte.
+      &copy; {jahr} {site.vereinsname}
+    </p>
+  </div>
+</footer>

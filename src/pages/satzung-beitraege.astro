@@ -1,0 +1,46 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+const d = site.dokumente;
+---
+
+<Basis
+  titel="Satzung und Beitraege"
+  beschreibung="Satzung und Beitragsordnung der Anbauvereinigung."
+>
+  <h1>Satzung und Beitraege</h1>
+  <p class="einleitung">
+    Hier finden Sie die geltende Satzung sowie die Beitragsordnung des Vereins
+    als sachliche Dokumente.
+  </p>
+
+  <h2>Satzung</h2>
+  {
+    d.satzungPdf ? (
+      <p><a href={d.satzungPdf}>Satzung als PDF herunterladen</a></p>
+    ) : (
+      <p class="platzhalter">Platzhalter: Satzung als PDF, sobald hinterlegt.</p>
+    )
+  }
+
+  <h2>Beitragsordnung</h2>
+  <p>
+    Die Beitraege decken die tatsaechlichen Kosten des gemeinschaftlichen Anbaus
+    sowie den Vereinsbetrieb. Sie sind kostendeckend kalkuliert und nicht auf
+    Gewinn ausgerichtet.
+  </p>
+  {
+    d.beitragsordnungPdf ? (
+      <p><a href={d.beitragsordnungPdf}>Beitragsordnung als PDF herunterladen</a></p>
+    ) : (
+      <p class="platzhalter">
+        Platzhalter: Beitragsordnung als PDF, sobald hinterlegt.
+      </p>
+    )
+  }
+
+  <div class="hinweis">
+    Die Beitragsangaben dienen ausschliesslich der sachlichen Information ueber
+    die Kostenstruktur. Sie stellen kein Angebot und keine Preiswerbung dar.
+  </div>
+</Basis>

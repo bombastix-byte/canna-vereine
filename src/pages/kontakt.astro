@@ -1,0 +1,35 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+import { pfad } from '../lib/url';
+const k = site.kontakt;
+---
+
+<Basis
+  titel="Kontakt"
+  beschreibung="Kontaktdaten und Erreichbarkeit der Anbauvereinigung."
+>
+  <h1>Kontakt</h1>
+  <p class="einleitung">
+    Sie erreichen den Verein ueber die folgenden Angaben.
+  </p>
+
+  <dl class="fakten">
+    <dt>Verein</dt>
+    <dd>{site.vereinsname}</dd>
+    <dt>Anschrift</dt>
+    <dd>{k.strasse}, {k.plz} {k.ort}</dd>
+    <dt>E-Mail</dt>
+    <dd><a href={`mailto:${k.email}`}>{k.email}</a></dd>
+    {k.telefon && (<><dt>Telefon</dt><dd>{k.telefon}</dd></>)}
+    {k.erreichbarkeit && (<><dt>Erreichbarkeit</dt><dd>{k.erreichbarkeit}</dd></>)}
+  </dl>
+
+  <div class="kasten">
+    <h2>Mitglieder</h2>
+    <p>
+      Mitglieder finden aktuelle Informationen im
+      <a href={pfad('/mitglieder')}>Mitgliederbereich</a>.
+    </p>
+  </div>
+</Basis>

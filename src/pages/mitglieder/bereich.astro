@@ -1,0 +1,133 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+
+// Geschuetztes Mitglieder-Dashboard. Serverseitig gerendert.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) {
+  return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+}
+const { pb, mitglied } = ergebnis;
+
+// Inhalte laden. Fehlt eine Collection noch (frische Installation), bleibt der
+// Bereich leer statt zu scheitern.
+async function ladeListe<T = Record<string, unknown>>(
+  collection: string,
+  sort: string,
+): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList({ sort })) as T[];
+  } catch {
+    return [];
+  }
+}
+
+interface Mitteilung {
+  id: string;
+  titel: string;
+  inhalt: string;
+  datum: string;
+}
+interface Termin {
+  id: string;
+  titel: string;
+  datum: string;
+  ort?: string;
+  beschreibung?: string;
+}
+interface Dokument {
+  id: string;
+  titel: string;
+  kategorie?: string;
+  datei: string;
+}
+
+const mitteilungen = await ladeListe<Mitteilung>('mitteilungen', '-datum');
+const termine = await ladeListe<Termin>('termine', 'datum');
+const dokumente = await ladeListe<Dokument>('dokumente', 'titel');
+
+const datum = (iso: string) =>
+  iso
+    ? new Date(iso).toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : '';
+
+const dateiUrl = (d: Dokument) =>
+  d.datei ? pb.files.getURL(d as any, d.datei) : '#';
+---
+
+<Basis titel="Mitgliederbereich" beschreibung="Interner Bereich fuer Mitglieder.">
+  <div class="seitenkopf" style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;">
+    <div>
+      <p class="eyebrow">Mitgliederbereich</p>
+      <h1 style="margin-bottom:0;">Aktuelles</h1>
+    </div>
+    <p style="margin:0;color:var(--ink-soft);font-size:0.9rem;">
+      Angemeldet als {mitglied.name ?? mitglied.email}.
+      <a href="/mitglieder/abmelden">Abmelden</a>
+    </p>
+  </div>
+
+  <h2>Mitteilungen</h2>
+  {
+    mitteilungen.length === 0 ? (
+      <p style="color:var(--ink-soft);">Derzeit liegen keine Mitteilungen vor.</p>
+    ) : (
+      mitteilungen.map((m) => (
+        <div class="kasten">
+          <h3 style="margin-top:0;">{m.titel}</h3>
+          <p style="color:var(--ink-soft);font-size:0.82rem;margin:0 0 0.6rem;">
+            {datum(m.datum)}
+          </p>
+          <p style="margin:0;white-space:pre-line;">{m.inhalt}</p>
+        </div>
+      ))
+    )
+  }
+
+  <h2>Termine</h2>
+  {
+    termine.length === 0 ? (
+      <p style="color:var(--ink-soft);">Keine anstehenden Termine eingetragen.</p>
+    ) : (
+      <ul>
+        {termine.map((t) => (
+          <li>
+            <strong>{datum(t.datum)}</strong>: {t.titel}
+            {t.ort && <> ({t.ort})</>}
+            {t.beschreibung && (
+              <div style="color:var(--ink-soft);font-size:0.92rem;">
+                {t.beschreibung}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <h2>Dokumente</h2>
+  {
+    dokumente.length === 0 ? (
+      <p style="color:var(--ink-soft);">Es sind keine Dokumente hinterlegt.</p>
+    ) : (
+      <ul>
+        {dokumente.map((d) => (
+          <li>
+            <a href={dateiUrl(d)} rel="noopener">
+              {d.titel}
+            </a>
+            {d.kategorie && (
+              <span style="color:var(--ink-soft);"> — {d.kategorie}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Basis>

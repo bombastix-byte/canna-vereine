@@ -1,0 +1,21 @@
+# build output
+dist/
+# dependencies
+node_modules/
+# astro
+.astro/
+# environment
+.env
+.env.production
+# pocketbase binary + daten (lokal, nie ins Repo)
+pb/
+pb_data/
+
+# build-artefakt
+canna-vereine-static.zip
+# logs
+npm-debug.log*
+*.log
+# os
+.DS_Store
+Thumbs.db

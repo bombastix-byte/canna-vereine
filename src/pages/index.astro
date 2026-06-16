@@ -1,0 +1,97 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+import { pfad } from '../lib/url';
+
+const themen = [
+  {
+    href: '/aufnahmeverfahren',
+    titel: 'Aufnahmeverfahren',
+    text: 'Voraussetzungen und Ablauf einer Mitgliedschaft, sachlich dargestellt.',
+  },
+  {
+    href: '/satzung-beitraege',
+    titel: 'Satzung und Beitraege',
+    text: 'Vereinsregeln und Beitragsordnung zum Nachlesen.',
+  },
+  {
+    href: '/gesundheit-jugendschutz',
+    titel: 'Gesundheit und Jugendschutz',
+    text: 'Das Gesundheits- und Jugendschutzkonzept des Vereins.',
+  },
+  {
+    href: '/praevention-beratung',
+    titel: 'Praevention und Beratung',
+    text: 'Praeventionsbeauftragte Person und unabhaengige Beratungsstellen.',
+  },
+  {
+    href: '/anbau-sorten',
+    titel: 'Anbau und Sorten',
+    text: 'Objektive Angaben zu Herkunft und Wirkstoffgehalten.',
+  },
+  {
+    href: '/rechtliche-hinweise',
+    titel: 'Rechtliche Hinweise',
+    text: 'Gesetzliche Grundlagen und Pflichthinweise nach KCanG.',
+  },
+];
+---
+
+<Basis
+  titel="Startseite"
+  beschreibung={`Sachinformationen der ${site.vereinsname} nach dem Konsumcannabisgesetz (KCanG).`}
+>
+  <section class="hero" slot="hero">
+    <div class="hero__innen">
+      <p class="eyebrow">Anbauvereinigung nach KCanG</p>
+      <h1>{site.vereinsname}</h1>
+      <p>
+        Sachliche Informationen zu gemeinschaftlichem Eigenanbau,
+        Mitgliedschaft, Gesundheits- und Jugendschutz in {site.stadt}.
+      </p>
+    </div>
+  </section>
+
+  <div class="seitenkopf">
+    <p class="eyebrow">Ueber diese Website</p>
+    <p class="einleitung">
+      Diese Website stellt sachliche Informationen ueber die {site.vereinsname}
+      bereit. Sie richtet sich an die Allgemeinheit sowie an Mitglieder und dient
+      der Erfuellung der gesetzlichen Informationspflichten nach dem
+      Konsumcannabisgesetz.
+    </p>
+  </div>
+
+  <div class="kasten">
+    <h2>Was eine Anbauvereinigung ist</h2>
+    <p style="margin-bottom:0;">
+      Eine Anbauvereinigung ist ein eingetragener Verein, dem nach Paragraf 11
+      KCanG der gemeinschaftliche, nicht gewerbliche Eigenanbau von Cannabis und
+      die Weitergabe an seine Mitglieder zum Eigenkonsum erlaubt ist. Die Abgabe
+      erfolgt ausschliesslich an volljaehrige Mitglieder. Ein Verkauf an Dritte
+      sowie jede Form des Handels sind ausgeschlossen.
+    </p>
+  </div>
+
+  <h2>Themen auf dieser Website</h2>
+  <ul class="kacheln">
+    {
+      themen.map((t) => (
+        <li>
+          <a class="kachel" href={pfad(t.href)}>
+            <span class="kachel__titel">{t.titel}</span>
+            <span class="kachel__text">{t.text}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="hinweis">
+    <strong>Gesetzlicher Hinweis.</strong> Der Konsum von Cannabis kann
+    gesundheitliche Risiken mit sich bringen, insbesondere fuer Jugendliche und
+    junge Erwachsene. Die Abgabe erfolgt ausschliesslich an Mitglieder ab 18
+    Jahren. Informationen zur Suchtvorbeugung finden Sie unter
+    <a href={pfad('/praevention-beratung')}>Praevention und Beratung</a>.
+  </div>
+</Basis>

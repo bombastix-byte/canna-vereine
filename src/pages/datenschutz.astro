@@ -1,0 +1,46 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+const k = site.kontakt;
+---
+
+<Basis titel="Datenschutz" beschreibung="Datenschutzerklaerung nach DSGVO.">
+  <h1>Datenschutzerklaerung</h1>
+  <p class="einleitung">
+    Der Schutz Ihrer personenbezogenen Daten ist dem Verein wichtig. Diese
+    Erklaerung informiert ueber die Verarbeitung im Rahmen dieser Website.
+  </p>
+
+  <div class="hinweis">
+    <span class="platzhalter">
+      Platzhalter: Diese Datenschutzerklaerung ist ein Geruest und vor dem
+      Livegang juristisch zu pruefen und zu vervollstaendigen (insbesondere
+      Hosting, Server-Logs, Mitgliederbereich, Auftragsverarbeitung).
+    </span>
+  </div>
+
+  <h2>Verantwortlicher</h2>
+  <p>{site.vereinsname}, {k.strasse}, {k.plz} {k.ort}, {k.email}.</p>
+
+  <h2>Verarbeitung beim Besuch der Website</h2>
+  <p>
+    Beim Aufruf der Website werden technisch notwendige Daten verarbeitet
+    (z. B. IP-Adresse, Zeitpunkt, abgerufene Seite), um die Auslieferung und die
+    Sicherheit zu gewaehrleisten. Rechtsgrundlage ist Artikel 6 Absatz 1
+    Buchstabe f DSGVO.
+  </p>
+
+  <h2>Mitgliederbereich</h2>
+  <p>
+    Fuer die Anmeldung im Mitgliederbereich werden Zugangsdaten verarbeitet. Die
+    Verarbeitung erfolgt zur Erfuellung des Mitgliedschaftsverhaeltnisses nach
+    Artikel 6 Absatz 1 Buchstabe b DSGVO.
+  </p>
+
+  <h2>Ihre Rechte</h2>
+  <p>
+    Sie haben das Recht auf Auskunft, Berichtigung, Loeschung, Einschraenkung,
+    Datenuebertragbarkeit und Widerspruch sowie ein Beschwerderecht bei einer
+    Aufsichtsbehoerde.
+  </p>
+</Basis>
