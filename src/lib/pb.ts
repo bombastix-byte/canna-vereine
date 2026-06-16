@@ -1,9 +1,21 @@
 import PocketBase from 'pocketbase';
 
-// Adresse des selbst gehosteten PocketBase. Lokal Standard, in Produktion
-// per Umgebungsvariable PB_URL setzen (z. B. interne Adresse des Servers).
-export const PB_URL =
-  (import.meta.env.PB_URL as string | undefined) ?? 'http://127.0.0.1:8090';
+// Konfiguration zur Laufzeit ueber Umgebungsvariablen (process.env hat Vorrang,
+// damit der gebaute Server pro Container konfigurierbar bleibt).
+function env(key: string): string | undefined {
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  return import.meta.env[key] as string | undefined;
+}
+
+// Server-seitige Adresse von PocketBase (Auth, Daten lesen). Lokal Standard;
+// in Produktion z. B. die interne Adresse des PB-Containers.
+export const PB_URL = env('PB_URL') ?? 'http://127.0.0.1:8090';
+
+// Oeffentliche Adresse von PocketBase fuer browser-seitige Links (Datei-
+// Downloads). Hinter einem Reverse-Proxy die echte Domain; sonst gleich PB_URL.
+export const PB_PUBLIC_URL = env('PB_PUBLIC_URL') ?? PB_URL;
 
 // Name des httpOnly-Cookies, in dem der Auth-Token der Mitglieder liegt.
 export const AUTH_COOKIE = 'pb_token';
@@ -11,6 +23,14 @@ export const AUTH_COOKIE = 'pb_token';
 /** Neuer, nicht authentifizierter PocketBase-Client (pro Anfrage einmalig). */
 export function neuePb(): PocketBase {
   return new PocketBase(PB_URL);
+}
+
+/** Browser-taugliche Download-URL einer Datei (nutzt die oeffentliche Adresse). */
+export function dateiUrl(
+  record: { collectionId: string; id: string },
+  datei: string,
+): string {
+  return `${PB_PUBLIC_URL}/api/files/${record.collectionId}/${record.id}/${datei}`;
 }
 
 export interface Mitglied {

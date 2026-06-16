@@ -1,0 +1,11 @@
+node_modules
+dist
+.astro
+pb
+pb_data
+.git
+.env
+.env.production
+*.zip
+Onboarding-Checkliste.pdf
+backups

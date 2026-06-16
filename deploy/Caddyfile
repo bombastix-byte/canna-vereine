@@ -1,0 +1,38 @@
+# Automatisches HTTPS. Pro Verein eine Domain; PocketBase laeuft unter den
+# Pfaden /api/* (inkl. Datei-Downloads) und /_/* (Admin-Oberflaeche), der Rest
+# geht an den Astro-Server. So genuegt je Verein ein einziger A-Record, keine
+# zusaetzlichen Subdomains noetig.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN_GOERLITZ} {
+	@pb path /api/* /_/*
+	handle @pb {
+		reverse_proxy pb-goerlitz:8090
+	}
+	handle {
+		reverse_proxy astro-goerlitz:4321
+	}
+}
+
+{$DOMAIN_GOERLITZ2} {
+	@pb path /api/* /_/*
+	handle @pb {
+		reverse_proxy pb-goerlitz2:8090
+	}
+	handle {
+		reverse_proxy astro-goerlitz2:4321
+	}
+}
+
+{$DOMAIN_LEIPZIG} {
+	@pb path /api/* /_/*
+	handle @pb {
+		reverse_proxy pb-leipzig:8090
+	}
+	handle {
+		reverse_proxy astro-leipzig:4321
+	}
+}

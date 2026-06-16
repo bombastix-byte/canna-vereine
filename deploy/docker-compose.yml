@@ -1,0 +1,96 @@
+# Produktions-Stack, anbieter-neutral: laeuft auf jedem Linux-Server mit Docker.
+# Caddy uebernimmt automatisch HTTPS (Let's Encrypt), sobald die Domains per
+# DNS auf den Server zeigen. Pro Verein ein Astro-Server und eine eigene
+# PocketBase-Instanz (getrennte Mitgliederdaten).
+#
+# Domains und ACME-E-Mail in .env eintragen (siehe .env.example).
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - astro-goerlitz
+      - astro-goerlitz2
+      - astro-leipzig
+
+  # ---------- Goerlitz 1 ----------
+  astro-goerlitz:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.astro
+      args:
+        SITE_ID: goerlitz
+    restart: unless-stopped
+    environment:
+      PB_URL: http://pb-goerlitz:8090
+      PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ}
+    depends_on:
+      - pb-goerlitz
+  pb-goerlitz:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.pocketbase
+    restart: unless-stopped
+    volumes:
+      - pb_goerlitz:/pb/pb_data
+
+  # ---------- Goerlitz 2 (CSC) ----------
+  astro-goerlitz2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.astro
+      args:
+        SITE_ID: goerlitz2
+    restart: unless-stopped
+    environment:
+      PB_URL: http://pb-goerlitz2:8090
+      PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ2}
+    depends_on:
+      - pb-goerlitz2
+  pb-goerlitz2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.pocketbase
+    restart: unless-stopped
+    volumes:
+      - pb_goerlitz2:/pb/pb_data
+
+  # ---------- Leipzig ----------
+  astro-leipzig:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.astro
+      args:
+        SITE_ID: leipzig
+    restart: unless-stopped
+    environment:
+      PB_URL: http://pb-leipzig:8090
+      PB_PUBLIC_URL: https://${DOMAIN_LEIPZIG}
+    depends_on:
+      - pb-leipzig
+  pb-leipzig:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.pocketbase
+    restart: unless-stopped
+    volumes:
+      - pb_leipzig:/pb/pb_data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pb_goerlitz:
+    name: canna_pb_goerlitz
+  pb_goerlitz2:
+    name: canna_pb_goerlitz2
+  pb_leipzig:
+    name: canna_pb_leipzig
