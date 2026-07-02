@@ -1,13 +1,26 @@
 # Automatisches HTTPS. Pro Verein eine Domain; PocketBase laeuft unter den
 # Pfaden /api/* (inkl. Datei-Downloads) und /_/* (Admin-Oberflaeche), der Rest
-# geht an den Astro-Server. So genuegt je Verein ein einziger A-Record, keine
-# zusaetzlichen Subdomains noetig.
+# geht an den Astro-Server.
+#
+# Sicherheit: Der direkte Passwort-Login der Mitglieder an der PocketBase-API
+# ist von aussen gesperrt (403). Anmeldung laeuft NUR ueber die Website
+# (/mitglieder/anmelden) - dort greift die Zwei-Faktor-Pruefung. Die Website
+# erreicht PocketBase intern ueber das Docker-Netz, nicht ueber Caddy.
+#
+# ACHTUNG Betrieb: Auf dem VPS haengen hinter dieser Datei zusaetzlich die
+# Bloecke weiterer Zellen (aikonform, adhdsparks - via go-live.sh angehaengt).
+# Diese Datei daher NIE per Deploy auf den Server kopieren; Aenderungen dort
+# von Hand nachziehen und Caddy-Container neu erstellen (Bind-Mount + inode!).
 
 {
 	email {$ACME_EMAIL}
 }
 
 {$DOMAIN_GOERLITZ} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth {
+		respond "Anmeldung nur ueber die Website." 403
+	}
 	@pb path /api/* /_/*
 	handle @pb {
 		reverse_proxy pb-goerlitz:8090
@@ -18,6 +31,10 @@
 }
 
 {$DOMAIN_GOERLITZ2} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth {
+		respond "Anmeldung nur ueber die Website." 403
+	}
 	@pb path /api/* /_/*
 	handle @pb {
 		reverse_proxy pb-goerlitz2:8090
@@ -28,6 +45,10 @@
 }
 
 {$DOMAIN_LEIPZIG} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth {
+		respond "Anmeldung nur ueber die Website." 403
+	}
 	@pb path /api/* /_/*
 	handle @pb {
 		reverse_proxy pb-leipzig:8090

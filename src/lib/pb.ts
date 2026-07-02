@@ -20,6 +20,10 @@ export const PB_PUBLIC_URL = env('PB_PUBLIC_URL') ?? PB_URL;
 // Name des httpOnly-Cookies, in dem der Auth-Token der Mitglieder liegt.
 export const AUTH_COOKIE = 'pb_token';
 
+// Zwischen-Cookie waehrend der Zwei-Faktor-Anmeldung: Passwort war richtig,
+// der TOTP-Code steht noch aus. Kurzlebig; wird nach dem Code-Schritt geloescht.
+export const PENDING_COOKIE = 'pb_pending';
+
 /** Neuer, nicht authentifizierter PocketBase-Client (pro Anfrage einmalig). */
 export function neuePb(): PocketBase {
   return new PocketBase(PB_URL);

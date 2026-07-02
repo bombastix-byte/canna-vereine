@@ -39,10 +39,18 @@ interface Vernichtung {
   id: string;
   charge_nr?: string;
   sorte_name?: string;
-  menge_gramm: number;
+  menge_gramm?: number;
+  anzahl_pflanzen?: number;
+  pflanzen_nrn?: string;
   grund?: string;
   datum?: string;
   zeuge?: string;
+}
+interface Pflanze {
+  id: string;
+  charge_ref: string;
+  nummer: string;
+  status?: string;
 }
 
 async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
@@ -69,6 +77,9 @@ const sorten = await ladeListe<Sorte>('sorten', { sort: 'name' });
 const alleChargen = await ladeListe<Charge>('chargen', { sort: 'sorte_name,charge_nr' });
 const vernichtungen = await ladeListe<Vernichtung>('vernichtungen', { sort: '-created' });
 const transporte = await ladeListe<Transport>('transporte', { sort: '-created' });
+const allePflanzen = await ladeListe<Pflanze>('pflanzen', { sort: 'nummer' });
+const pflanzenVon = (chargeId: string) => allePflanzen.filter((p) => p.charge_ref === chargeId);
+const PFLANZE_STATUS: Record<string, string> = { wachsend: '🌱', geerntet: '✂️', vernichtet: '✕' };
 
 // Arbeitslogische Reihenfolge statt alphabetischem Status: erst was im Anbau
 // ist, dann Trocknung, dann abgebbar. Erledigtes (aufgebraucht/gesperrt)
@@ -219,6 +230,29 @@ const statusVariante: Record<string, string> = {
           </span>
         </div>
 
+        {pflanzenVon(c.id).length > 0 && (
+          <details class="pflanzen-det">
+            <summary>
+              Pflanzen: {pflanzenVon(c.id).filter((p) => p.status === 'wachsend').length} wachsend
+              {' / '}{pflanzenVon(c.id).length} gesamt
+            </summary>
+            <ul class="pflanzenliste">
+              {pflanzenVon(c.id).map((p) => (
+                <li class:list={['pflanze', `pf-${p.status}`]}>
+                  <span>{PFLANZE_STATUS[p.status ?? ''] ?? ''} {p.nummer} <em>({p.status})</em></span>
+                  {p.status === 'wachsend' && c.status === 'anbau' && (
+                    <form method="post" action="/mitglieder/wawi/pflanze-vernichten" class="pflanze-form">
+                      <input type="hidden" name="pflanze" value={p.id} />
+                      <input class="eingabe" name="grund" type="text" placeholder="Grund" required />
+                      <button class="knopf-sek" type="submit">vernichten</button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
         {moeglicheAktionen(c.status).length > 0 && (
           <details class="aktionen-det">
             <summary>{naechsterSchritt[c.status ?? ''] ?? 'Aktionen'}</summary>
@@ -345,7 +379,8 @@ const statusVariante: Record<string, string> = {
         {vernichtungen.map((v) => (
           <tr>
             <td>{v.datum}</td><td>{v.charge_nr}</td><td>{v.sorte_name}</td>
-            <td style="text-align:right;">{v.menge_gramm} g</td><td>{v.grund}</td><td>{v.zeuge || '—'}</td>
+            <td style="text-align:right;">{v.menge_gramm ? `${v.menge_gramm} g` : `${v.anzahl_pflanzen ?? '?'} Pflanze(n)${v.pflanzen_nrn ? ` (${v.pflanzen_nrn})` : ''}`}</td>
+            <td>{v.grund}</td><td>{v.zeuge || '—'}</td>
           </tr>
         ))}
       </tbody>
@@ -379,6 +414,15 @@ const statusVariante: Record<string, string> = {
   .charge-daten { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.3rem 1rem; font-size: 0.92rem; color: var(--ink-soft); }
   .charge-daten strong { color: var(--ink); }
   .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
+  .pflanzen-det { margin-top: 0.7rem; font-size: 0.92rem; }
+  .pflanzen-det summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; }
+  .pflanzenliste { list-style: none; padding: 0.5rem 0 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+  .pflanze { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; border-bottom: 1px dashed var(--line); padding-bottom: 0.35rem; }
+  .pflanze em { color: var(--ink-soft); font-style: normal; font-size: 0.85rem; }
+  .pf-vernichtet span { color: var(--ink-soft); text-decoration: line-through; }
+  .pflanze-form { display: flex; gap: 0.4rem; align-items: center; }
+  .pflanze-form .eingabe { width: 11rem; padding: 0.35rem 0.5rem; font-size: 0.88rem; }
+  .pflanze-form .knopf-sek { padding: 0.35rem 0.7rem; font-size: 0.85rem; }
   .aktionen-det summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
   .aktion { display: flex; flex-direction: column; gap: 0.4rem; max-width: 22rem; margin: 0.8rem 0; padding: 0.8rem; border: 1px solid var(--line); border-radius: var(--radius); }
   .aktion label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9rem; color: var(--ink-soft); }

@@ -5,6 +5,7 @@ import { pruefeVermehrung } from '../src/lib/vermehrung.ts';
 import { belegZpl } from '../src/lib/zpl.ts';
 import { darfDienst } from '../src/lib/rollen.ts';
 import { csvFeld, csvText } from '../src/lib/csv.ts';
+import { hotp, totpPruefen, zeitschritt, base32Encode, base32Decode, neuesSecret } from '../src/lib/totp.ts';
 
 let fehler = 0;
 function pruefe(name, ist, soll) {
@@ -78,6 +79,20 @@ pruefe('CSV: Anfuehrungszeichen verdoppelt', csvFeld('sagt "hi"'), '"sagt ""hi""
 pruefe('CSV: Zeilenumbruch gequotet', csvFeld('a\nb'), '"a\nb"');
 pruefe('CSV: null wird leer', csvFeld(null), '');
 pruefeWahr('CSV: Text mit BOM + CRLF', csvText([['a', 'b'], [1, 2]]).endsWith('a;b\r\n1;2\r\n'));
+
+// --- TOTP / Zwei-Faktor (RFC-4226-Testvektoren beweisen die Implementierung) ---
+const rfcSecret = base32Encode(new TextEncoder().encode('12345678901234567890'));
+pruefe('HOTP RFC-Vektor Zaehler 0', hotp(rfcSecret, 0), '755224');
+pruefe('HOTP RFC-Vektor Zaehler 1', hotp(rfcSecret, 1), '287082');
+pruefe('HOTP RFC-Vektor Zaehler 9', hotp(rfcSecret, 9), '520489');
+pruefeWahr('Base32 Roundtrip', new TextDecoder().decode(base32Decode(base32Encode(new TextEncoder().encode('hallo welt')))) === 'hallo welt');
+const s = neuesSecret();
+const jetzt = 1700000000000;
+pruefe('TOTP: korrekter Code akzeptiert', totpPruefen(s, hotp(s, zeitschritt(jetzt)), jetzt), zeitschritt(jetzt));
+pruefe('TOTP: Vorgaenger-Fenster (+-30s) akzeptiert', totpPruefen(s, hotp(s, zeitschritt(jetzt) - 1), jetzt), zeitschritt(jetzt) - 1);
+pruefe('TOTP: 2 Schritte alt abgelehnt', totpPruefen(s, hotp(s, zeitschritt(jetzt) - 2), jetzt), null);
+pruefe('TOTP: falscher Code abgelehnt', totpPruefen(s, '000000', jetzt) === zeitschritt(jetzt) ? 'ok' : null, null);
+pruefe('TOTP: Muell abgelehnt', totpPruefen(s, 'abc123', jetzt), null);
 
 console.log(`\n${fehler === 0 ? 'ALLE ERWEITERUNGS-TESTS BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

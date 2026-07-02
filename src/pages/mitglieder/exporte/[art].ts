@@ -38,8 +38,8 @@ export const GET: APIRoute = async ({ params, url, cookies, redirect }) => {
   if (art === 'vernichtungen') {
     const rows = (await alle<Record<string, any>>('vernichtungen')).filter((r) => jahrVon(r.datum) === jahr);
     return csvAntwort(`vernichtungen-${jahr}.csv`, [
-      ['Datum', 'Charge', 'Sorte', 'Menge (g)', 'Grund', 'Zeuge', 'Notiz'],
-      ...rows.map((r) => [r.datum, r.charge_nr, r.sorte_name, r.menge_gramm, r.grund, r.zeuge, r.notiz]),
+      ['Datum', 'Charge', 'Sorte', 'Menge (g)', 'Pflanzen (Stueck)', 'Pflanzen-Nrn', 'Grund', 'Zeuge', 'Notiz'],
+      ...rows.map((r) => [r.datum, r.charge_nr, r.sorte_name, r.menge_gramm, r.anzahl_pflanzen, r.pflanzen_nrn, r.grund, r.zeuge, r.notiz]),
     ]);
   }
 

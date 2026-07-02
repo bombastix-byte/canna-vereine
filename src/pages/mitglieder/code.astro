@@ -1,0 +1,46 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import { PENDING_COOKIE } from '../../lib/pb';
+
+// Zweiter Schritt der Anmeldung: 6-stelliger Code aus der Authenticator-App.
+export const prerender = false;
+
+// Ohne Zwischen-Cookie (Passwort-Schritt) gibt es hier nichts zu tun.
+if (!Astro.cookies.get(PENDING_COOKIE)?.value) {
+  return Astro.redirect('/mitglieder', 303);
+}
+
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  code: 'Der Code ist nicht gültig. Bitte den aktuellen Code aus der App eingeben.',
+  abgelaufen: 'Die Anmeldung ist abgelaufen. Bitte erneut mit Passwort anmelden.',
+};
+const meldung = fehler ? fehlertext[fehler] ?? fehlertext.code : null;
+---
+
+<Basis titel="Bestätigungscode" beschreibung="Zweiter Schritt der Anmeldung.">
+  <div class="seitenkopf">
+    <p class="eyebrow">Anmeldung · Schritt 2</p>
+    <h1 style="margin-bottom:0.6rem;">Bestätigungscode</h1>
+    <p class="einleitung">
+      Gib den 6-stelligen Code aus deiner Authenticator-App ein.
+    </p>
+  </div>
+
+  {meldung && <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>}
+
+  <form class="kasten" method="post" action="/mitglieder/code/pruefen">
+    <div class="feld">
+      <label for="code">Code</label>
+      <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+        maxlength="6" autocomplete="one-time-code" required autofocus
+        style="font-size:1.6rem;letter-spacing:0.4em;text-align:center;max-width:12rem;" />
+    </div>
+    <button class="knopf" type="submit">Anmelden</button>
+  </form>
+
+  <p style="color:var(--ink-soft);font-size:0.95rem;">
+    Kein Zugriff auf die App? Der Vorstand kann die Zwei-Faktor-Anmeldung für
+    dein Konto zurücksetzen.
+  </p>
+</Basis>

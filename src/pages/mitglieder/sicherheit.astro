@@ -1,0 +1,102 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { neuesSecret, otpauthUrl } from '../../lib/totp';
+import QRCode from 'qrcode-svg';
+import { site } from '../../config';
+
+// Zwei-Faktor-Anmeldung einrichten/verwalten (TOTP, Authenticator-App).
+// Besonders empfohlen fuer Personal-Konten (Tresen, Anbau, Vorstand).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+
+let zf: { id: string; aktiv?: boolean } | null = null;
+try {
+  zf = await pb.collection('zweifaktor').getFirstListItem(`user="${mitglied.id}"`);
+} catch {
+  zf = null;
+}
+const aktiv = !!zf?.aktiv;
+
+// Fuer die Einrichtung: frisches Geheimnis erzeugen und als QR zeigen.
+// Gespeichert wird es erst, wenn der erste Code korrekt eingegeben wurde.
+const secret = aktiv ? '' : neuesSecret();
+const qrSvg = secret
+  ? new QRCode({ content: otpauthUrl(site.kurzname, mitglied.email, secret), width: 200, height: 200, padding: 2, ecl: 'M', join: true }).svg()
+  : '';
+
+const fehler = Astro.url.searchParams.get('fehler');
+const ok = Astro.url.searchParams.get('ok');
+const fehlertext: Record<string, string> = {
+  code: 'Der Code war nicht gültig — bitte mit dem aktuellen Code aus der App erneut versuchen.',
+  fehlgeschlagen: 'Das hat nicht geklappt. Bitte erneut versuchen.',
+};
+const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
+---
+
+<Basis titel="Sicherheit" beschreibung="Zwei-Faktor-Anmeldung verwalten.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Sicherheit</h1>
+  <p class="einleitung">
+    Mit der Zwei-Faktor-Anmeldung brauchst du beim Anmelden zusätzlich zum
+    Passwort einen 6-stelligen Code aus einer Authenticator-App.
+    Für Konten mit Vereinsarbeit (Tresen, Anbau, Vorstand) dringend empfohlen.
+  </p>
+
+  {meldung && <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>}
+  {ok === 'an' && <p class="hinweis" role="status">Zwei-Faktor-Anmeldung ist jetzt aktiv.</p>}
+  {ok === 'aus' && <p class="hinweis" role="status">Zwei-Faktor-Anmeldung wurde deaktiviert.</p>}
+
+  {aktiv ? (
+    <div class="kasten">
+      <p><span class="abzeichen abzeichen--ok">aktiv</span> Deine Anmeldung ist mit einem zweiten Faktor geschützt.</p>
+      <form method="post" action="/mitglieder/sicherheit/deaktivieren">
+        <div class="feld">
+          <label for="code">Zum Deaktivieren: aktueller Code aus der App</label>
+          <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required style="max-width:10rem;" />
+        </div>
+        <button class="knopf-sek" type="submit">Zwei-Faktor deaktivieren</button>
+      </form>
+    </div>
+  ) : (
+    <div class="kasten">
+      <h2 style="margin-top:0;">Einrichten (2 Minuten)</h2>
+      <ol style="margin:0 0 1rem;padding-left:1.3rem;">
+        <li>Authenticator-App öffnen (z. B. Google Authenticator, Aegis, 2FAS).</li>
+        <li>Diesen QR-Code scannen.</li>
+        <li>Den angezeigten 6-stelligen Code unten eingeben.</li>
+      </ol>
+      <div class="qr" set:html={qrSvg} />
+      <p style="color:var(--ink-soft);font-size:0.85rem;">Ohne Kamera: Geheimnis von Hand eintragen: <code>{secret}</code></p>
+      <form method="post" action="/mitglieder/sicherheit/aktivieren">
+        <input type="hidden" name="secret" value={secret} />
+        <div class="feld">
+          <label for="code">Code aus der App</label>
+          <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" style="max-width:10rem;" />
+        </div>
+        <button class="knopf" type="submit">Zwei-Faktor aktivieren</button>
+      </form>
+    </div>
+  )}
+
+  <p style="color:var(--ink-soft);font-size:0.92rem;max-width:var(--mass);">
+    Handy verloren? Der Vorstand kann die Zwei-Faktor-Anmeldung für dein Konto
+    im System zurücksetzen — danach richtest du sie hier neu ein.
+  </p>
+</Basis>
+
+<style>
+  .qr {
+    display: inline-block;
+    margin: 0 0 0.6rem;
+  }
+  .qr :global(svg) {
+    background: #fff;
+    border-radius: var(--radius);
+  }
+</style>

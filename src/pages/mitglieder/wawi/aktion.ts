@@ -61,6 +61,15 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   try {
     await pb.collection('chargen').update(chargeId, patch);
+    // Ernte: alle noch wachsenden Pflanzen der Charge als geerntet markieren.
+    if (aktion === 'ernte') {
+      const wachsende = await pb.collection('pflanzen').getFullList({
+        filter: `charge_ref="${chargeId}" && status="wachsend"`,
+      });
+      for (const p of wachsende) {
+        await pb.collection('pflanzen').update(p.id, { status: 'geerntet' });
+      }
+    }
   } catch {
     return zurueck('fehler=fehlgeschlagen');
   }

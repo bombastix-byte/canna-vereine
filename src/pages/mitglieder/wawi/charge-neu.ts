@@ -26,8 +26,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const sorte = await pb.collection('sorten').getOne(sorteId);
     const jahr = berlinTag().slice(0, 4);
     const anzahl = (await pb.collection('chargen').getList(1, 1, { filter: `charge_nr~"${jahr}-"` })).totalItems;
-    await pb.collection('chargen').create({
-      charge_nr: chargeNr(jahr, anzahl),
+    const nr = chargeNr(jahr, anzahl);
+    const neu = await pb.collection('chargen').create({
+      charge_nr: nr,
       sorte: sorteId,
       sorte_name: sorte.name,
       status: 'anbau',
@@ -37,6 +38,15 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       standort,
       notiz: '',
     });
+    // Pflanzen-Ebene: je Pflanze ein eigener Datensatz (P01, P02, ...).
+    const n = Number.isFinite(pflanzenzahl) ? Math.min(Math.max(0, Math.trunc(pflanzenzahl)), 500) : 0;
+    for (let i = 1; i <= n; i++) {
+      await pb.collection('pflanzen').create({
+        charge_ref: neu.id,
+        nummer: `${nr}-P${String(i).padStart(2, '0')}`,
+        status: 'wachsend',
+      });
+    }
   } catch {
     return redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
   }
