@@ -7,6 +7,7 @@ Astro-5 + PocketBase-Stack. Deckt die vollständige KCanG-Kette ab.
 | Seite | Rolle | Zweck |
 |---|---|---|
 | `bereich` | alle | Dashboard |
+| `anleitungen` | alle (lesen) | Verfahrensbibliothek: SOPs mit Schritten, Rollen-Badge; Pflege: Vorstand im CMS |
 | `wawi` | anbau, vorstand | Warenwirtschaft: Chargen Anbau→Ernte→Freigabe→Vernichtung |
 | `ausgabe` | ausgabe, vorstand | Tresen: Abgabe buchen (Limits 25/50 g, U21 30 g/≤10 % THC), bucht auf Charge |
 | `ausgabe/beleg/[id]` | ausgabe / eigenes | Beleg/Beipackzettel: OS-Druck + ZPL an Etikettendrucker |
@@ -36,6 +37,7 @@ node --env-file=.env scripts/seed.mjs            # Basis
 node --env-file=.env scripts/seed-ausgabe.mjs    # Sorten, Abgabe, Rollen (rolle)
 node --env-file=.env scripts/seed-wawi.mjs       # rollen-Migration, Chargen, Vernichtung
 node --env-file=.env scripts/seed-erweiterung.mjs# Vermehrung, Vorstand-Schreibrecht
+node --env-file=.env scripts/seed-anleitungen.mjs# Verfahrensbibliothek + Dienst-Verknuepfung
 node --env-file=.env scripts/seed-dummies.mjs    # optionale Testmitglieder
 node --env-file=.env scripts/import-mitglieder.mjs data/mitglieder.csv  # echte Mitglieder
 ```
