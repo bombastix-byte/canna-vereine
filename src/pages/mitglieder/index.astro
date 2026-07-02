@@ -38,11 +38,7 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
 
   {
     meldung && (
-      <p
-        class="hinweis"
-        role="alert"
-        style="border-color:#d99;background:#fbecec;"
-      >
+      <p class="hinweis hinweis--fehler" role="alert">
         {meldung}
       </p>
     )

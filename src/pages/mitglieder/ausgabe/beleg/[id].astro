@@ -57,7 +57,7 @@ const praev = site.praeventionsbeauftragter;
     </p>
   )}
   {gedruckt && <p class="hinweis" role="status" style="max-width:var(--mass);">An Etikettendrucker gesendet.</p>}
-  {druckfehler && <p class="hinweis" role="alert" style="max-width:var(--mass);border-color:#d99;background:#fbecec;">Drucker nicht erreichbar. Bitte über den Druckdialog drucken.</p>}
+  {druckfehler && <p class="hinweis hinweis--fehler" role="alert" style="max-width:var(--mass);">Drucker nicht erreichbar. Bitte über den Druckdialog drucken.</p>}
 
   <div class="aktionen">
     <button class="knopf" type="button" onclick="window.print()">Beleg drucken</button>
@@ -121,16 +121,6 @@ const praev = site.praeventionsbeauftragter;
     flex-wrap: wrap;
     margin: 1rem 0 1.4rem;
     max-width: var(--mass);
-  }
-  .knopf-sek {
-    text-decoration: none;
-    color: var(--ink-soft);
-    padding: 0.5rem 0.9rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: none;
-    font: inherit;
-    cursor: pointer;
   }
   .beleg {
     max-width: 26rem;

@@ -42,7 +42,7 @@ const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
   </p>
 
   {ok && <p class="hinweis" role="status">Gespeichert.</p>}
-  {fehler && <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">Speichern fehlgeschlagen.</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Speichern fehlgeschlagen.</p>}
 
   <p style="color:var(--ink-soft);">{mitglieder.length} Mitglieder.</p>
 

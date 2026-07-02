@@ -101,6 +101,15 @@ const naechsterSchritt: Record<string, string> = {
   geerntet: '→ Nächster Schritt: Freigeben (nach der Trocknung)',
   freigegeben: 'Weitere Aktionen (vernichten, sperren)',
 };
+
+// Status -> einheitliche Abzeichen-Variante (gemeinsame Bausteine).
+const statusVariante: Record<string, string> = {
+  freigegeben: 'abzeichen--ok',
+  anbau: 'abzeichen--warn',
+  geerntet: '',
+  gesperrt: 'abzeichen--gefahr',
+  aufgebraucht: 'abzeichen--gefahr',
+};
 ---
 
 <Basis titel="Warenwirtschaft" beschreibung="Chargen vom Anbau bis zur Ausgabe, KCanG-dokumentiert.">
@@ -113,7 +122,7 @@ const naechsterSchritt: Record<string, string> = {
     Anbaulos rückverfolgbar. Vernichtungen werden dokumentiert.
   </p>
 
-  {fmeldung && <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{fmeldung}</p>}
+  {fmeldung && <p class="hinweis hinweis--fehler" role="alert">{fmeldung}</p>}
   {omeldung && <p class="hinweis" role="status">{omeldung}</p>}
 
   <h2>Bestand (freigegeben)</h2>
@@ -134,7 +143,7 @@ const naechsterSchritt: Record<string, string> = {
   <h2>Chargen</h2>
   <p class="ablauf">Ablauf je Charge: <strong>Anbau</strong> → <strong>Ernte</strong> (Frischgewicht wiegen) → <strong>Freigabe</strong> (Trockengewicht + THC eintragen) → am Tresen abgebbar.</p>
 
-  <details class="neu-det">
+  <details class="klappe">
     <summary>＋ Neue Charge anlegen</summary>
     <form class="kasten" method="post" action="/mitglieder/wawi/charge-neu">
     <div class="feld">
@@ -173,7 +182,7 @@ const naechsterSchritt: Record<string, string> = {
       <div class="charge" id={`c-${c.id}`}>
         <div class="charge-kopf">
           <span><strong>{c.charge_nr}</strong> · {c.sorte_name}</span>
-          <span class:list={['badge', `st-${c.status}`]}>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</span>
+          <span class:list={['abzeichen', statusVariante[c.status ?? ''] || null]}>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</span>
         </div>
         <div class="charge-daten">
           <span>Herkunft: {c.herkunft || '—'}</span>
@@ -244,7 +253,7 @@ const naechsterSchritt: Record<string, string> = {
   )}
 
   {archiv.length > 0 && (
-    <details class="neu-det">
+    <details class="klappe">
       <summary>Archiv ({archiv.length}) — aufgebrauchte und gesperrte Chargen</summary>
       <table class="tabelle">
         <thead><tr><th>Charge</th><th>Sorte</th><th>Status</th><th class="r">Trocken</th><th class="r">THC</th></tr></thead>
@@ -282,7 +291,8 @@ const naechsterSchritt: Record<string, string> = {
 </Basis>
 
 <style>
-  select, .feld input, .aktion input, .aktion select {
+  .aktion input,
+  .aktion select {
     width: 100%;
     padding: 0.5rem 0.6rem;
     border: 1px solid var(--line);
@@ -294,13 +304,6 @@ const naechsterSchritt: Record<string, string> = {
   .feld-reihe { display: flex; gap: 0.9rem; flex-wrap: wrap; }
   .feld-reihe .feld { flex: 1 1 8rem; }
   .ablauf { max-width: var(--mass); color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 1rem; }
-  .neu-det { max-width: var(--mass); margin: 0 0 1.2rem; border: 1px dashed var(--line); border-radius: var(--radius); padding: 0.7rem 1rem; }
-  .neu-det summary { cursor: pointer; font-weight: 600; }
-  .neu-det[open] { border-style: solid; }
-  .neu-det .kasten { border: none; padding: 0.8rem 0 0; margin: 0; }
-  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; margin-bottom: 1rem; }
-  .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
-  .tabelle .r { text-align: right; }
   .charge {
     max-width: var(--mass);
     border: 1px solid var(--line);
@@ -312,14 +315,8 @@ const naechsterSchritt: Record<string, string> = {
   .charge-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; }
   .charge-daten { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.3rem 1rem; font-size: 0.92rem; color: var(--ink-soft); }
   .charge-daten strong { color: var(--ink); }
-  .badge { font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
-  .st-freigegeben { color: #1c7c3a; border-color: #1c7c3a; }
-  .st-anbau { color: #8a5a00; border-color: #c98a00; }
-  .st-geerntet { color: #556; border-color: #99a; }
-  .st-gesperrt, .st-aufgebraucht { color: #a33; border-color: #d99; }
   .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
   .aktionen-det summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
   .aktion { display: flex; flex-direction: column; gap: 0.4rem; max-width: 22rem; margin: 0.8rem 0; padding: 0.8rem; border: 1px solid var(--line); border-radius: var(--radius); }
   .aktion label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9rem; color: var(--ink-soft); }
-  .knopf-sek { background: none; border: 1px solid var(--line); color: var(--ink-soft); padding: 0.5rem 0.9rem; border-radius: var(--radius); cursor: pointer; font: inherit; }
 </style>

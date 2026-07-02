@@ -21,9 +21,12 @@ const beschneiden = await pb.collection('helferdienste').getFirstListItem('titel
 const giessen = await pb.collection('helferdienste').getFirstListItem('titel="Gießen"');
 const eva = await pb.collection('users').getFirstListItem('mitgliedsnummer="M-105"');
 
-// Deterministisch: Evas alte Eintragungen fuer die Testdienste loeschen.
-for (const e of await pb.collection('helfer_eintragungen').getFullList({ filter: `mitglied="${eva.id}"` })) {
-  await pb.collection('helfer_eintragungen').delete(e.id);
+// Deterministisch: alte Eintragungen der Test-Nutzer loeschen (Eva + Anbau).
+const anbauUser = await pb.collection('users').getFirstListItem(`email="${ANBAU}"`);
+for (const uid of [eva.id, anbauUser.id]) {
+  for (const e of await pb.collection('helfer_eintragungen').getFullList({ filter: `mitglied="${uid}"` })) {
+    await pb.collection('helfer_eintragungen').delete(e.id);
+  }
 }
 
 async function anmelden(email, pw) {
@@ -75,6 +78,43 @@ pruefe('Zweite Uebernahme -> ohne erstesmal', zweiteLoc.includes('ok=1') && !zwe
 const anbauCookie = await anmelden(ANBAU, ANBAU_PW);
 const anbauLoc = await eintragen(anbauCookie, beschneiden.id, '2027-01-07');
 pruefe('Anbau-User in Beschneiden -> ok', anbauLoc.includes('ok=1'), anbauLoc);
+
+// 6. Pflege-Oberflaeche: Vorstand legt eine Anleitung an, Mitglied darf nicht
+const STAFF = process.env.PB_STAFF_EMAIL ?? 'ausgabe@example.local'; // rollen: vorstand
+const STAFF_PW = process.env.PB_STAFF_PW ?? 'change-me-staff';
+const vorstandCookie = await anmelden(STAFF, STAFF_PW);
+// Alte Testanleitung aufraeumen (idempotent)
+try {
+  const alt = await pb.collection('anleitungen').getFirstListItem('titel="E2E-Testanleitung"');
+  await pb.collection('anleitungen').delete(alt.id);
+} catch { /* nicht vorhanden */ }
+const speichern = (cookie, felder) =>
+  fetch(`${BASE}/mitglieder/anleitungen/speichern`, {
+    method: 'POST', redirect: 'manual',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    body: new URLSearchParams(felder),
+  }).then((r) => r.headers.get('location') ?? '');
+const neuLoc = await speichern(vorstandCookie, {
+  titel: 'E2E-Testanleitung', kategorie: 'allgemein', zweck: 'Test',
+  schritte: 'Schritt eins\nSchritt zwei', hinweise: '', benoetigte_rolle: '', aktiv: 'on',
+});
+pruefe('Vorstand legt Anleitung an -> Bibliothek', neuLoc.includes('/mitglieder/anleitungen?a='), neuLoc);
+const neuId = neuLoc.split('a=')[1]?.split('#')[0];
+const gespeichert = neuId ? await pb.collection('anleitungen').getOne(neuId) : null;
+pruefe('Anleitung in DB mit 2 Schritten', gespeichert?.schritte === 'Schritt eins\nSchritt zwei', gespeichert?.schritte);
+// Bearbeiten: Titel aendern + deaktivieren
+const editLoc = await speichern(vorstandCookie, {
+  id: neuId, titel: 'E2E-Testanleitung', kategorie: 'allgemein', zweck: 'Test',
+  schritte: 'Nur noch ein Schritt', hinweise: 'Wichtig!', benoetigte_rolle: 'anbau',
+});
+pruefe('Vorstand bearbeitet Anleitung -> ok', editLoc.includes(`a=${neuId}`), editLoc);
+const nachEdit = await pb.collection('anleitungen').getOne(neuId);
+pruefe('Bearbeitung gespeichert (inaktiv + anbau)', nachEdit.aktiv === false && nachEdit.benoetigte_rolle === 'anbau', JSON.stringify({ aktiv: nachEdit.aktiv, rolle: nachEdit.benoetigte_rolle }));
+// Einfaches Mitglied darf NICHT speichern
+const evaSpeichern = await speichern(evaCookie, { titel: 'Boese', kategorie: 'allgemein', schritte: 'x' });
+pruefe('Mitglied darf nicht anlegen -> keinzugriff', evaSpeichern.includes('keinzugriff'), evaSpeichern);
+// Aufraeumen
+await pb.collection('anleitungen').delete(neuId);
 
 console.log(`\n${fehler === 0 ? 'HTTP-E2E ANLEITUNGEN BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

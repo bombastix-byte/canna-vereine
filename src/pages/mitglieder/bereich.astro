@@ -373,6 +373,9 @@ const downloadUrl = (d: Dokument) =>
   .termin__inhalt {
     display: flex;
     flex-direction: column;
+    /* Flex-Item darf schrumpfen, lange Woerter brechen um. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .termin__text {
     color: var(--ink-soft);

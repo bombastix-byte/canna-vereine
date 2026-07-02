@@ -227,6 +227,13 @@
   --nav-spacing: 0.09em;
   --eyebrow-transform: uppercase;
   --eyebrow-spacing: 0.2em;
+
+  /* Statusfarben hell genug fuer dunklen Grund */
+  --ok: #7fc795;
+  --warn: #e0a63f;
+  --warn-ink: #e0b46a;
+  --gefahr: #e08c85;
+  --gefahr-bg: rgba(224, 140, 133, 0.12);
 }
 
 /* Nacht-spezifisch: Platzhalterhinweise hell genug auf dunklem Grund */

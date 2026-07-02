@@ -551,7 +551,10 @@ thead th {
   margin-bottom: 0.4rem;
 }
 
-.feld input {
+.feld input,
+.feld select,
+.feld textarea,
+.eingabe {
   width: 100%;
   padding: 0.7rem 0.8rem;
   font-size: 1rem;
@@ -562,7 +565,10 @@ thead th {
   color: var(--ink);
 }
 
-.feld input:focus {
+.feld input:focus,
+.feld select:focus,
+.feld textarea:focus,
+.eingabe:focus {
   border-color: var(--brand);
 }
 
@@ -585,6 +591,101 @@ thead th {
 .knopf:hover {
   background: var(--brand);
   border-color: var(--brand);
+}
+
+/* ---------- Gemeinsame Bausteine (Vereinsarbeit & Mitgliederbereich) ----------
+   Einheitliche Sprache fuer alle nachgeruesteten Seiten: Statusfarben,
+   Abzeichen, Klapper, Statuskarten, Zweitknopf, Tabellen-Ausrichtung. */
+
+:root {
+  --ok: #1c7c3a;
+  --warn: #c98a00;
+  --warn-ink: #8a5a00;
+  --gefahr: #b3403a;
+  --gefahr-bg: rgba(179, 64, 58, 0.08);
+}
+
+/* Fehler-Variante des Hinweisbands (statt Inline-Styles je Seite). */
+.hinweis--fehler {
+  border-color: var(--gefahr);
+  background: var(--gefahr-bg);
+}
+
+/* Abzeichen: kleine Pille fuer Status/Rollen/Rhythmus. */
+.abzeichen {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  white-space: nowrap;
+}
+.abzeichen--ok { color: var(--ok); border-color: var(--ok); }
+.abzeichen--warn { color: var(--warn-ink); border-color: var(--warn); }
+.abzeichen--gefahr { color: var(--gefahr); border-color: var(--gefahr); }
+.abzeichen--akzent { color: var(--accent); }
+
+/* Klapper: einklappbarer Bereich fuer Seltenes/Optionales. */
+.klappe {
+  max-width: var(--mass);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  margin: 0 0 1.2rem;
+}
+.klappe summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.klappe[open] {
+  border-style: solid;
+}
+.klappe .kasten {
+  border: none;
+  padding: 0.8rem 0 0;
+  margin: 0;
+}
+
+/* Statuskarte: Infokarte mit Akzentleiste (z. B. Restmengen am Tresen). */
+.statuskarte {
+  max-width: var(--mass);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  background: var(--bg-rein);
+}
+.statuskarte--warn {
+  border-left-color: var(--warn);
+}
+
+/* Zweitknopf: ruhige Alternative neben .knopf. */
+.knopf-sek {
+  display: inline-block;
+  font: inherit;
+  text-decoration: none;
+  color: var(--ink-soft);
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+}
+.knopf-sek:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+
+/* Rechtsbuendige Zahlen-Spalten in jeder Tabelle. */
+table .r {
+  text-align: right;
 }
 
 .skip-link {

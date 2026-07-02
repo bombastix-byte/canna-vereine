@@ -2,7 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { darfDienst, TEAM_LABEL } from '../../lib/rollen';
+import { darfDienst, darfVerwalten, TEAM_LABEL } from '../../lib/rollen';
 
 // Verfahrensbibliothek: alle Arbeitsanleitungen des Vereins ("so wird es
 // gemacht"). Lesen darf jedes Mitglied - Transparenz. Ein Badge zeigt, wer
@@ -25,11 +25,13 @@ interface Anleitung {
   updated?: string;
 }
 
+// Vorstand sieht auch inaktive Anleitungen (zum Reaktivieren/Bearbeiten).
+const verwalten = darfVerwalten(mitglied.rollen);
 let anleitungen: Anleitung[] = [];
 try {
   anleitungen = (
     (await pb.collection('anleitungen').getFullList({ sort: 'kategorie,titel' })) as Anleitung[]
-  ).filter((a) => a.aktiv !== false);
+  ).filter((a) => a.aktiv !== false || verwalten);
 } catch {
   anleitungen = [];
 }
@@ -65,8 +67,15 @@ const stand = (iso?: string) =>
     bei Fragen das jeweilige Team ansprechen.
   </p>
 
+  {verwalten && (
+    <p><a class="knopf-sek" href="/mitglieder/anleitungen/pflege">＋ Neue Anleitung anlegen</a></p>
+  )}
+
   {anleitungen.length === 0 && (
-    <p style="color:var(--ink-soft);">Noch keine Anleitungen hinterlegt. Der Vorstand pflegt sie im CMS.</p>
+    <p style="color:var(--ink-soft);">
+      Noch keine Anleitungen hinterlegt.
+      {verwalten ? ' Über „Neue Anleitung anlegen" starten.' : ' Der Vorstand legt sie an.'}
+    </p>
   )}
 
   {gruppen.map((g) => (
@@ -76,8 +85,11 @@ const stand = (iso?: string) =>
         <details class="sop" id={`a-${a.id}`} open={a.id === offenId}>
           <summary>
             <span class="sop-titel">{a.titel}</span>
-            <span class:list={['sop-badge', { frei: !a.benoetigte_rolle, du: darfDienst(mitglied.rollen, a.benoetigte_rolle) && !!a.benoetigte_rolle }]}>
-              {a.benoetigte_rolle ? `nur ${TEAM_LABEL[a.benoetigte_rolle] ?? a.benoetigte_rolle}` : 'jedes Mitglied'}
+            <span class="sop-badges">
+              {a.aktiv === false && <span class="abzeichen abzeichen--gefahr">inaktiv</span>}
+              <span class:list={['abzeichen', !a.benoetigte_rolle ? null : darfDienst(mitglied.rollen, a.benoetigte_rolle) ? 'abzeichen--ok' : 'abzeichen--warn']}>
+                {a.benoetigte_rolle ? `nur ${TEAM_LABEL[a.benoetigte_rolle] ?? a.benoetigte_rolle}` : 'jedes Mitglied'}
+              </span>
             </span>
           </summary>
           {a.zweck && <p class="sop-zweck">{a.zweck}</p>}
@@ -89,6 +101,9 @@ const stand = (iso?: string) =>
           )}
           <p class="sop-stand">
             Stand: {stand(a.updated)}
+            {verwalten && (
+              <span> · <a href={`/mitglieder/anleitungen/pflege?id=${a.id}`}>Bearbeiten</a></span>
+            )}
             {a.benoetigte_rolle && !darfDienst(mitglied.rollen, a.benoetigte_rolle) && (
               <span> · Du darfst diese Aufgabe derzeit nicht ausführen — sprich den Vorstand an, wenn du sie übernehmen möchtest.</span>
             )}
@@ -126,24 +141,10 @@ const stand = (iso?: string) =>
     font-family: var(--font-display);
     font-size: 1.05rem;
   }
-  .sop-badge {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border: 1px solid #c98a00;
-    color: #8a5a00;
-    border-radius: 999px;
-    padding: 0.12rem 0.55rem;
-    white-space: nowrap;
-  }
-  .sop-badge.frei {
-    border-color: var(--line);
-    color: var(--ink-soft);
-  }
-  .sop-badge.du {
-    border-color: #1c7c3a;
-    color: #1c7c3a;
+  .sop-badges {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
   }
   .sop-zweck {
     margin: 0.8rem 0 0.4rem;
@@ -157,7 +158,7 @@ const stand = (iso?: string) =>
     margin: 0 0 0.45rem;
   }
   .sop-hinweis {
-    border-left: 3px solid #c98a00;
+    border-left: 3px solid var(--warn);
     padding: 0.5rem 0.8rem;
     background: var(--line-soft);
     border-radius: 0 var(--radius) var(--radius) 0;

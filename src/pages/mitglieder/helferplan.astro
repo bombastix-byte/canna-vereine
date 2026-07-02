@@ -93,7 +93,7 @@ const meinAm = (id: string, tag: Date) =>
   </p>
 
   {meldung && (
-    <p class="hinweis" role="alert" style="border-color:#d99;background:rgba(180,60,60,0.12);">{meldung}</p>
+    <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>
   )}
   {ok && !erstesmalDienst && <p class="hinweis" role="status">Danke, deine Eintragung wurde gespeichert.</p>}
   {aus && <p class="hinweis" role="status">Du wurdest aus dem Dienst ausgetragen.</p>}
@@ -253,8 +253,8 @@ const meinAm = (id: string, tag: Date) =>
     margin: 0.4rem 0 0;
   }
   .dienst__tag--rolle {
-    color: #8a5a00;
-    border-color: #c98a00;
+    color: var(--warn-ink);
+    border-color: var(--warn);
   }
   .dienst__sop {
     color: var(--accent);

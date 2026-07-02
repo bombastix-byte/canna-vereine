@@ -135,7 +135,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
   </p>
 
   {fehler && msg && (
-    <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;"><strong>Nicht gebucht:</strong> {msg}</p>
+    <p class="hinweis hinweis--fehler" role="alert"><strong>Nicht gebucht:</strong> {msg}</p>
   )}
 
   <section class="schritt" aria-label="Schritt 1">
@@ -153,7 +153,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
       </div>
 
       {gewaehlt && status && (
-        <div class:list={['statuskarte', { warn: status.u21 }]}>
+        <div class:list={['statuskarte', { 'statuskarte--warn': status.u21 }]}>
           <div class="sk-kopf">
             <strong>{mnr(gewaehlt)}</strong>
             {status.alter != null ? (
@@ -214,16 +214,16 @@ const schnellMengen = [1, 2, 3, 5, 10];
               {schnellMengen.filter((g) => g <= status.restJetzt).map((g) => (
                 <button type="button" class="menge-knopf" data-g={g}>{g} g</button>
               ))}
-              <input id="menge_1" name="menge_1" type="number" inputmode="decimal"
+              <input class="eingabe" id="menge_1" name="menge_1" type="number" inputmode="decimal"
                 min="0.1" step="0.1" max={status.restJetzt} required placeholder="frei" />
             </div>
           </div>
 
-          <details class="mehr-det">
+          <details class="klappe" style="margin-bottom:0.9rem;">
             <summary>＋ weitere Sorte mitgeben (bis zu 3 zusätzlich)</summary>
             {[2, 3, 4].map((i) => (
               <div class="pos-zeile">
-                <select name={`charge_${i}`} aria-label={`Sorte Position ${i}`}>
+                <select class="eingabe" name={`charge_${i}`} aria-label={`Sorte Position ${i}`}>
                   <option value="">— Sorte {i} (optional) —</option>
                   {chargen.map((c) => (
                     <option value={c.id} disabled={chargeGesperrt(c)}>
@@ -231,7 +231,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
                     </option>
                   ))}
                 </select>
-                <input name={`menge_${i}`} aria-label={`Menge Position ${i} in Gramm`} type="number"
+                <input class="eingabe" name={`menge_${i}`} aria-label={`Menge Position ${i} in Gramm`} type="number"
                   inputmode="decimal" min="0.1" step="0.1" max={status.restJetzt} placeholder="g" />
               </div>
             ))}
@@ -331,17 +331,6 @@ const schnellMengen = [1, 2, 3, 5, 10];
     font-size: 0.95rem;
     font-weight: 700;
   }
-  .statuskarte {
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 1rem 1.2rem;
-    margin: 1rem 0 0;
-    background: var(--bg-rein);
-  }
-  .statuskarte.warn {
-    border-left-color: #c98a00;
-  }
   .sk-kopf {
     display: flex;
     justify-content: space-between;
@@ -354,7 +343,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
     font-size: 0.92rem;
   }
   .sk-fehlt {
-    color: #c0392b;
+    color: var(--gefahr);
     font-weight: 600;
   }
   .sk-gross {
@@ -388,11 +377,11 @@ const schnellMengen = [1, 2, 3, 5, 10];
   }
   .sk-warn {
     margin: 0.7rem 0 0;
-    color: #8a5a00;
+    color: var(--warn-ink);
     font-size: 0.92rem;
   }
   .sk-stop {
-    color: #c0392b;
+    color: var(--gefahr);
     font-weight: 600;
   }
   .mengenreihe {
@@ -422,20 +411,6 @@ const schnellMengen = [1, 2, 3, 5, 10];
     width: 7rem;
     flex: none;
   }
-  .mehr-det {
-    margin: 0 0 0.9rem;
-    border: 1px dashed var(--line);
-    border-radius: var(--radius);
-    padding: 0.6rem 0.9rem;
-  }
-  .mehr-det summary {
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-  .mehr-det[open] {
-    border-style: solid;
-  }
   .pos-zeile {
     display: flex;
     gap: 0.5rem;
@@ -444,6 +419,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
   .pos-zeile select {
     flex: 1 1 auto;
     min-width: 0;
+    width: auto;
   }
   .pos-zeile input {
     width: 5.5rem;
@@ -452,32 +428,5 @@ const schnellMengen = [1, 2, 3, 5, 10];
   .beitrag-zeile {
     margin: 0.6rem 0 0;
     font-size: 0.95rem;
-  }
-  .tabelle {
-    width: 100%;
-    max-width: var(--mass);
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-  .tabelle th,
-  .tabelle td {
-    text-align: left;
-    padding: 0.5rem 0.6rem;
-    border-bottom: 1px solid var(--line);
-  }
-  .tabelle .r {
-    text-align: right;
-  }
-  select,
-  .mengenreihe input {
-    padding: 0.6rem 0.7rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--bg-rein);
-    color: var(--ink);
-    font: inherit;
-  }
-  select {
-    width: 100%;
   }
 </style>

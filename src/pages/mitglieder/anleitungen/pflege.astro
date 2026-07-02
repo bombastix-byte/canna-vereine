@@ -1,0 +1,138 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten, TEAM_LABEL } from '../../../lib/rollen';
+
+// Pflege-Oberflaeche fuer Anleitungen: anlegen und bearbeiten, ohne CMS.
+// Nur Vorstand. Ein Schritt pro Zeile - so bleibt die Pflege so einfach
+// wie ein Zettel.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface Anleitung {
+  id: string;
+  titel: string;
+  kategorie?: string;
+  zweck?: string;
+  schritte: string;
+  hinweise?: string;
+  benoetigte_rolle?: string;
+  aktiv?: boolean;
+}
+
+// Bearbeiten (?id=...) oder Neuanlage (ohne id).
+const id = Astro.url.searchParams.get('id') ?? '';
+let a: Anleitung | null = null;
+if (id) {
+  try {
+    a = (await pb.collection('anleitungen').getOne(id)) as Anleitung;
+  } catch {
+    return Astro.redirect('/mitglieder/anleitungen', 303);
+  }
+}
+
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  fehlend: 'Bitte mindestens Titel und Schritte ausfüllen.',
+  fehlgeschlagen: 'Speichern fehlgeschlagen. Bitte erneut versuchen.',
+};
+const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
+
+const KATEGORIEN: Array<[string, string]> = [
+  ['anbau', 'Anbau und Pflege'],
+  ['ernte', 'Ernte und Trocknung'],
+  ['lager', 'Lager und Bestand'],
+  ['ausgabe', 'Ausgabe'],
+  ['allgemein', 'Allgemeines'],
+];
+---
+
+<Basis titel={a ? `Anleitung bearbeiten` : 'Neue Anleitung'} beschreibung="Anleitung anlegen oder bearbeiten.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <h1 style="margin-bottom:0.4rem;">{a ? `„${a.titel}" bearbeiten` : 'Neue Anleitung'}</h1>
+  <p class="einleitung">
+    Schreib die Anleitung so, dass jemand sie beim ersten Mal alleine schafft:
+    ein Schritt pro Zeile, kurze Sätze, Wichtiges in den Hinweis.
+  </p>
+
+  {meldung && <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>}
+
+  <form class="kasten" method="post" action="/mitglieder/anleitungen/speichern">
+    {a && <input type="hidden" name="id" value={a.id} />}
+    <div class="feld">
+      <label for="titel">Titel</label>
+      <input id="titel" name="titel" type="text" required value={a?.titel ?? ''} placeholder="z. B. Gießen" />
+    </div>
+    <div class="zeile">
+      <div class="feld">
+        <label for="kategorie">Kategorie</label>
+        <select id="kategorie" name="kategorie">
+          {KATEGORIEN.map(([wert, label]) => (
+            <option value={wert} selected={(a?.kategorie ?? 'allgemein') === wert}>{label}</option>
+          ))}
+        </select>
+      </div>
+      <div class="feld">
+        <label for="benoetigte_rolle">Wer darf das ausführen?</label>
+        <select id="benoetigte_rolle" name="benoetigte_rolle">
+          <option value="" selected={!a?.benoetigte_rolle}>Jedes Mitglied</option>
+          {Object.entries(TEAM_LABEL).map(([wert, label]) => (
+            <option value={wert} selected={a?.benoetigte_rolle === wert}>nur {label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+    <div class="feld">
+      <label for="zweck">Zweck (1–2 Sätze: wofür ist das Verfahren da?)</label>
+      <input id="zweck" name="zweck" type="text" value={a?.zweck ?? ''} placeholder="z. B. Pflanzen gleichmäßig versorgen, ohne Staunässe." />
+    </div>
+    <div class="feld">
+      <label for="schritte">Schritte — ein Schritt pro Zeile</label>
+      <textarea id="schritte" name="schritte" rows="10" required placeholder={'Gießplan prüfen\nWasser auf Zimmertemperatur\n…'}>{a?.schritte ?? ''}</textarea>
+    </div>
+    <div class="feld">
+      <label for="hinweise">Wichtig-Hinweis (Sicherheit, häufige Fehler — optional)</label>
+      <textarea id="hinweise" name="hinweise" rows="3">{a?.hinweise ?? ''}</textarea>
+    </div>
+    <label class="chk">
+      <input type="checkbox" name="aktiv" checked={a ? a.aktiv !== false : true} />
+      Aktiv (erscheint in der Bibliothek)
+    </label>
+    <div class="aktionen">
+      <button class="knopf" type="submit">{a ? 'Änderungen speichern' : 'Anleitung anlegen'}</button>
+      <a class="knopf-sek" href="/mitglieder/anleitungen">Abbrechen</a>
+    </div>
+  </form>
+</Basis>
+
+<style>
+  .zeile {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .zeile .feld {
+    flex: 1 1 14rem;
+  }
+  .chk {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1.1rem;
+  }
+  .chk input {
+    width: auto;
+  }
+  .aktionen {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+</style>

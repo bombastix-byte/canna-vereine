@@ -60,7 +60,7 @@ const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '
     {limitFuer('samen')} Samen oder {limitFuer('stecklinge')} Stecklinge. Wird beim Buchen automatisch geprüft.
   </p>
 
-  {fehler && msg && <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{msg}</p>}
+  {fehler && msg && <p class="hinweis hinweis--fehler" role="alert">{msg}</p>}
   {ok && <p class="hinweis" role="status">Weitergabe gebucht.</p>}
 
   <form class="kasten" method="get" action="/mitglieder/vermehrung" style="margin-bottom:1rem;">
@@ -124,12 +124,8 @@ const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '
 </Basis>
 
 <style>
-  select, .feld input { width: 100%; padding: 0.6rem 0.7rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
   .doppel { display: flex; gap: 1rem; flex-wrap: wrap; }
   .doppel .feld { flex: 1 1 12rem; }
   .feld input:disabled { opacity: 0.5; }
-  .statuskarte { max-width: var(--mass); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.2rem; margin: 0 0 1rem; background: var(--bg-rein); }
   .sk-zeile { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; border-top: 1px solid var(--line); margin-top: 0.4rem; }
-  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; }
-  .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
 </style>
