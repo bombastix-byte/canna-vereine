@@ -13,7 +13,13 @@ Astro-5 + PocketBase-Stack. Deckt die vollständige KCanG-Kette ab.
 | `ausgabe/beleg/[id]` | ausgabe / eigenes | Beleg/Beipackzettel: OS-Druck + ZPL an Etikettendrucker |
 | `vermehrung` | ausgabe, vorstand | Samen/Stecklinge (7/5 pro Monat) |
 | `jahresmeldung` | vorstand, praevention | Aggregat für die Behördenmeldung |
-| `verwaltung` | vorstand | Mitglieder & Rollen pflegen |
+| `verwaltung` | vorstand | Mitglieder & Rollen pflegen (inkl. Beitrag bezahlt bis) |
+| `antraege` | vorstand | Beitrittsanträge & Warteliste; Aufnehmen legt Mitgliedskonto an |
+| `ausweis` | alle | Digitaler Mitgliedsausweis mit QR (Tresen-Scan) |
+| `exporte/[art]` | vorstand, praevention | CSV: jahresmeldung, abgaben, vernichtungen, transporte (?jahr=) |
+| `wawi/transport/[id]` | anbau, ausgabe, vorstand | Druckbare Transportbescheinigung (§ 22 KCanG) |
+
+Öffentlich: `/mitglied-werden` — Beitrittsantrag (Honeypot, ab 18), landet in `antraege`.
 
 ## Rollen
 `mitglied · ausgabe · anbau · praevention · vorstand` (Mehrfach; Vorstand = Vollzugriff).
@@ -38,6 +44,7 @@ node --env-file=.env scripts/seed-ausgabe.mjs    # Sorten, Abgabe, Rollen (rolle
 node --env-file=.env scripts/seed-wawi.mjs       # rollen-Migration, Chargen, Vernichtung
 node --env-file=.env scripts/seed-erweiterung.mjs# Vermehrung, Vorstand-Schreibrecht
 node --env-file=.env scripts/seed-anleitungen.mjs# Verfahrensbibliothek + Dienst-Verknuepfung
+node --env-file=.env scripts/seed-augenhoehe.mjs # Transporte, Antraege, Labor-Felder, beitrag_bis
 node --env-file=.env scripts/seed-dummies.mjs    # optionale Testmitglieder
 node --env-file=.env scripts/import-mitglieder.mjs data/mitglieder.csv  # echte Mitglieder
 ```
