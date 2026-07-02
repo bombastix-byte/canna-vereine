@@ -1,7 +1,7 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
-import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
 import { darfAnbau } from '../../lib/rollen';
 import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } from '../../lib/wawi';
 import { berlinTag } from '../../lib/ausgabe';
@@ -18,6 +18,7 @@ if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehl
 interface Sorte { id: string; name: string; thc_prozent?: number; cbd_prozent?: number }
 interface Charge {
   id: string;
+  collectionId: string;
   charge_nr?: string;
   sorte_name?: string;
   status?: string;
@@ -31,6 +32,8 @@ interface Charge {
   thc_prozent?: number;
   cbd_prozent?: number;
   standort?: string;
+  coa?: string;
+  testergebnis_url?: string;
 }
 interface Vernichtung {
   id: string;
@@ -50,9 +53,22 @@ async function ladeListe<T>(collection: string, opts: Record<string, unknown> = 
   }
 }
 
+interface Transport {
+  id: string;
+  charge_nr?: string;
+  sorte_name?: string;
+  menge_gramm: number;
+  von?: string;
+  nach?: string;
+  datum?: string;
+  person_name?: string;
+  belegnr?: string;
+}
+
 const sorten = await ladeListe<Sorte>('sorten', { sort: 'name' });
 const alleChargen = await ladeListe<Charge>('chargen', { sort: 'sorte_name,charge_nr' });
 const vernichtungen = await ladeListe<Vernichtung>('vernichtungen', { sort: '-created' });
+const transporte = await ladeListe<Transport>('transporte', { sort: '-created' });
 
 // Arbeitslogische Reihenfolge statt alphabetischem Status: erst was im Anbau
 // ist, dann Trocknung, dann abgebbar. Erledigtes (aufgebraucht/gesperrt)
@@ -87,6 +103,7 @@ const oktext: Record<string, string> = {
   freigabe: 'Charge freigegeben – jetzt am Tresen abgebbar.',
   sperren: 'Charge gesperrt.',
   vernichtet: 'Vernichtung dokumentiert.',
+  labor: 'Laborunterlagen gespeichert.',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
@@ -195,6 +212,11 @@ const statusVariante: Record<string, string> = {
           </span>
           <span>Verfügbar: <strong>{g(c.verfuegbar_g)}</strong></span>
           <span>THC/CBD: {c.thc_prozent ?? '—'} % / {c.cbd_prozent ?? '—'} %</span>
+          <span>
+            Labor:
+            {c.coa ? <a href={dateiUrl(c as { collectionId: string; id: string }, c.coa)} target="_blank" rel="noopener"> Zertifikat</a> : ' —'}
+            {c.testergebnis_url && <> · <a href={c.testergebnis_url} target="_blank" rel="noopener">Testergebnis</a></>}
+          </span>
         </div>
 
         {moeglicheAktionen(c.status).length > 0 && (
@@ -239,6 +261,28 @@ const statusVariante: Record<string, string> = {
               </form>
             )}
 
+            <form class="aktion" method="post" action="/mitglieder/wawi/transport">
+              <input type="hidden" name="charge" value={c.id} />
+              <strong>Transport dokumentieren (§ 22 KCanG)</strong>
+              <label>Menge (g)<input name="menge_gramm" type="number" min="0.1" step="0.1" required /></label>
+              <label>Von<input name="von" type="text" required placeholder="z. B. Anbaustätte, Anschrift" /></label>
+              <label>Nach<input name="nach" type="text" required placeholder="z. B. Ausgabestelle, Anschrift" /></label>
+              <label>Zweck (optional)<input name="zweck" type="text" placeholder="z. B. Umlagerung zur Ausgabe" /></label>
+              <button class="knopf" type="submit">Bescheinigung erstellen</button>
+            </form>
+
+            <form class="aktion" method="post" action="/mitglieder/wawi/labor" enctype="multipart/form-data">
+              <input type="hidden" name="charge" value={c.id} />
+              <strong>Laborunterlagen hinterlegen</strong>
+              <label>Zertifikat (PDF/Bild){c.coa && <span style="color:var(--ink-soft);"> — ersetzt das vorhandene</span>}
+                <input name="coa" type="file" accept=".pdf,image/*" />
+              </label>
+              <label>Link zu eigenen Testergebnissen (z. B. Mess-App)
+                <input name="testergebnis_url" type="url" value={c.testergebnis_url ?? ''} placeholder="https://…" />
+              </label>
+              <button class="knopf" type="submit">Speichern</button>
+            </form>
+
             {moeglicheAktionen(c.status).includes('sperren') && (
               <form class="aktion" method="post" action="/mitglieder/wawi/aktion">
                 <input type="hidden" name="charge" value={c.id} />
@@ -270,6 +314,25 @@ const statusVariante: Record<string, string> = {
         </tbody>
       </table>
     </details>
+  )}
+
+  <h2>Transporte</h2>
+  {transporte.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine Transporte dokumentiert.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Datum</th><th>Charge</th><th>Sorte</th><th class="r">Menge</th><th>Strecke</th><th>Bescheinigung</th></tr></thead>
+      <tbody>
+        {transporte.map((t) => (
+          <tr>
+            <td>{t.datum}</td><td>{t.charge_nr}</td><td>{t.sorte_name}</td>
+            <td class="r">{t.menge_gramm} g</td>
+            <td>{t.von} → {t.nach}</td>
+            <td><a href={`/mitglieder/wawi/transport/${t.id}`}>{t.belegnr || 'öffnen'}</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )}
 
   <h2>Vernichtungen</h2>

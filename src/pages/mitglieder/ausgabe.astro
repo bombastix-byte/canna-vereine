@@ -34,6 +34,7 @@ interface UserRow {
   email: string;
   mitgliedsnummer?: string;
   geburtsdatum?: string;
+  beitrag_bis?: string;
 }
 interface ChargeRow {
   id: string;
@@ -79,8 +80,18 @@ const fehler = Astro.url.searchParams.get('fehler');
 const msg = Astro.url.searchParams.get('msg');
 
 // Status eines ausgewaehlten Mitglieds (fuer die Restmengen-Anzeige).
-const gewaehltId = Astro.url.searchParams.get('mitglied') ?? '';
+// Auswahl per Dropdown (?mitglied=id) ODER Schnellfeld/Scanner (?nr=M-101).
+const nrParam = Astro.url.searchParams.get('nr')?.trim() ?? '';
+const perNr = nrParam
+  ? mitglieder.find((m) => (m.mitgliedsnummer ?? '').toLowerCase() === nrParam.toLowerCase()) ?? null
+  : null;
+const gewaehltId = perNr?.id ?? (Astro.url.searchParams.get('mitglied') ?? '');
 const gewaehlt = mitglieder.find((m) => m.id === gewaehltId) ?? null;
+const nrNichtGefunden = !!nrParam && !perNr;
+
+// Beitragsstatus: nur Hinweis am Tresen, kein Abgabe-Block (Vereinsentscheidung).
+const beitragOffen = (m: UserRow) =>
+  !m.beitrag_bis || m.beitrag_bis.slice(0, 10) < tag;
 let status: null | {
   u21: boolean;
   alter: number | null;
@@ -140,9 +151,18 @@ const schnellMengen = [1, 2, 3, 5, 10];
 
   <section class="schritt" aria-label="Schritt 1">
     <h2 class="schritt-titel"><span class="snr">1</span> Mitglied wählen</h2>
+    <form class="kasten" method="get" action="/mitglieder/ausgabe" style="margin-bottom:0.8rem;">
+      <div class="feld">
+        <label for="nr">Schnell: Mitgliedsnummer (tippen oder Ausweis scannen)</label>
+        <input class="eingabe" id="nr" name="nr" type="text" inputmode="text"
+          placeholder="z. B. M-101" value={nrParam} autocomplete="off" />
+      </div>
+      <button class="knopf" type="submit">Laden</button>
+      {nrNichtGefunden && <p style="color:var(--gefahr);font-size:0.92rem;margin:0.6rem 0 0;">Nummer „{nrParam}" nicht gefunden.</p>}
+    </form>
     <form class="kasten" method="get" action="/mitglieder/ausgabe">
       <div class="feld">
-        <label for="mitglied-sel">Mitglied (Nummer oder Name)</label>
+        <label for="mitglied-sel">…oder aus der Liste wählen</label>
         <select id="mitglied-sel" name="mitglied" onchange="this.form.submit()">
           <option value="">— bitte wählen —</option>
           {mitglieder.map((m) => (
@@ -178,6 +198,9 @@ const schnellMengen = [1, 2, 3, 5, 10];
           </div>
           {status.u21 && (
             <p class="sk-warn">Unter 21: nur Sorten bis {U21_MAX_THC} % THC — stärkere sind unten ausgegraut.</p>
+          )}
+          {beitragOffen(gewaehlt) && (
+            <p class="sk-warn">Beitragsstatus: {gewaehlt.beitrag_bis ? `bezahlt bis ${gewaehlt.beitrag_bis.slice(0, 10)}` : 'kein Eintrag'} — bitte an der Kasse klären.</p>
           )}
           {status.restJetzt === 0 && (
             <p class="sk-warn sk-stop">Limit erreicht — heute keine Abgabe mehr an dieses Mitglied möglich.</p>

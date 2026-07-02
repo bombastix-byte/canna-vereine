@@ -15,6 +15,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const id = String(daten.get('mitglied') ?? '').trim();
   const mitgliedsnummer = String(daten.get('mitgliedsnummer') ?? '').trim();
   const geburtsdatum = String(daten.get('geburtsdatum') ?? '').trim();
+  const beitragBis = String(daten.get('beitrag_bis') ?? '').trim();
   const rollen = daten
     .getAll('rollen')
     .map((r) => String(r))
@@ -26,6 +27,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     await pb.collection('users').update(id, {
       mitgliedsnummer,
       geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
+      beitrag_bis: beitragBis ? `${beitragBis} 00:00:00.000Z` : null,
       rollen: rollen.length ? rollen : ['mitglied'],
     });
   } catch {

@@ -18,6 +18,7 @@ interface UserRow {
   email: string;
   mitgliedsnummer?: string;
   geburtsdatum?: string;
+  beitrag_bis?: string;
   rollen?: string[];
 }
 let mitglieder: UserRow[] = [];
@@ -56,6 +57,7 @@ const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
       <div class="mrow-felder">
         <label>Mitgliedsnr.<input name="mitgliedsnummer" type="text" value={m.mitgliedsnummer ?? ''} /></label>
         <label>Geburtsdatum<input name="geburtsdatum" type="date" value={isoTag(m.geburtsdatum)} /></label>
+        <label>Beitrag bezahlt bis<input name="beitrag_bis" type="date" value={isoTag(m.beitrag_bis)} /></label>
       </div>
       <fieldset class="mrow-rollen">
         <legend>Rollen</legend>

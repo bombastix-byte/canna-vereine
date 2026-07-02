@@ -1,0 +1,87 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { site } from '../config';
+
+// Oeffentlicher Beitrittsantrag. Bewusst nuechtern (KCanG Paragraf 6: keine
+// Werbung) - reine Sachinformation zum Aufnahmeverfahren plus Formular.
+// Antraege landen in der Warteliste des Vorstands.
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  fehlend: 'Bitte Name, E-Mail-Adresse und Geburtsdatum angeben.',
+  alter: 'Eine Mitgliedschaft ist erst ab 18 Jahren möglich.',
+  fehlgeschlagen: 'Der Antrag konnte nicht übermittelt werden. Bitte erneut versuchen.',
+};
+const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
+---
+
+<Basis titel="Mitglied werden" beschreibung="Sachinformationen zum Aufnahmeverfahren der Vereinigung.">
+  <div class="seitenkopf">
+    <p class="eyebrow">Aufnahme</p>
+    <h1>Mitglied werden</h1>
+    <p class="einleitung">
+      Die Mitgliedschaft in der {site.vereinsname} ist ab 18 Jahren möglich und
+      setzt einen Wohnsitz oder gewöhnlichen Aufenthalt in Deutschland voraus.
+      Über die Aufnahme entscheidet der Vorstand nach der Satzung; bei
+      ausgeschöpfter Kapazität führt die Vereinigung eine Warteliste.
+    </p>
+  </div>
+
+  {ok ? (
+    <div class="hinweis" role="status">
+      <strong>Ihr Antrag ist eingegangen.</strong> Der Vorstand meldet sich unter
+      der angegebenen E-Mail-Adresse. Bei ausgeschöpfter Kapazität werden Sie auf
+      die Warteliste gesetzt und informiert, sobald ein Platz frei wird.
+    </div>
+  ) : (
+    <>
+      {meldung && <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>}
+
+      <form class="kasten" method="post" action="/mitglied-werden/absenden">
+        <div class="feld">
+          <label for="name">Vor- und Nachname</label>
+          <input id="name" name="name" type="text" required autocomplete="name" />
+        </div>
+        <div class="feld">
+          <label for="email">E-Mail-Adresse</label>
+          <input id="email" name="email" type="email" required autocomplete="email" />
+        </div>
+        <div class="feld">
+          <label for="geburtsdatum">Geburtsdatum</label>
+          <input id="geburtsdatum" name="geburtsdatum" type="date" required />
+        </div>
+        <div class="feld">
+          <label for="telefon">Telefon (optional)</label>
+          <input id="telefon" name="telefon" type="tel" autocomplete="tel" />
+        </div>
+        <div class="feld">
+          <label for="nachricht">Nachricht an den Vorstand (optional)</label>
+          <textarea id="nachricht" name="nachricht" rows="3"></textarea>
+        </div>
+        <!-- Honeypot gegen automatisierte Eintraege; bleibt fuer Menschen unsichtbar. -->
+        <div class="hp" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+        <button class="knopf" type="submit">Antrag senden</button>
+      </form>
+
+      <p style="color:var(--ink-soft);font-size:0.95rem;max-width:var(--mass);">
+        Mit dem Absenden willigen Sie ein, dass die Vereinigung Ihre Angaben zur
+        Bearbeitung des Aufnahmeantrags speichert. Einzelheiten in der
+        <a href="/datenschutz">Datenschutzerklärung</a>.
+      </p>
+    </>
+  )}
+</Basis>
+
+<style>
+  .hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+</style>

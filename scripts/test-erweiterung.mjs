@@ -4,6 +4,7 @@ import { aggregiereJahr } from '../src/lib/jahresmeldung.ts';
 import { pruefeVermehrung } from '../src/lib/vermehrung.ts';
 import { belegZpl } from '../src/lib/zpl.ts';
 import { darfDienst } from '../src/lib/rollen.ts';
+import { csvFeld, csvText } from '../src/lib/csv.ts';
 
 let fehler = 0;
 function pruefe(name, ist, soll) {
@@ -69,6 +70,14 @@ pruefe('anbau-Dienst ohne Rolle -> nein', darfDienst(['mitglied'], 'anbau'), fal
 pruefe('anbau-Dienst mit Rolle anbau -> ja', darfDienst(['mitglied', 'anbau'], 'anbau'), true);
 pruefe('anbau-Dienst als Vorstand -> ja', darfDienst(['vorstand'], 'anbau'), true);
 pruefe('ausgabe-Dienst mit nur anbau -> nein', darfDienst(['anbau'], 'ausgabe'), false);
+
+// --- CSV-Export-Helfer ---
+pruefe('CSV: einfaches Feld unveraendert', csvFeld('Northern Lights'), 'Northern Lights');
+pruefe('CSV: Semikolon wird gequotet', csvFeld('a;b'), '"a;b"');
+pruefe('CSV: Anfuehrungszeichen verdoppelt', csvFeld('sagt "hi"'), '"sagt ""hi"""');
+pruefe('CSV: Zeilenumbruch gequotet', csvFeld('a\nb'), '"a\nb"');
+pruefe('CSV: null wird leer', csvFeld(null), '');
+pruefeWahr('CSV: Text mit BOM + CRLF', csvText([['a', 'b'], [1, 2]]).endsWith('a;b\r\n1;2\r\n'));
 
 console.log(`\n${fehler === 0 ? 'ALLE ERWEITERUNGS-TESTS BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

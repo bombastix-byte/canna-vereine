@@ -1,0 +1,159 @@
+---
+import Basis from '../../../../layouts/Basis.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
+import { darfAnbau, darfAusgeben } from '../../../../lib/rollen';
+import { site } from '../../../../config';
+
+// Druckbare Transportbescheinigung (Paragraf 22 Abs. 3 KCanG): beim Transport
+// mitzufuehren. Enthaelt Vereinigung, Charge, Menge, Strecke, Person, Datum.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen) && !darfAusgeben(mitglied.rollen)) {
+  return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+}
+
+const { id } = Astro.params;
+let t;
+try {
+  t = await pb.collection('transporte').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/wawi', 303);
+}
+
+const neu = Astro.url.searchParams.get('neu');
+const datum = (s?: string) =>
+  s ? new Date(s.length === 10 ? s + 'T00:00:00Z' : s).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+---
+
+<Basis titel={`Transportbescheinigung ${t.belegnr ?? ''}`} beschreibung="Transportbescheinigung nach Paragraf 22 KCanG.">
+  {neu && (
+    <p class="hinweis" role="status" style="max-width:var(--mass);">
+      Transport dokumentiert. Bescheinigung drucken und beim Transport mitführen.
+    </p>
+  )}
+
+  <div class="aktionen">
+    <button class="knopf" type="button" onclick="window.print()">Bescheinigung drucken</button>
+    <a class="knopf-sek" href="/mitglieder/wawi">Zurück zur Warenwirtschaft</a>
+  </div>
+
+  <div class="schein">
+    <p class="schein-titel">Transportbescheinigung</p>
+    <p class="schein-untertitel">nach § 22 Abs. 3 Konsumcannabisgesetz (KCanG)</p>
+
+    <table class="schein-tab">
+      <tbody>
+        <tr><td>Anbauvereinigung</td><td><strong>{site.vereinsname}</strong><br />{site.kontakt.strasse}, {site.kontakt.plz} {site.kontakt.ort}</td></tr>
+        {site.erlaubnisHinweis && <tr><td>Erlaubnis</td><td>{site.erlaubnisHinweis}</td></tr>}
+        <tr><td>Bescheinigungs-Nr.</td><td>{t.belegnr}</td></tr>
+        <tr><td>Datum</td><td>{datum(t.datum)}</td></tr>
+        <tr><td>Sorte / Charge</td><td>{t.sorte_name} · Charge {t.charge_nr}</td></tr>
+        <tr><td>Menge</td><td><strong>{t.menge_gramm} g</strong></td></tr>
+        <tr><td>Von</td><td>{t.von}</td></tr>
+        <tr><td>Nach</td><td>{t.nach}</td></tr>
+        {t.zweck && <tr><td>Zweck</td><td>{t.zweck}</td></tr>}
+        <tr><td>Transportierende Person</td><td>{t.person_name}</td></tr>
+      </tbody>
+    </table>
+
+    <p class="schein-fuss">
+      Der Transport erfolgt im Rahmen des gemeinschaftlichen Eigenanbaus der
+      Vereinigung. Diese Bescheinigung ist während des Transports mitzuführen
+      und auf Verlangen vorzuzeigen.
+    </p>
+
+    <div class="unterschrift">
+      <span>Ort, Datum</span>
+      <span>Unterschrift der transportierenden Person</span>
+    </div>
+  </div>
+</Basis>
+
+<style>
+  .aktionen {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 1rem 0 1.4rem;
+    max-width: var(--mass);
+  }
+  .schein {
+    max-width: 34rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.6rem;
+    background: var(--bg-rein);
+  }
+  .schein-titel {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .schein-untertitel {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    margin: 0.2rem 0 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .schein-tab {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .schein-tab td {
+    padding: 0.4rem 0;
+    vertical-align: top;
+    border-bottom: 1px solid var(--line);
+  }
+  .schein-tab td:first-child {
+    color: var(--ink-soft);
+    width: 38%;
+    padding-right: 0.8rem;
+  }
+  .schein-fuss {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 1rem 0 2.2rem;
+  }
+  .unterschrift {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+  .unterschrift span {
+    flex: 1;
+    border-top: 1px solid var(--ink);
+    padding-top: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  @media print {
+    :global(body *) {
+      visibility: hidden;
+    }
+    .schein,
+    .schein * {
+      visibility: visible;
+    }
+    .schein {
+      position: absolute;
+      top: 0;
+      left: 0;
+      border: none;
+      padding: 0;
+      max-width: none;
+      width: 100%;
+    }
+    .aktionen {
+      display: none;
+    }
+  }
+</style>

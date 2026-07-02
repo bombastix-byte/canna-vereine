@@ -58,6 +58,14 @@ const w = aggregiereJahr(jahr, {
     <button class="jahr-knopf" type="button" onclick="window.print()">Drucken</button>
   </div>
 
+  <p class="exporte">
+    CSV-Exporte {jahr} (pseudonymisiert, für Behörde/Ablage):
+    <a href={`/mitglieder/exporte/jahresmeldung?jahr=${jahr}`}>Jahresmeldung</a> ·
+    <a href={`/mitglieder/exporte/abgaben?jahr=${jahr}`}>Abgabe-Protokoll</a> ·
+    <a href={`/mitglieder/exporte/vernichtungen?jahr=${jahr}`}>Vernichtungen</a> ·
+    <a href={`/mitglieder/exporte/transporte?jahr=${jahr}`}>Transporte</a>
+  </p>
+
   <div class="bericht">
     <div class="bericht-kopf">
       <strong>{site.vereinsname}</strong>
@@ -88,6 +96,7 @@ const w = aggregiereJahr(jahr, {
     padding: 0.4rem 0.9rem; border: 1px solid var(--line); border-radius: var(--radius); background: none;
   }
   .jahr-knopf.aktiv { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+  .exporte { max-width: var(--mass); color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 1.2rem; }
   .bericht { max-width: 34rem; border: 1px solid var(--line); border-radius: var(--radius); padding: 1.2rem 1.3rem; background: var(--bg-rein); }
   .bericht-kopf { display: flex; flex-direction: column; gap: 0.15rem; padding-bottom: 0.7rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
   .tabelle { width: 100%; border-collapse: collapse; }

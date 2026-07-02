@@ -1,0 +1,92 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import QRCode from 'qrcode-svg';
+import { site } from '../../config';
+
+// Digitaler Mitgliedsausweis: Name, Mitgliedsnummer und QR-Code (Inhalt =
+// Mitgliedsnummer). Am Tresen wird der QR ins Schnellfeld gescannt - das
+// Mitglied ist sofort ausgewaehlt. Funktioniert mit jedem USB-/Kamera-Scanner.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { mitglied } = ergebnis;
+
+const nummer = mitglied.mitgliedsnummer ?? '';
+const qrSvg = nummer
+  ? new QRCode({ content: nummer, width: 220, height: 220, padding: 2, ecl: 'M', join: true }).svg()
+  : '';
+---
+
+<Basis titel="Mitgliedsausweis" beschreibung="Digitaler Mitgliedsausweis mit QR-Code.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Mitgliedsausweis</h1>
+  <p class="einleitung">
+    Zeig diesen Ausweis am Tresen — der QR-Code wird gescannt und du bist
+    sofort ausgewählt. Ein Bildschirmfoto auf dem Handy reicht.
+  </p>
+
+  {!nummer ? (
+    <p class="hinweis hinweis--fehler">Für dein Konto ist noch keine Mitgliedsnummer hinterlegt — bitte beim Vorstand melden.</p>
+  ) : (
+    <div class="ausweis">
+      <p class="ausweis-verein">{site.vereinsname}</p>
+      <div class="ausweis-qr" set:html={qrSvg} />
+      <p class="ausweis-name">{mitglied.name || mitglied.email}</p>
+      <p class="ausweis-nummer">{nummer}</p>
+      <p class="ausweis-fuss">Mitgliedsausweis · nicht übertragbar</p>
+    </div>
+  )}
+</Basis>
+
+<style>
+  .ausweis {
+    max-width: 20rem;
+    border: 1px solid var(--line);
+    border-top: 4px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.6rem;
+    background: var(--bg-rein);
+    text-align: center;
+  }
+  .ausweis-verein {
+    font-family: var(--font-display);
+    font-weight: 600;
+    margin: 0 0 1rem;
+  }
+  .ausweis-qr {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 1rem;
+  }
+  .ausweis-qr :global(svg) {
+    /* QR braucht hellen Grund - auch im dunklen Theme. */
+    background: #fff;
+    border-radius: var(--radius);
+    max-width: 100%;
+    height: auto;
+  }
+  .ausweis-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .ausweis-nummer {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--brand-strong);
+    letter-spacing: 0.06em;
+    margin: 0.2rem 0 0.8rem;
+  }
+  .ausweis-fuss {
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    margin: 0;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--line);
+  }
+</style>

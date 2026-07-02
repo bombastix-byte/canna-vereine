@@ -19,6 +19,7 @@ export const site: SiteConfig = sites[aktiveId] ?? goerlitz;
 // ohne werbende Begriffe, rein nach Informationszweck gegliedert.
 export const navigation: NavPunkt[] = [
   { label: 'Start', href: '/' },
+  { label: 'Mitglied werden', href: '/mitglied-werden' },
   { label: 'Prävention und Beratung', href: '/praevention-beratung' },
   { label: 'Rechtliche Hinweise', href: '/rechtliche-hinweise' },
   { label: 'Kontakt', href: '/kontakt' },

@@ -1,0 +1,151 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+
+// Beitrittsantraege und Warteliste. Nur Vorstand. "Aufnehmen" legt direkt
+// das Mitgliedskonto an (Startpasswort, Rolle mitglied).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface Antrag {
+  id: string;
+  name: string;
+  email: string;
+  telefon?: string;
+  geburtsdatum?: string;
+  nachricht?: string;
+  status?: string;
+  created: string;
+}
+
+let antraege: Antrag[] = [];
+try {
+  antraege = (await pb.collection('antraege').getFullList({ sort: 'created' })) as Antrag[];
+} catch {
+  antraege = [];
+}
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const passwort = Astro.url.searchParams.get('pw');
+const nr = Astro.url.searchParams.get('nr');
+const oktext: Record<string, string> = {
+  warteliste: 'Auf die Warteliste gesetzt.',
+  abgelehnt: 'Antrag abgelehnt.',
+  aufgenommen: `Mitglied aufgenommen${nr ? ` (Nr. ${nr})` : ''}. Startpasswort: ${passwort ?? '—'} — bitte sicher übermitteln und ändern lassen.`,
+};
+
+const gruppen: Array<{ key: string; label: string; abzeichen?: string }> = [
+  { key: 'offen', label: 'Neue Anträge', abzeichen: 'abzeichen--warn' },
+  { key: 'warteliste', label: 'Warteliste' },
+  { key: 'aufgenommen', label: 'Aufgenommen', abzeichen: 'abzeichen--ok' },
+  { key: 'abgelehnt', label: 'Abgelehnt', abzeichen: 'abzeichen--gefahr' },
+];
+const je = (s: string) => antraege.filter((a) => (a.status ?? 'offen') === s);
+
+const datum = (iso?: string) =>
+  iso ? new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+---
+
+<Basis titel="Beitrittsanträge" beschreibung="Anträge und Warteliste verwalten.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <h1 style="margin-bottom:0.4rem;">Beitrittsanträge</h1>
+  <p class="einleitung">
+    Anträge von der Website landen hier. Reihenfolge = Eingangsdatum.
+    „Aufnehmen" legt sofort das Mitgliedskonto mit Startpasswort an.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Aktion fehlgeschlagen{fehler === 'existiert' ? ' — für diese E-Mail existiert bereits ein Mitgliedskonto.' : '. Bitte erneut versuchen.'}</p>}
+
+  {antraege.length === 0 && <p style="color:var(--ink-soft);">Keine Anträge vorhanden.</p>}
+
+  {gruppen.map((g) => {
+    const liste = je(g.key);
+    return liste.length === 0 ? null : (
+      <section style="max-width:var(--mass);">
+        <h2>{g.label} <span class:list={['abzeichen', g.abzeichen]}>{liste.length}</span></h2>
+        {liste.map((a, i) => (
+          <div class="antrag" id={`an-${a.id}`}>
+            <div class="antrag-kopf">
+              <strong>{g.key === 'warteliste' && `${i + 1}. `}{a.name}</strong>
+              <span class="antrag-datum">Eingang {datum(a.created)}</span>
+            </div>
+            <div class="antrag-daten">
+              <span>{a.email}</span>
+              {a.telefon && <span>{a.telefon}</span>}
+              <span>geb. {datum(a.geburtsdatum)}</span>
+            </div>
+            {a.nachricht && <p class="antrag-text">{a.nachricht}</p>}
+            {(g.key === 'offen' || g.key === 'warteliste') && (
+              <div class="antrag-aktionen">
+                <form method="post" action="/mitglieder/antraege/aktion">
+                  <input type="hidden" name="antrag" value={a.id} />
+                  <input type="hidden" name="aktion" value="aufnehmen" />
+                  <button class="knopf" type="submit">Aufnehmen</button>
+                </form>
+                {g.key === 'offen' && (
+                  <form method="post" action="/mitglieder/antraege/aktion">
+                    <input type="hidden" name="antrag" value={a.id} />
+                    <input type="hidden" name="aktion" value="warteliste" />
+                    <button class="knopf-sek" type="submit">Auf Warteliste</button>
+                  </form>
+                )}
+                <form method="post" action="/mitglieder/antraege/aktion">
+                  <input type="hidden" name="antrag" value={a.id} />
+                  <input type="hidden" name="aktion" value="ablehnen" />
+                  <button class="knopf-sek" type="submit">Ablehnen</button>
+                </form>
+              </div>
+            )}
+          </div>
+        ))}
+      </section>
+    );
+  })}
+</Basis>
+
+<style>
+  .antrag {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.9rem 1.1rem;
+    margin: 0 0 0.7rem;
+    background: var(--bg-rein);
+  }
+  .antrag-kopf {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .antrag-datum {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+  .antrag-daten {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0.25rem 0 0;
+  }
+  .antrag-text {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+  }
+  .antrag-aktionen {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.7rem;
+  }
+</style>

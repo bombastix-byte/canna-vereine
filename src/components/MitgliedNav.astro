@@ -17,6 +17,7 @@ const mitgliedPunkte = [
   { label: 'Helferplan', href: '/mitglieder/helferplan' },
   { label: 'Anleitungen', href: '/mitglieder/anleitungen' },
   { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' },
+  { label: 'Ausweis', href: '/mitglieder/ausweis' },
 ];
 
 const arbeitPunkte: { label: string; href: string }[] = [];
@@ -32,6 +33,7 @@ if (darfBerichte(rollen)) {
 }
 if (darfVerwalten(rollen)) {
   arbeitPunkte.push({ label: 'Mitglieder', href: '/mitglieder/verwaltung' });
+  arbeitPunkte.push({ label: 'Anträge', href: '/mitglieder/antraege' });
 }
 
 const aktiv = Astro.url.pathname.replace(/\/$/, '');
