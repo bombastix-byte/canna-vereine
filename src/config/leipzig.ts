@@ -6,7 +6,7 @@ export const leipzig: SiteConfig = {
   id: 'leipzig',
   theme: 'warm',
   layout: 'zentriert',
-  vereinsname: 'Anbauvereinigung Leipzig e. V.', // TODO: exakter Name laut Satzung
+  vereinsname: 'Anbauvereinigung Leipzig e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'Anbauvereinigung Leipzig',
   stadt: 'Leipzig',
   registereintrag: 'TODO: VR-Nummer, Amtsgericht Leipzig',

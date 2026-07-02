@@ -5,7 +5,8 @@ import type { SiteConfig } from './types';
 export const goerlitz: SiteConfig = {
   id: 'goerlitz',
   theme: 'nacht',
-  vereinsname: 'Anbauvereinigung Görlitz e. V.', // TODO: exakter Name laut Satzung
+  //   = geschütztes Leerzeichen: "Görlitz e. V." bricht nie auseinander.
+  vereinsname: 'Anbauvereinigung Görlitz e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'Anbauvereinigung Görlitz',
   stadt: 'Görlitz',
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',

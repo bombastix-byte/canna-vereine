@@ -6,7 +6,7 @@ export const goerlitz2: SiteConfig = {
   id: 'goerlitz2',
   theme: 'klar',
   layout: 'sidebar',
-  vereinsname: 'Cannabis Social Club Görlitz e. V.', // TODO: exakter Name laut Satzung
+  vereinsname: 'Cannabis Social Club Görlitz e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'CSC Görlitz',
   stadt: 'Görlitz',
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',

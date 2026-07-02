@@ -39,6 +39,12 @@ h3 {
   letter-spacing: var(--display-letter);
   color: var(--ink);
   line-height: 1.2;
+  /* Gleichmaessige Zeilenumbrueche, verhindert einzelne haengende Woerter. */
+  text-wrap: balance;
+  /* Lange deutsche Komposita ("Datenschutzerklaerung") am Handy sauber
+     trennen statt aus dem Bildschirm zu laufen. */
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 h1 {
@@ -606,5 +612,18 @@ thead th {
   }
   .inhalt {
     padding-top: 2.5rem;
+  }
+  h1 {
+    font-size: clamp(1.75rem, 7vw, 2.2rem);
+  }
+  /* Tabellen (Abgaben, Chargen-Archiv, Jahresmeldung) am Handy seitlich
+     scrollbar statt das Layout zu sprengen. */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  thead th {
+    white-space: nowrap;
   }
 }
