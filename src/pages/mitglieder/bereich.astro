@@ -2,7 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
-import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from '../../lib/rollen';
+import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from '../../lib/rollen';
 import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../lib/helfer';
 
 // Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
@@ -157,7 +157,13 @@ const downloadUrl = (d: Dokument) =>
         {offeneDienste > 0 ? `${offeneDienste} heute offen` : 'Heute nichts offen'}
       </span>
     </a>
+  </section>
 
+  {istPersonal(mitglied.rollen) && (
+    <p class="eyebrow" style="margin:1.6rem 0 0.6rem;">Vereinsarbeit</p>
+  )}
+  {istPersonal(mitglied.rollen) && (
+  <section class="ueberblick" aria-label="Vereinsarbeit">
     {darfAnbau(mitglied.rollen) && (
       <a class="uk" href="/mitglieder/wawi">
         <span class="uk__kopf">
@@ -218,6 +224,7 @@ const downloadUrl = (d: Dokument) =>
       </a>
     )}
   </section>
+  )}
 
   <h2 id="mitteilungen">Mitteilungen</h2>
   {

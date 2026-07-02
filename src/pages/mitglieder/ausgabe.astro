@@ -9,7 +9,6 @@ import {
   istU21,
   alterAmTag,
   summeGramm,
-  beitragEuro,
   LIMIT_TAG_G,
   LIMIT_MONAT_G,
   LIMIT_MONAT_U21_G,
@@ -18,6 +17,8 @@ import {
 } from '../../lib/ausgabe';
 
 // Tresen: Abgabe an Mitglieder buchen. Nur Personal (Vorstand/Ausgabe).
+// Gefuehrter Ablauf in zwei Schritten: 1. Mitglied waehlen -> Restmengen sehen,
+// 2. Charge + Menge -> buchen. U21-gesperrte Chargen sind direkt deaktiviert.
 export const prerender = false;
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
@@ -33,7 +34,6 @@ interface UserRow {
   email: string;
   mitgliedsnummer?: string;
   geburtsdatum?: string;
-  rolle?: string;
 }
 interface ChargeRow {
   id: string;
@@ -89,6 +89,7 @@ let status: null | {
   monatslimit: number;
   restTag: number;
   restMonat: number;
+  restJetzt: number;
 } = null;
 if (gewaehlt) {
   const saetze = await ladeListe<AusgabeRow>('ausgaben', {
@@ -98,130 +99,212 @@ if (gewaehlt) {
   const heute = summeGramm(saetze.filter((r) => r.tag === tag));
   const u21 = istU21(gewaehlt.geburtsdatum, tag);
   const monatslimit = u21 ? LIMIT_MONAT_U21_G : LIMIT_MONAT_G;
+  const restTag = Math.max(0, LIMIT_TAG_G - heute);
+  const restMonat = Math.max(0, monatslimit - monatSumme);
   status = {
     u21,
     alter: alterAmTag(gewaehlt.geburtsdatum, tag),
     heute,
     monatSumme,
     monatslimit,
-    restTag: Math.max(0, LIMIT_TAG_G - heute),
-    restMonat: Math.max(0, monatslimit - monatSumme),
+    restTag,
+    restMonat,
+    restJetzt: Math.min(restTag, restMonat),
   };
 }
+
+// Fuer U21 gesperrte Chargen direkt im Dropdown deaktivieren (>10 % THC oder
+// THC unbekannt) - die Fehlermeldung kommt so gar nicht erst zustande.
+const chargeGesperrt = (c: ChargeRow) =>
+  !!status?.u21 && !(typeof c.thc_prozent === 'number' && c.thc_prozent > 0 && c.thc_prozent <= U21_MAX_THC);
 
 const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '') + (m.name || m.email);
 const eur = (n?: number) => (n ?? 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const heuteSumme = summeGramm(heuteAlle);
+const schnellMengen = [1, 2, 3, 5, 10];
 ---
 
 <Basis titel="Ausgabe (Tresen)" beschreibung="Abgabe an Mitglieder buchen, KCanG-konform.">
   <MitgliedNav rollen={personal.rollen} />
-  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <p class="eyebrow">Vereinsarbeit</p>
   <h1 style="margin-bottom:0.4rem;">Ausgabe am Tresen</h1>
   <p class="einleitung">
-    Abgabe an ein Mitglied buchen. Tages-, Monats- und U21-Grenzen werden beim
-    Buchen automatisch geprüft. Der Selbstkostenbeitrag beträgt
-    {eur(BEITRAG_PRO_GRAMM)} € je Gramm; kassiert wird an der Kasse.
+    Erst das Mitglied wählen, dann Sorte und Menge. Alle gesetzlichen Grenzen
+    prüft das System automatisch. Beitrag: {eur(BEITRAG_PRO_GRAMM)} € je Gramm,
+    kassiert wird an der Kasse.
   </p>
 
   {fehler && msg && (
-    <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{msg}</p>
+    <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;"><strong>Nicht gebucht:</strong> {msg}</p>
   )}
 
-  <form class="kasten" method="get" action="/mitglieder/ausgabe" style="margin-bottom:1rem;">
-    <div class="feld">
-      <label for="mitglied-sel">Mitglied</label>
-      <select id="mitglied-sel" name="mitglied" onchange="this.form.submit()">
-        <option value="">— Mitglied wählen —</option>
-        {mitglieder.map((m) => (
-          <option value={m.id} selected={m.id === gewaehltId}>{mnr(m)}</option>
-        ))}
-      </select>
-      <noscript><button class="knopf" type="submit">Mitglied laden</button></noscript>
-    </div>
-  </form>
+  <section class="schritt" aria-label="Schritt 1">
+    <h2 class="schritt-titel"><span class="snr">1</span> Mitglied wählen</h2>
+    <form class="kasten" method="get" action="/mitglieder/ausgabe">
+      <div class="feld">
+        <label for="mitglied-sel">Mitglied (Nummer oder Name)</label>
+        <select id="mitglied-sel" name="mitglied" onchange="this.form.submit()">
+          <option value="">— bitte wählen —</option>
+          {mitglieder.map((m) => (
+            <option value={m.id} selected={m.id === gewaehltId}>{mnr(m)}</option>
+          ))}
+        </select>
+        <noscript><button class="knopf" type="submit">Mitglied laden</button></noscript>
+      </div>
 
-  {gewaehlt && status && (
-    <div class:list={['statuskarte', { warn: status.u21 }]}>
-      <div class="sk-kopf">
-        <strong>{mnr(gewaehlt)}</strong>
-        {status.alter != null ? (
-          <span class="sk-alter">{status.alter} Jahre{status.u21 ? ' · unter 21' : ''}</span>
-        ) : (
-          <span class="sk-alter sk-fehlt">Geburtsdatum fehlt → als U21 behandelt</span>
-        )}
-      </div>
-      <div class="sk-zeile">
-        <span>Heute: <strong>{status.heute} g</strong> / {LIMIT_TAG_G} g</span>
-        <span>Noch heute: <strong>{status.restTag} g</strong></span>
-      </div>
-      <div class="sk-zeile">
-        <span>Monat: <strong>{status.monatSumme} g</strong> / {status.monatslimit} g</span>
-        <span>Noch diesen Monat: <strong>{status.restMonat} g</strong></span>
-      </div>
-      {status.u21 && (
-        <p class="sk-warn">Unter 21: nur Sorten mit höchstens {U21_MAX_THC} % THC zulässig.</p>
+      {gewaehlt && status && (
+        <div class:list={['statuskarte', { warn: status.u21 }]}>
+          <div class="sk-kopf">
+            <strong>{mnr(gewaehlt)}</strong>
+            {status.alter != null ? (
+              <span class="sk-alter">{status.alter} Jahre{status.u21 ? ' · unter 21' : ''}</span>
+            ) : (
+              <span class="sk-alter sk-fehlt">Geburtsdatum fehlt → wird streng als U21 behandelt</span>
+            )}
+          </div>
+          <div class="sk-gross">
+            <div class="sk-box">
+              <span class="sk-box-label">Darf jetzt noch</span>
+              <span class="sk-box-wert">{status.restJetzt} g</span>
+            </div>
+            <div class="sk-box sk-box-soft">
+              <span class="sk-box-label">Heute schon</span>
+              <span class="sk-box-wert">{status.heute} / {LIMIT_TAG_G} g</span>
+            </div>
+            <div class="sk-box sk-box-soft">
+              <span class="sk-box-label">Diesen Monat</span>
+              <span class="sk-box-wert">{status.monatSumme} / {status.monatslimit} g</span>
+            </div>
+          </div>
+          {status.u21 && (
+            <p class="sk-warn">Unter 21: nur Sorten bis {U21_MAX_THC} % THC — stärkere sind unten ausgegraut.</p>
+          )}
+          {status.restJetzt === 0 && (
+            <p class="sk-warn sk-stop">Limit erreicht — heute keine Abgabe mehr an dieses Mitglied möglich.</p>
+          )}
+        </div>
       )}
-    </div>
+    </form>
+  </section>
+
+  {gewaehlt && status && status.restJetzt > 0 && (
+    <section class="schritt" aria-label="Schritt 2">
+      <h2 class="schritt-titel"><span class="snr">2</span> Sorte und Menge</h2>
+      {chargen.length === 0 ? (
+        <p class="hinweis">Keine freigegebene Charge mit Bestand. Zuerst in der
+        <a href="/mitglieder/wawi"> Warenwirtschaft</a> eine Charge freigeben.</p>
+      ) : (
+        <form class="kasten" method="post" action="/mitglieder/ausgabe/buchen">
+          <input type="hidden" name="mitglied" value={gewaehltId} />
+          <div class="feld">
+            <label for="charge">Sorte (Charge)</label>
+            <select id="charge" name="charge" required>
+              <option value="">— bitte wählen —</option>
+              {chargen.map((c) => (
+                <option value={c.id} disabled={chargeGesperrt(c)}>
+                  {c.sorte_name} — {c.thc_prozent ?? '?'} % THC · {c.verfuegbar_g} g da · Charge {c.charge_nr}{chargeGesperrt(c) ? ' — für U21 gesperrt' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div class="feld">
+            <label for="menge_gramm">Menge in Gramm (höchstens {status.restJetzt} g)</label>
+            <div class="mengenreihe">
+              {schnellMengen.filter((g) => g <= status.restJetzt).map((g) => (
+                <button type="button" class="menge-knopf" data-g={g}>{g} g</button>
+              ))}
+              <input id="menge_gramm" name="menge_gramm" type="number" inputmode="decimal"
+                min="0.1" step="0.1" max={status.restJetzt} required placeholder="frei" />
+            </div>
+            <p class="beitrag-zeile">Beitrag: <strong id="beitrag-vorschau">—</strong> <span style="color:var(--ink-soft);">({eur(BEITRAG_PRO_GRAMM)} €/g)</span></p>
+          </div>
+          <button class="knopf" type="submit">Buchen und Beleg zeigen</button>
+        </form>
+      )}
+    </section>
   )}
 
-  <form class="kasten" method="post" action="/mitglieder/ausgabe/buchen">
-    <input type="hidden" name="mitglied" value={gewaehltId} />
-    <div class="feld">
-      <label for="charge">Sorte / Charge</label>
-      <select id="charge" name="charge" required>
-        <option value="">— Charge wählen —</option>
-        {chargen.map((c) => (
-          <option value={c.id}>
-            {c.sorte_name} · {c.charge_nr} — {c.thc_prozent ?? '?'} % THC · {c.verfuegbar_g} g verfügbar
-          </option>
-        ))}
-      </select>
-      {chargen.length === 0 && (
-        <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.4rem 0 0;">Keine freigegebene Charge mit Bestand. Zuerst in der Warenwirtschaft eine Charge freigeben.</p>
-      )}
-    </div>
-    <div class="feld">
-      <label for="menge_gramm">Menge in Gramm</label>
-      <input id="menge_gramm" name="menge_gramm" type="number" min="0.1" step="0.1" required />
-    </div>
-    <button class="knopf" type="submit" disabled={!gewaehltId}>Abgabe buchen &amp; Beleg drucken</button>
-    {!gewaehltId && <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.6rem 0 0;">Zuerst oben ein Mitglied wählen.</p>}
-  </form>
-
-  <h2>Heutige Abgaben ({tag})</h2>
-  <p style="color:var(--ink-soft);">Gesamt heute: <strong>{heuteSumme} g</strong> · {heuteAlle.length} Buchungen</p>
+  <h2>Heutige Abgaben</h2>
   {heuteAlle.length === 0 ? (
-    <p style="color:var(--ink-soft);">Heute noch keine Abgabe gebucht.</p>
+    <p style="color:var(--ink-soft);">Heute wurde noch nichts ausgegeben.</p>
   ) : (
-    <table class="tabelle">
-      <thead>
-        <tr><th>Mitglied</th><th>Sorte</th><th style="text-align:right;">Menge</th><th style="text-align:right;">THC</th><th style="text-align:right;">Beitrag</th><th>Beleg</th></tr>
-      </thead>
-      <tbody>
-        {heuteAlle.map((a) => (
-          <tr>
-            <td>{a.mitgliedsnummer || a.mitglied.slice(0, 6)}</td>
-            <td>{a.sorte_name}</td>
-            <td style="text-align:right;">{a.menge_gramm} g</td>
-            <td style="text-align:right;">{a.thc_prozent ?? '—'} %</td>
-            <td style="text-align:right;">{eur(a.beitrag_euro)} €</td>
-            <td><a href={`/mitglieder/ausgabe/beleg/${a.id}`}>{a.belegnr || 'Beleg'}</a></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <>
+      <p style="color:var(--ink-soft);">{heuteAlle.length} Buchungen · zusammen <strong>{heuteSumme} g</strong></p>
+      <table class="tabelle">
+        <thead>
+          <tr><th>Mitglied</th><th>Sorte</th><th class="r">Menge</th><th class="r">THC</th><th class="r">Beitrag</th><th>Beleg</th></tr>
+        </thead>
+        <tbody>
+          {heuteAlle.map((a) => (
+            <tr>
+              <td>{a.mitgliedsnummer || a.mitglied.slice(0, 6)}</td>
+              <td>{a.sorte_name}</td>
+              <td class="r">{a.menge_gramm} g</td>
+              <td class="r">{a.thc_prozent ?? '—'} %</td>
+              <td class="r">{eur(a.beitrag_euro)} €</td>
+              <td><a href={`/mitglieder/ausgabe/beleg/${a.id}`}>öffnen</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   )}
 </Basis>
 
+<script define:vars={{ preisProGramm: BEITRAG_PRO_GRAMM }}>
+  // Schnellwahl-Mengen + Beitragsvorschau. Rein optional - ohne JS bleibt das
+  // Zahlenfeld voll nutzbar, gebucht/geprueft wird immer serverseitig.
+  const feld = document.getElementById('menge_gramm');
+  const vorschau = document.getElementById('beitrag-vorschau');
+  const zeige = () => {
+    if (!feld || !vorschau) return;
+    const g = parseFloat(String(feld.value).replace(',', '.'));
+    vorschau.textContent = Number.isFinite(g) && g > 0
+      ? (g * preisProGramm).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+      : '—';
+  };
+  feld?.addEventListener('input', zeige);
+  document.querySelectorAll('.menge-knopf').forEach((k) => {
+    k.addEventListener('click', () => {
+      if (!feld) return;
+      feld.value = k.dataset.g ?? '';
+      zeige();
+      document.querySelectorAll('.menge-knopf').forEach((x) => x.classList.toggle('aktiv', x === k));
+    });
+  });
+</script>
+
 <style>
-  .statuskarte {
+  .schritt {
+    margin: 0 0 1.6rem;
     max-width: var(--mass);
+  }
+  .schritt-titel {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.15rem;
+    margin: 0 0 0.7rem;
+  }
+  .snr {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg-rein);
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+  .statuskarte {
     border: 1px solid var(--line);
     border-left: 4px solid var(--accent);
     border-radius: var(--radius);
     padding: 1rem 1.2rem;
-    margin: 0 0 1rem;
+    margin: 1rem 0 0;
     background: var(--bg-rein);
   }
   .statuskarte.warn {
@@ -232,7 +315,7 @@ const heuteSumme = summeGramm(heuteAlle);
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.7rem;
   }
   .sk-alter {
     color: var(--ink-soft);
@@ -242,18 +325,74 @@ const heuteSumme = summeGramm(heuteAlle);
     color: #c0392b;
     font-weight: 600;
   }
-  .sk-zeile {
+  .sk-gross {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 0.6rem;
+  }
+  .sk-box {
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.8rem;
     display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-    padding: 0.25rem 0;
-    border-top: 1px solid var(--line);
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .sk-box-soft {
+    border-color: var(--line);
+  }
+  .sk-box-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .sk-box-wert {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--brand-strong);
   }
   .sk-warn {
-    margin: 0.6rem 0 0;
+    margin: 0.7rem 0 0;
     color: #8a5a00;
     font-size: 0.92rem;
+  }
+  .sk-stop {
+    color: #c0392b;
+    font-weight: 600;
+  }
+  .mengenreihe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+  .menge-knopf {
+    font: inherit;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-rein);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .menge-knopf:hover {
+    border-color: var(--accent);
+  }
+  .menge-knopf.aktiv {
+    border-color: var(--accent);
+    background: var(--line-soft);
+    font-weight: 600;
+  }
+  .mengenreihe input {
+    width: 7rem;
+    flex: none;
+  }
+  .beitrag-zeile {
+    margin: 0.6rem 0 0;
+    font-size: 0.95rem;
   }
   .tabelle {
     width: 100%;
@@ -267,13 +406,19 @@ const heuteSumme = summeGramm(heuteAlle);
     padding: 0.5rem 0.6rem;
     border-bottom: 1px solid var(--line);
   }
-  select {
-    width: 100%;
+  .tabelle .r {
+    text-align: right;
+  }
+  select,
+  .mengenreihe input {
     padding: 0.6rem 0.7rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--bg-rein);
     color: var(--ink);
     font: inherit;
+  }
+  select {
+    width: 100%;
   }
 </style>

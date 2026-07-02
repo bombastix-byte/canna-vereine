@@ -51,12 +51,21 @@ async function ladeListe<T>(collection: string, opts: Record<string, unknown> = 
 }
 
 const sorten = await ladeListe<Sorte>('sorten', { sort: 'name' });
-const chargen = await ladeListe<Charge>('chargen', { sort: 'status,sorte_name,charge_nr' });
+const alleChargen = await ladeListe<Charge>('chargen', { sort: 'sorte_name,charge_nr' });
 const vernichtungen = await ladeListe<Vernichtung>('vernichtungen', { sort: '-created' });
+
+// Arbeitslogische Reihenfolge statt alphabetischem Status: erst was im Anbau
+// ist, dann Trocknung, dann abgebbar. Erledigtes (aufgebraucht/gesperrt)
+// wandert ins zusammengeklappte Archiv.
+const statusReihe: Record<string, number> = { anbau: 0, geerntet: 1, freigegeben: 2 };
+const laufend = alleChargen
+  .filter((c) => c.status && c.status in statusReihe)
+  .sort((a, b) => (statusReihe[a.status!] ?? 9) - (statusReihe[b.status!] ?? 9));
+const archiv = alleChargen.filter((c) => !c.status || !(c.status in statusReihe));
 
 // Bestand je Sorte aus freigegebenen Chargen.
 const bestand = new Map<string, number>();
-for (const c of chargen) {
+for (const c of alleChargen) {
   if (c.status === 'freigegeben') {
     bestand.set(c.sorte_name ?? '?', (bestand.get(c.sorte_name ?? '?') ?? 0) + (c.verfuegbar_g ?? 0));
   }
@@ -85,11 +94,18 @@ const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
 const datum = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
+
+// Der Klapper je Charge sagt direkt, was als Naechstes ansteht.
+const naechsterSchritt: Record<string, string> = {
+  anbau: '→ Nächster Schritt: Ernte erfassen',
+  geerntet: '→ Nächster Schritt: Freigeben (nach der Trocknung)',
+  freigegeben: 'Weitere Aktionen (vernichten, sperren)',
+};
 ---
 
 <Basis titel="Warenwirtschaft" beschreibung="Chargen vom Anbau bis zur Ausgabe, KCanG-dokumentiert.">
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <p class="eyebrow">Vereinsarbeit</p>
   <h1 style="margin-bottom:0.4rem;">Warenwirtschaft</h1>
   <p class="einleitung">
     Jedes Anbaulos als Charge vom Anbau über Ernte und Trocknung bis zur Freigabe.
@@ -115,8 +131,12 @@ const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
     </table>
   )}
 
-  <h2>Neue Charge anlegen</h2>
-  <form class="kasten" method="post" action="/mitglieder/wawi/charge-neu">
+  <h2>Chargen</h2>
+  <p class="ablauf">Ablauf je Charge: <strong>Anbau</strong> → <strong>Ernte</strong> (Frischgewicht wiegen) → <strong>Freigabe</strong> (Trockengewicht + THC eintragen) → am Tresen abgebbar.</p>
+
+  <details class="neu-det">
+    <summary>＋ Neue Charge anlegen</summary>
+    <form class="kasten" method="post" action="/mitglieder/wawi/charge-neu">
     <div class="feld">
       <label for="sorte">Sorte</label>
       <select id="sorte" name="sorte" required>
@@ -142,14 +162,14 @@ const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
         <input id="standort" name="standort" type="text" placeholder="z. B. Anbauraum 1" />
       </div>
     </div>
-    <button class="knopf" type="submit">Charge anlegen</button>
-  </form>
+      <button class="knopf" type="submit">Charge anlegen</button>
+    </form>
+  </details>
 
-  <h2>Chargen</h2>
-  {chargen.length === 0 ? (
-    <p style="color:var(--ink-soft);">Noch keine Charge angelegt.</p>
+  {laufend.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine laufende Charge. Oben über „Neue Charge anlegen“ starten.</p>
   ) : (
-    chargen.map((c) => (
+    laufend.map((c) => (
       <div class="charge" id={`c-${c.id}`}>
         <div class="charge-kopf">
           <span><strong>{c.charge_nr}</strong> · {c.sorte_name}</span>
@@ -170,7 +190,7 @@ const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
 
         {moeglicheAktionen(c.status).length > 0 && (
           <details class="aktionen-det">
-            <summary>Aktionen</summary>
+            <summary>{naechsterSchritt[c.status ?? ''] ?? 'Aktionen'}</summary>
 
             {moeglicheAktionen(c.status).includes('ernte') && (
               <form class="aktion" method="post" action="/mitglieder/wawi/aktion">
@@ -223,6 +243,26 @@ const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
     ))
   )}
 
+  {archiv.length > 0 && (
+    <details class="neu-det">
+      <summary>Archiv ({archiv.length}) — aufgebrauchte und gesperrte Chargen</summary>
+      <table class="tabelle">
+        <thead><tr><th>Charge</th><th>Sorte</th><th>Status</th><th class="r">Trocken</th><th class="r">THC</th></tr></thead>
+        <tbody>
+          {archiv.map((c) => (
+            <tr>
+              <td>{c.charge_nr}</td>
+              <td>{c.sorte_name}</td>
+              <td>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</td>
+              <td class="r">{g(c.trockengewicht_g)}</td>
+              <td class="r">{c.thc_prozent ?? '—'} %</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  )}
+
   <h2>Vernichtungen</h2>
   {vernichtungen.length === 0 ? (
     <p style="color:var(--ink-soft);">Keine Vernichtungen dokumentiert.</p>
@@ -253,8 +293,14 @@ const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
   }
   .feld-reihe { display: flex; gap: 0.9rem; flex-wrap: wrap; }
   .feld-reihe .feld { flex: 1 1 8rem; }
+  .ablauf { max-width: var(--mass); color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 1rem; }
+  .neu-det { max-width: var(--mass); margin: 0 0 1.2rem; border: 1px dashed var(--line); border-radius: var(--radius); padding: 0.7rem 1rem; }
+  .neu-det summary { cursor: pointer; font-weight: 600; }
+  .neu-det[open] { border-style: solid; }
+  .neu-det .kasten { border: none; padding: 0.8rem 0 0; margin: 0; }
   .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; margin-bottom: 1rem; }
   .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+  .tabelle .r { text-align: right; }
   .charge {
     max-width: var(--mass);
     border: 1px solid var(--line);

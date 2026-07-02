@@ -2,58 +2,90 @@
 import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from '../lib/rollen';
 
 // Interne Navigation des Mitgliederbereichs. Wird auf allen geschützten
-// Seiten eingebunden. Hebt den aktuellen Punkt hervor. Die Personal-Punkte
-// (Tresen, Warenwirtschaft) erscheinen nur bei passender Rolle; dazu Prop
-// `rollen` übergeben.
+// Seiten eingebunden. Hebt den aktuellen Punkt hervor. Zwei Gruppen:
+// Mitglieder-Punkte und (nur bei passender Rolle) "Vereinsarbeit".
+// Dazu Prop `rollen` übergeben - sonst fehlen die Personal-Punkte.
 interface Props {
   rollen?: string[];
 }
 const { rollen } = Astro.props;
-const punkte = [
+
+const mitgliedPunkte = [
   { label: 'Aktuelles', href: '/mitglieder/bereich' },
   { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
   { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
   { label: 'Helferplan', href: '/mitglieder/helferplan' },
   { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' },
 ];
-if (darfAnbau(rollen)) {
-  punkte.push({ label: 'Warenwirtschaft', href: '/mitglieder/wawi' });
-}
+
+const arbeitPunkte: { label: string; href: string }[] = [];
 if (darfAusgeben(rollen)) {
-  punkte.push({ label: 'Ausgabe (Tresen)', href: '/mitglieder/ausgabe' });
-  punkte.push({ label: 'Vermehrung', href: '/mitglieder/vermehrung' });
+  arbeitPunkte.push({ label: 'Ausgabe (Tresen)', href: '/mitglieder/ausgabe' });
+  arbeitPunkte.push({ label: 'Vermehrung', href: '/mitglieder/vermehrung' });
+}
+if (darfAnbau(rollen)) {
+  arbeitPunkte.push({ label: 'Warenwirtschaft', href: '/mitglieder/wawi' });
 }
 if (darfBerichte(rollen)) {
-  punkte.push({ label: 'Jahresmeldung', href: '/mitglieder/jahresmeldung' });
+  arbeitPunkte.push({ label: 'Jahresmeldung', href: '/mitglieder/jahresmeldung' });
 }
 if (darfVerwalten(rollen)) {
-  punkte.push({ label: 'Verwaltung', href: '/mitglieder/verwaltung' });
+  arbeitPunkte.push({ label: 'Mitglieder', href: '/mitglieder/verwaltung' });
 }
+
 const aktiv = Astro.url.pathname.replace(/\/$/, '');
 ---
 
 <nav class="mnav" aria-label="Mitgliederbereich">
+  <div class="mnav-zeile">
+    {
+      mitgliedPunkte.map((p) => (
+        <a href={p.href} aria-current={aktiv === p.href ? 'page' : undefined}>
+          {p.label}
+        </a>
+      ))
+    }
+    <a class="mnav-aus" href="/mitglieder/abmelden">Abmelden</a>
+  </div>
   {
-    punkte.map((p) => (
-      <a href={p.href} aria-current={aktiv === p.href ? 'page' : undefined}>
-        {p.label}
-      </a>
-    ))
+    arbeitPunkte.length > 0 && (
+      <div class="mnav-zeile mnav-arbeit">
+        <span class="mnav-label">Vereinsarbeit</span>
+        {arbeitPunkte.map((p) => (
+          <a href={p.href} aria-current={aktiv === p.href ? 'page' : undefined}>
+            {p.label}
+          </a>
+        ))}
+      </div>
+    )
   }
-  <a class="mnav-aus" href="/mitglieder/abmelden">Abmelden</a>
 </nav>
 
 <style>
   .mnav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 0.9rem;
-    align-items: center;
     margin: 0 0 1.6rem;
     padding-bottom: 0.9rem;
     border-bottom: 1px solid var(--line);
     font-size: 0.95rem;
     max-width: var(--mass);
+  }
+  .mnav-zeile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+    align-items: center;
+  }
+  .mnav-arbeit {
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px dashed var(--line);
+  }
+  .mnav-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
   }
   .mnav a {
     text-decoration: none;

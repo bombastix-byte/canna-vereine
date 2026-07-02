@@ -53,7 +53,7 @@ const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '
 
 <Basis titel="Vermehrungsmaterial" beschreibung="Samen/Stecklinge an Mitglieder, KCanG-konform.">
   <MitgliedNav rollen={personal.rollen} />
-  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <p class="eyebrow">Vereinsarbeit</p>
   <h1 style="margin-bottom:0.4rem;">Vermehrungsmaterial</h1>
   <p class="einleitung">
     Weitergabe von Samen und Stecklingen an Mitglieder. Monatsgrenze je Mitglied:
@@ -82,21 +82,22 @@ const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '
     </div>
   )}
 
-  <form class="kasten" method="post" action="/mitglieder/vermehrung/buchen">
-    <input type="hidden" name="mitglied" value={gewaehltId} />
-    <div class="feld">
-      <label for="art">Art</label>
-      <select id="art" name="art" required>
-        {ARTEN.map((a) => <option value={a}>{ART_LABEL[a]} (max. {limitFuer(a)}/Monat)</option>)}
-      </select>
-    </div>
-    <div class="feld">
-      <label for="anzahl">Stückzahl</label>
-      <input id="anzahl" name="anzahl" type="number" min="1" step="1" required />
-    </div>
-    <button class="knopf" type="submit" disabled={!gewaehltId}>Weitergabe buchen</button>
-    {!gewaehltId && <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.6rem 0 0;">Zuerst oben ein Mitglied wählen.</p>}
-  </form>
+  {gewaehlt && (
+    <form class="kasten" method="post" action="/mitglieder/vermehrung/buchen">
+      <input type="hidden" name="mitglied" value={gewaehltId} />
+      <div class="feld">
+        <label for="art">Art</label>
+        <select id="art" name="art" required>
+          {ARTEN.map((a) => <option value={a}>{ART_LABEL[a]} (max. {limitFuer(a)}/Monat)</option>)}
+        </select>
+      </div>
+      <div class="feld">
+        <label for="anzahl">Stückzahl</label>
+        <input id="anzahl" name="anzahl" type="number" min="1" step="1" required />
+      </div>
+      <button class="knopf" type="submit">Weitergabe buchen</button>
+    </form>
+  )}
 
   <h2>Heutige Weitergaben ({tag})</h2>
   {heuteAlle.length === 0 ? (
