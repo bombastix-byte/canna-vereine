@@ -41,18 +41,33 @@ export const POST: APIRoute = async ({ params, cookies, redirect }) => {
     return redirect('/mitglieder/ausgabe?fehler=1&msg=Beleg+nicht+gefunden', 303);
   }
 
+  // Alle Positionen des Vorgangs (gleiche Belegnummer) auf EIN Etikett.
+  let positionen = [a];
+  if (a.belegnr) {
+    try {
+      positionen = await pb.collection('ausgaben').getFullList({
+        filter: `belegnr="${a.belegnr}" && mitglied="${a.mitglied}"`,
+        sort: 'created',
+      });
+    } catch {
+      positionen = [a];
+    }
+  }
+
   const zpl = belegZpl({
     verein: site.vereinsname,
     ort: `${site.kontakt.plz} ${site.kontakt.ort}`,
     belegnr: a.belegnr,
     datum: a.tag,
     mitgliedsnummer: a.mitgliedsnummer,
-    sorte: a.sorte_name,
-    charge: a.charge,
-    menge_gramm: a.menge_gramm,
-    thc_prozent: a.thc_prozent,
-    cbd_prozent: a.cbd_prozent,
-    beitrag_euro: a.beitrag_euro,
+    positionen: positionen.map((p) => ({
+      sorte: p.sorte_name,
+      charge: p.charge,
+      menge_gramm: p.menge_gramm,
+      thc_prozent: p.thc_prozent,
+      cbd_prozent: p.cbd_prozent,
+      beitrag_euro: p.beitrag_euro,
+    })),
   });
 
   // Kein Drucker konfiguriert -> ZPL-Datei zum manuellen Senden liefern.

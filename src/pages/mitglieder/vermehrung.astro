@@ -82,18 +82,23 @@ const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '
     </div>
   )}
 
-  {gewaehlt && (
+  {gewaehlt && stand && (
     <form class="kasten" method="post" action="/mitglieder/vermehrung/buchen">
       <input type="hidden" name="mitglied" value={gewaehltId} />
-      <div class="feld">
-        <label for="art">Art</label>
-        <select id="art" name="art" required>
-          {ARTEN.map((a) => <option value={a}>{ART_LABEL[a]} (max. {limitFuer(a)}/Monat)</option>)}
-        </select>
-      </div>
-      <div class="feld">
-        <label for="anzahl">Stückzahl</label>
-        <input id="anzahl" name="anzahl" type="number" min="1" step="1" required />
+      <p style="margin:0 0 0.8rem;color:var(--ink-soft);font-size:0.95rem;">
+        Beides zusammen in einem Vorgang möglich — einfach die Felder ausfüllen, die gebraucht werden.
+      </p>
+      <div class="doppel">
+        <div class="feld">
+          <label for="anzahl_samen">Samen (noch {stand.samen.rest} von {stand.samen.limit} diesen Monat)</label>
+          <input id="anzahl_samen" name="anzahl_samen" type="number" min="1" step="1"
+            max={stand.samen.rest} disabled={stand.samen.rest === 0} placeholder={stand.samen.rest === 0 ? 'Limit erreicht' : 'Stück'} />
+        </div>
+        <div class="feld">
+          <label for="anzahl_stecklinge">Stecklinge (noch {stand.stecklinge.rest} von {stand.stecklinge.limit})</label>
+          <input id="anzahl_stecklinge" name="anzahl_stecklinge" type="number" min="1" step="1"
+            max={stand.stecklinge.rest} disabled={stand.stecklinge.rest === 0} placeholder={stand.stecklinge.rest === 0 ? 'Limit erreicht' : 'Stück'} />
+        </div>
       </div>
       <button class="knopf" type="submit">Weitergabe buchen</button>
     </form>
@@ -120,6 +125,9 @@ const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '
 
 <style>
   select, .feld input { width: 100%; padding: 0.6rem 0.7rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .doppel { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .doppel .feld { flex: 1 1 12rem; }
+  .feld input:disabled { opacity: 0.5; }
   .statuskarte { max-width: var(--mass); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.2rem; margin: 0 0 1rem; background: var(--bg-rein); }
   .sk-zeile { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; border-top: 1px solid var(--line); margin-top: 0.4rem; }
   .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; }

@@ -3,6 +3,7 @@
 // wenn ein Fall fehlschlaegt.  Aufruf:  node scripts/test-ausgabe.mjs
 import {
   pruefeLimit,
+  pruefeAbgabePositionen,
   istU21,
   alterAmTag,
   beitragEuro,
@@ -63,6 +64,20 @@ pruefe('U21 bei 20 Jahren -> true', istU21('2006-01-10', stichtag), true);
 pruefe('U21 bei genau 21 -> false', istU21('2005-07-02', stichtag), false);
 pruefe('U21 bei 21 + 1 Tag -> false', istU21('2005-07-01', stichtag), false);
 pruefe('U21 bei fehlendem Geburtsdatum -> true (streng)', istU21(undefined, stichtag), true);
+
+// --- Mehrfach-Positionen (ein Vorgang, gemeinsamer Beleg) ---
+const multi = (p, extra = {}) =>
+  pruefeAbgabePositionen({ u21: false, alterBekannt: true, mengeHeuteBisher: 0, mengeMonatBisher: 0, positionen: p, ...extra });
+// Das kritische Schlupfloch: Limit darf nicht durch Aufteilen umgehbar sein.
+pruefe('Multi: 22g heute + (2g+2g) -> Tageslimit', multi([{ thcProzent: 18, menge: 2 }, { thcProzent: 20, menge: 2 }], { mengeHeuteBisher: 22 }).code, 'tageslimit');
+pruefe('Multi: 22g heute + (2g+1g) -> ok (genau 25)', multi([{ thcProzent: 18, menge: 2 }, { thcProzent: 20, menge: 1 }], { mengeHeuteBisher: 22 }).ok, true);
+pruefe('Multi: 2 Positionen ok, gesamt korrekt', multi([{ thcProzent: 18, menge: 5 }, { thcProzent: 20, menge: 3 }]).gesamt, 8);
+pruefe('Multi: Monat 48 + (1g+2g) -> Monatslimit', multi([{ thcProzent: 18, menge: 1 }, { thcProzent: 20, menge: 2 }], { mengeMonatBisher: 48 }).code, 'monatslimit');
+pruefe('Multi U21: eine Position 18% -> u21_thc', multi([{ thcProzent: 9, menge: 2 }, { thcProzent: 18, menge: 2 }], { u21: true }).code, 'u21_thc');
+pruefe('Multi U21: beide <=10% -> ok', multi([{ thcProzent: 9, menge: 2 }, { thcProzent: 10, menge: 2 }], { u21: true }).ok, true);
+pruefe('Multi: Bestand je Position (5g da, 8g gewollt) -> bestand', multi([{ thcProzent: 18, menge: 8, bestandGramm: 5 }]).code, 'bestand');
+pruefe('Multi: keine Positionen -> menge', multi([]).code, 'menge');
+pruefe('Multi: Position mit 0g -> menge', multi([{ thcProzent: 18, menge: 0 }]).code, 'menge');
 
 // --- Beitrag (8,50 EUR/g) ---
 pruefe('Beitrag 10 g = 85,00', beitragEuro(10), 85);

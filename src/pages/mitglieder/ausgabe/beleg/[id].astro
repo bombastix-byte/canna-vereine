@@ -4,9 +4,10 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
 import { darfAusgeben } from '../../../../lib/rollen';
 import { site } from '../../../../config';
 
-// Druckbarer Abgabe-Beleg / Beipackzettel (Tueten-Label) mit den nach KCanG
-// erforderlichen Pflichtangaben. Sichtbar fuer das Personal und fuer das
-// betroffene Mitglied (durch die Collection-Regel abgesichert).
+// Druckbarer Abgabe-Beleg / Beipackzettel mit den nach KCanG erforderlichen
+// Pflichtangaben. Ein Vorgang kann MEHRERE Positionen haben (gleiche
+// Belegnummer) - der Beleg zeigt alle Positionen und die Gesamtsumme.
+// Sichtbar fuer das Personal und fuer das betroffene Mitglied.
 export const prerender = false;
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
@@ -22,6 +23,21 @@ try {
   return Astro.redirect('/mitglieder/bereich?fehler=beleg', 303);
 }
 
+// Alle Positionen dieses Vorgangs (gleiche Belegnummer, gleiches Mitglied).
+let positionen = [a];
+if (a.belegnr) {
+  try {
+    positionen = await pb.collection('ausgaben').getFullList({
+      filter: `belegnr="${a.belegnr}" && mitglied="${a.mitglied}"`,
+      sort: 'created',
+    });
+  } catch {
+    positionen = [a];
+  }
+}
+const gesamtGramm = positionen.reduce((s, p) => s + (Number(p.menge_gramm) || 0), 0);
+const gesamtEuro = positionen.reduce((s, p) => s + (Number(p.beitrag_euro) || 0), 0);
+
 const neu = Astro.url.searchParams.get('neu');
 const gedruckt = Astro.url.searchParams.get('gedruckt');
 const druckfehler = Astro.url.searchParams.get('druckfehler');
@@ -35,10 +51,11 @@ const praev = site.praeventionsbeauftragter;
 <Basis titel={`Beleg ${a.belegnr ?? ''}`} beschreibung="Abgabe-Beleg / Beipackzettel">
   {neu && (
     <p class="hinweis" role="status" style="max-width:var(--mass);">
-      Abgabe gebucht. Beleg drucken und der Tüte beilegen. Beitrag an der Kasse kassieren.
+      {positionen.length > 1
+        ? `Abgabe gebucht (${positionen.length} Positionen, ein Beleg).`
+        : 'Abgabe gebucht.'} Beleg drucken und der Tüte beilegen. Beitrag an der Kasse kassieren.
     </p>
   )}
-
   {gedruckt && <p class="hinweis" role="status" style="max-width:var(--mass);">An Etikettendrucker gesendet.</p>}
   {druckfehler && <p class="hinweis" role="alert" style="max-width:var(--mass);border-color:#d99;background:#fbecec;">Drucker nicht erreichbar. Bitte über den Druckdialog drucken.</p>}
 
@@ -49,7 +66,7 @@ const praev = site.praeventionsbeauftragter;
         <button class="knopf-sek" type="submit">An Etikettendrucker senden</button>
       </form>
     )}
-    <a class="knopf-sek" href="/mitglieder/ausgabe">Zurück zum Tresen</a>
+    {personal && <a class="knopf-sek" href="/mitglieder/ausgabe">Zurück zum Tresen</a>}
   </div>
 
   <div class="beleg">
@@ -63,12 +80,28 @@ const praev = site.praeventionsbeauftragter;
         <tr><td>Beleg-Nr.</td><td>{a.belegnr}</td></tr>
         <tr><td>Abgabedatum</td><td>{abgabedatum}</td></tr>
         <tr><td>Mitglied</td><td>{a.mitgliedsnummer || a.mitglied}</td></tr>
-        <tr><td>Sorte</td><td>{a.sorte_name}</td></tr>
-        {a.charge && <tr><td>Charge</td><td>{a.charge}</td></tr>}
-        <tr><td>Menge</td><td><strong>{a.menge_gramm} g</strong></td></tr>
-        <tr><td>THC-Gehalt</td><td>{a.thc_prozent} %</td></tr>
-        <tr><td>CBD-Gehalt</td><td>{a.cbd_prozent} %</td></tr>
-        <tr><td>Selbstkostenbeitrag</td><td>{eur(a.beitrag_euro)} €</td></tr>
+      </tbody>
+    </table>
+
+    <table class="pos-tab">
+      <thead>
+        <tr><th>Sorte / Charge</th><th class="r">Menge</th><th class="r">THC/CBD</th><th class="r">Beitrag</th></tr>
+      </thead>
+      <tbody>
+        {positionen.map((p) => (
+          <tr>
+            <td>{p.sorte_name}{p.charge ? ` · ${p.charge}` : ''}</td>
+            <td class="r">{p.menge_gramm} g</td>
+            <td class="r">{p.thc_prozent} / {p.cbd_prozent} %</td>
+            <td class="r">{eur(p.beitrag_euro)} €</td>
+          </tr>
+        ))}
+        <tr class="gesamt">
+          <td><strong>Gesamt</strong></td>
+          <td class="r"><strong>{gesamtGramm} g</strong></td>
+          <td></td>
+          <td class="r"><strong>{eur(gesamtEuro)} €</strong></td>
+        </tr>
       </tbody>
     </table>
 
@@ -85,6 +118,7 @@ const praev = site.praeventionsbeauftragter;
     display: flex;
     gap: 0.8rem;
     align-items: center;
+    flex-wrap: wrap;
     margin: 1rem 0 1.4rem;
     max-width: var(--mass);
   }
@@ -94,9 +128,12 @@ const praev = site.praeventionsbeauftragter;
     padding: 0.5rem 0.9rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
+    background: none;
+    font: inherit;
+    cursor: pointer;
   }
   .beleg {
-    max-width: 24rem;
+    max-width: 26rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 1.1rem 1.2rem;
@@ -115,14 +152,42 @@ const praev = site.praeventionsbeauftragter;
     width: 100%;
     border-collapse: collapse;
     font-size: 0.95rem;
+    margin: 0 0 0.6rem;
   }
   .beleg-tab td {
-    padding: 0.28rem 0;
+    padding: 0.24rem 0;
     vertical-align: top;
   }
   .beleg-tab td:first-child {
     color: var(--ink-soft);
     width: 45%;
+  }
+  .pos-tab {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin: 0 0 0.4rem;
+  }
+  .pos-tab th,
+  .pos-tab td {
+    text-align: left;
+    padding: 0.3rem 0.2rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .pos-tab thead th {
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .pos-tab .r {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .pos-tab .gesamt td {
+    border-bottom: none;
+    padding-top: 0.5rem;
   }
   .beleg-hinweise {
     margin-top: 0.9rem;
@@ -136,7 +201,7 @@ const praev = site.praeventionsbeauftragter;
     margin: 0 0 0.5rem;
   }
 
-  /* Druck: nur das Label, alles andere ausblenden. */
+  /* Druck: nur den Beleg, alles andere ausblenden. */
   @media print {
     :global(body *) {
       visibility: hidden;

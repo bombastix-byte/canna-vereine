@@ -160,6 +160,66 @@ export function pruefeLimit(e: LimitEingabe): LimitErgebnis {
   return { ok: true, ...basis };
 }
 
+/** Eine Position einer Mehrfach-Abgabe (eine Charge, eine Menge). */
+export interface PositionEingabe {
+  /** THC-Gehalt der Charge in Prozent, oder null wenn unbekannt. */
+  thcProzent: number | null;
+  /** Gewuenschte Menge dieser Position (Gramm). */
+  menge: number;
+  /** Verfuegbarer Bestand der Charge (Gramm), oder null wenn nicht gefuehrt. */
+  bestandGramm?: number | null;
+  /** Anzeigename fuer Fehlermeldungen (Sorte/Charge). */
+  name?: string;
+}
+
+/**
+ * Prueft eine Abgabe mit MEHREREN Positionen in einem Vorgang.
+ * Entscheidend: Tages- und Monatslimit gelten fuer die SUMME aller Positionen
+ * (nicht je Position), sonst liesse sich das Limit durch Aufteilen umgehen.
+ * U21-THC und Bestand werden je Position geprueft.
+ */
+export function pruefeAbgabePositionen(e: {
+  u21: boolean;
+  alterBekannt: boolean;
+  mengeHeuteBisher: number;
+  mengeMonatBisher: number;
+  positionen: PositionEingabe[];
+}): LimitErgebnis & { gesamt: number } {
+  const monatslimit = e.u21 ? LIMIT_MONAT_U21_G : LIMIT_MONAT_G;
+  const restTag = Math.max(0, LIMIT_TAG_G - e.mengeHeuteBisher);
+  const restMonat = Math.max(0, monatslimit - e.mengeMonatBisher);
+  const gesamt = e.positionen.reduce((s, p) => s + (Number(p.menge) || 0), 0);
+  const basis = { restTag, restMonat, monatslimit, gesamt };
+
+  if (e.positionen.length === 0 || e.positionen.some((p) => !Number.isFinite(p.menge) || p.menge <= 0)) {
+    return { ok: false, code: 'menge', meldung: 'Bitte fuer jede Position eine gueltige Menge in Gramm angeben.', ...basis };
+  }
+
+  for (const p of e.positionen) {
+    const wo = p.name ? ` (${p.name})` : '';
+    if (e.u21) {
+      if (p.thcProzent === null) {
+        return { ok: false, code: 'u21_thc', meldung: `THC-Gehalt unbekannt${wo} - Abgabe an unter 21-Jaehrige nicht moeglich.`, ...basis };
+      }
+      if (p.thcProzent > U21_MAX_THC) {
+        return { ok: false, code: 'u21_thc', meldung: `Mitglied unter 21: nur Sorten mit hoechstens ${U21_MAX_THC} % THC zulaessig${wo}.`, ...basis };
+      }
+    }
+    if (p.bestandGramm != null && p.menge > p.bestandGramm) {
+      return { ok: false, code: 'bestand', meldung: `Nicht genug Bestand${wo} - verfuegbar sind ${p.bestandGramm} g.`, ...basis };
+    }
+  }
+
+  if (e.mengeHeuteBisher + gesamt > LIMIT_TAG_G) {
+    return { ok: false, code: 'tageslimit', meldung: `Tageslimit ${LIMIT_TAG_G} g ueberschritten - alle Positionen zusammen sind ${gesamt} g, heute sind noch ${restTag} g moeglich.`, ...basis };
+  }
+  if (e.mengeMonatBisher + gesamt > monatslimit) {
+    return { ok: false, code: 'monatslimit', meldung: `Monatslimit ${monatslimit} g ueberschritten - alle Positionen zusammen sind ${gesamt} g, diesen Monat sind noch ${restMonat} g moeglich.`, ...basis };
+  }
+
+  return { ok: true, ...basis };
+}
+
 /** Selbstkostenbeitrag fuer eine Menge, auf Cent gerundet. */
 export function beitragEuro(mengeGramm: number): number {
   return Math.round(mengeGramm * BEITRAG_PRO_GRAMM * 100) / 100;

@@ -65,6 +65,22 @@ pruefeWahr('Vermehrung 7 Samen -> ok', (await post('/mitglieder/vermehrung/buche
 pruefeWahr('Vermehrung +1 Samen -> Monatsgrenze', (await post('/mitglieder/vermehrung/buchen', { mitglied: anna.id, art: 'samen', anzahl: '1' })).headers.get('location').includes('Monatsgrenze'));
 pruefeWahr('Vermehrung 5 Stecklinge -> ok', (await post('/mitglieder/vermehrung/buchen', { mitglied: anna.id, art: 'stecklinge', anzahl: '5' })).headers.get('location').includes('ok=1'));
 
+// 2b. Vermehrung: Samen UND Stecklinge in EINEM Vorgang (Doppel-Felder)
+const bengt = await pb.collection('users').getFirstListItem('mitgliedsnummer="M-102"');
+for (const v of await pb.collection('vermehrung_ausgaben').getFullList({ filter: `mitglied="${bengt.id}" && monat="${monat}"` })) {
+  await pb.collection('vermehrung_ausgaben').delete(v.id);
+}
+const dualLoc = (await post('/mitglieder/vermehrung/buchen', { mitglied: bengt.id, anzahl_samen: '3', anzahl_stecklinge: '2' })).headers.get('location') ?? '';
+pruefeWahr('Dual (3 Samen + 2 Stecklinge) -> ok', dualLoc.includes('ok=1'), dualLoc);
+const bengtSaetze = await pb.collection('vermehrung_ausgaben').getFullList({ filter: `mitglied="${bengt.id}" && monat="${monat}"` });
+pruefe('Dual: 2 Zeilen gebucht', bengtSaetze.length, 2);
+pruefeWahr('Dual: gemeinsame Belegnr', bengtSaetze.length === 2 && bengtSaetze[0].belegnr === bengtSaetze[1].belegnr);
+// Alles-oder-nichts: Stecklinge wuerden Limit reissen -> auch Samen NICHT gebucht.
+const dualFehlLoc = (await post('/mitglieder/vermehrung/buchen', { mitglied: bengt.id, anzahl_samen: '2', anzahl_stecklinge: '4' })).headers.get('location') ?? '';
+pruefeWahr('Dual ueber Limit -> Fehlermeldung Stecklinge', decodeURIComponent(dualFehlLoc).includes('Stecklinge'), dualFehlLoc);
+const nachher = await pb.collection('vermehrung_ausgaben').getFullList({ filter: `mitglied="${bengt.id}" && monat="${monat}"` });
+pruefe('Dual ueber Limit: nichts gebucht (weiter 2 Zeilen)', nachher.length, 2);
+
 // 3. Jahresmeldung: Seite laedt (200)
 const jm = await fetch(`${BASE}/mitglieder/jahresmeldung`, { headers: { cookie }, redirect: 'manual' });
 pruefe('Jahresmeldung Seite -> 200', jm.status, 200);

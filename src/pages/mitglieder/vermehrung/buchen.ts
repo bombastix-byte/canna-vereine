@@ -2,10 +2,12 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAusgeben } from '../../../lib/rollen';
 import { berlinTag, berlinMonat } from '../../../lib/ausgabe';
-import { pruefeVermehrung, summeStueck } from '../../../lib/vermehrung';
+import { pruefeVermehrung, summeStueck, ART_LABEL } from '../../../lib/vermehrung';
 
-// Bucht die Weitergabe von Vermehrungsmaterial (Samen/Stecklinge) an ein
-// Mitglied. Prueft die Monatsgrenze (7 Samen / 5 Stecklinge). Nur Personal.
+// Bucht die Weitergabe von Vermehrungsmaterial an ein Mitglied. Samen und
+// Stecklinge koennen in EINEM Vorgang zusammen gebucht werden (je Art eigene
+// Monatsgrenze: 7 Samen / 5 Stecklinge). Beide Grenzen werden VOR dem Anlegen
+// geprueft, damit nie nur die halbe Buchung durchgeht. Nur Personal.
 export const prerender = false;
 
 function zurueck(redirect: (u: string, s?: number) => Response, mitgliedId: string, meldung: string) {
@@ -21,10 +23,20 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const daten = await request.formData();
   const mitgliedId = String(daten.get('mitglied') ?? '').trim();
-  const art = String(daten.get('art') ?? '').trim();
-  const anzahl = Number(String(daten.get('anzahl') ?? '').trim());
+  if (!mitgliedId) return zurueck(redirect, mitgliedId, 'Bitte zuerst ein Mitglied waehlen.');
 
-  if (!mitgliedId || !art) return zurueck(redirect, mitgliedId, 'Bitte Mitglied und Art auswaehlen.');
+  // Neue Doppel-Felder; die alten Einzelfelder (art + anzahl) bleiben gueltig.
+  const posten: Array<{ art: string; anzahl: number }> = [];
+  const altArt = String(daten.get('art') ?? '').trim();
+  const altAnzahl = Number(String(daten.get('anzahl') ?? '').trim());
+  if (altArt && Number.isFinite(altAnzahl) && altAnzahl > 0) posten.push({ art: altArt, anzahl: altAnzahl });
+  for (const art of ['samen', 'stecklinge']) {
+    const n = Number(String(daten.get(`anzahl_${art}`) ?? '').trim());
+    if (Number.isFinite(n) && n > 0) posten.push({ art, anzahl: n });
+  }
+  if (posten.length === 0) {
+    return zurueck(redirect, mitgliedId, 'Bitte mindestens eine Stueckzahl angeben (Samen oder Stecklinge).');
+  }
 
   let empfaenger;
   try {
@@ -36,32 +48,47 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const tag = berlinTag();
   const monat = berlinMonat(tag);
 
-  let bisher = [];
-  try {
-    bisher = await pb.collection('vermehrung_ausgaben').getFullList({
-      filter: `mitglied="${mitgliedId}" && monat="${monat}" && art="${art}"`,
-    });
-  } catch {
-    bisher = [];
+  // ERST beide Grenzen pruefen, DANN buchen (keine halben Vorgaenge).
+  for (const p of posten) {
+    let bisher = [];
+    try {
+      bisher = await pb.collection('vermehrung_ausgaben').getFullList({
+        filter: `mitglied="${mitgliedId}" && monat="${monat}" && art="${p.art}"`,
+      });
+    } catch {
+      bisher = [];
+    }
+    const pruefung = pruefeVermehrung({ art: p.art, bisherMonat: summeStueck(bisher), anzahlNeu: p.anzahl });
+    if (!pruefung.ok) {
+      return zurueck(redirect, mitgliedId, `${ART_LABEL[p.art as keyof typeof ART_LABEL] ?? p.art}: ${pruefung.meldung ?? 'nicht zulaessig.'} Es wurde nichts gebucht.`);
+    }
   }
 
-  const pruefung = pruefeVermehrung({ art, bisherMonat: summeStueck(bisher), anzahlNeu: anzahl });
-  if (!pruefung.ok) return zurueck(redirect, mitgliedId, pruefung.meldung ?? 'Nicht zulaessig.');
-
-  try {
-    await pb.collection('vermehrung_ausgaben').create({
-      mitglied: mitgliedId,
-      mitgliedsnummer: empfaenger.mitgliedsnummer || '',
-      art,
-      anzahl,
-      tag,
-      monat,
-      abgegeben_von: personal.id,
-      belegnr: 'V-' + tag.replaceAll('-', '') + '-' + String(Date.now()).slice(-5),
-      notiz: '',
-    });
-  } catch {
-    return zurueck(redirect, mitgliedId, 'Buchung fehlgeschlagen.');
+  const belegnr = 'V-' + tag.replaceAll('-', '') + '-' + String(Date.now()).slice(-5);
+  let gebucht = 0;
+  for (const p of posten) {
+    try {
+      await pb.collection('vermehrung_ausgaben').create({
+        mitglied: mitgliedId,
+        mitgliedsnummer: empfaenger.mitgliedsnummer || '',
+        art: p.art,
+        anzahl: p.anzahl,
+        tag,
+        monat,
+        abgegeben_von: personal.id,
+        belegnr,
+        notiz: '',
+      });
+      gebucht++;
+    } catch {
+      return zurueck(
+        redirect,
+        mitgliedId,
+        gebucht
+          ? `Nur ${gebucht} von ${posten.length} Posten gebucht (Beleg ${belegnr}) - Rest bitte erneut buchen.`
+          : 'Buchung fehlgeschlagen.',
+      );
+    }
   }
 
   const q = new URLSearchParams({ mitglied: mitgliedId, ok: '1' });

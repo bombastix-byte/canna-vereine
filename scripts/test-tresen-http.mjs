@@ -19,6 +19,7 @@ const uid = async (nr) => (await pb.collection('users').getFirstListItem(`mitgli
 const chargeVon = async (sorteName) =>
   (await pb.collection('chargen').getFirstListItem(`sorte_name="${sorteName}" && status="freigegeben"`)).id;
 const anna = await uid('M-101');
+const bengt = await uid('M-102'); // frisch, fuer Multi-Positions-Tests
 const david = await uid('M-104'); // U21 (2007)
 const hugo = await uid('M-108'); // ohne Geburtsdatum -> als U21
 const chNL = await chargeVon('Northern Lights'); // 18 % THC
@@ -50,6 +51,20 @@ async function buchen(mitglied, charge, menge) {
   });
   return r.headers.get('location') ?? '';
 }
+
+async function buchenMulti(mitglied, positionen) {
+  const body = new URLSearchParams({ mitglied });
+  positionen.forEach((p, i) => {
+    body.set(`charge_${i + 1}`, p.charge);
+    body.set(`menge_${i + 1}`, String(p.menge));
+  });
+  const r = await fetch(`${BASE}/mitglieder/ausgabe/buchen`, {
+    method: 'POST', redirect: 'manual',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    body,
+  });
+  return r.headers.get('location') ?? '';
+}
 let fehler = 0;
 function pruefe(name, loc, enthaelt) {
   const ok = loc.includes(enthaelt);
@@ -62,6 +77,28 @@ pruefe('David (U21) + Charge 18% THC -> blockt', await buchen(david, chNL, 5), '
 pruefe('David (U21) + Charge 9% THC -> Beleg', await buchen(david, chCBD, 5), '/beleg/');
 pruefe('Hugo (kein Geb.dat) + 18% THC -> blockt (als U21)', await buchen(hugo, chNL, 5), 'THC');
 pruefe('Anna (22g heute) + 3g -> Beleg (genau 25)', await buchen(anna, chNL, 3), '/beleg/');
+
+// --- Mehrere Sorten in EINEM Vorgang (gemeinsamer Beleg) ---
+const multiLoc = await buchenMulti(bengt, [
+  { charge: chNL, menge: 3 },
+  { charge: chCBD, menge: 2 },
+]);
+pruefe('Bengt Multi (3g NL + 2g CBD) -> Beleg', multiLoc, '/beleg/');
+// Beide Zeilen muessen dieselbe Belegnummer teilen.
+const belegId = multiLoc.split('/beleg/')[1]?.split('?')[0];
+if (belegId) {
+  const erster = await pb.collection('ausgaben').getOne(belegId);
+  const gruppe = await pb.collection('ausgaben').getFullList({
+    filter: `belegnr="${erster.belegnr}" && mitglied="${bengt}"`,
+  });
+  pruefe('Multi: 2 Zeilen mit gleicher Belegnr', String(gruppe.length), '2');
+  pruefe('Multi: Gesamtmenge 5 g', String(gruppe.reduce((s, r) => s + r.menge_gramm, 0)), '5');
+}
+// Summe ueber Tageslimit muss blocken (Bengt hat jetzt 5 g heute -> Rest 20).
+pruefe('Bengt Multi (15g + 10g = 25g, Rest 20) -> Tageslimit', await buchenMulti(bengt, [
+  { charge: chNL, menge: 15 },
+  { charge: chCBD, menge: 10 },
+]), 'Tageslimit');
 
 console.log(`\n${fehler === 0 ? 'HTTP-E2E TRESEN BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

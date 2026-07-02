@@ -189,16 +189,17 @@ const schnellMengen = [1, 2, 3, 5, 10];
 
   {gewaehlt && status && status.restJetzt > 0 && (
     <section class="schritt" aria-label="Schritt 2">
-      <h2 class="schritt-titel"><span class="snr">2</span> Sorte und Menge</h2>
+      <h2 class="schritt-titel"><span class="snr">2</span> Sorten und Mengen</h2>
       {chargen.length === 0 ? (
         <p class="hinweis">Keine freigegebene Charge mit Bestand. Zuerst in der
         <a href="/mitglieder/wawi"> Warenwirtschaft</a> eine Charge freigeben.</p>
       ) : (
         <form class="kasten" method="post" action="/mitglieder/ausgabe/buchen">
           <input type="hidden" name="mitglied" value={gewaehltId} />
+
           <div class="feld">
-            <label for="charge">Sorte (Charge)</label>
-            <select id="charge" name="charge" required>
+            <label for="charge_1">Sorte (Charge)</label>
+            <select id="charge_1" name="charge_1" required>
               <option value="">— bitte wählen —</option>
               {chargen.map((c) => (
                 <option value={c.id} disabled={chargeGesperrt(c)}>
@@ -208,17 +209,41 @@ const schnellMengen = [1, 2, 3, 5, 10];
             </select>
           </div>
           <div class="feld">
-            <label for="menge_gramm">Menge in Gramm (höchstens {status.restJetzt} g)</label>
+            <label for="menge_1">Menge in Gramm</label>
             <div class="mengenreihe">
               {schnellMengen.filter((g) => g <= status.restJetzt).map((g) => (
                 <button type="button" class="menge-knopf" data-g={g}>{g} g</button>
               ))}
-              <input id="menge_gramm" name="menge_gramm" type="number" inputmode="decimal"
+              <input id="menge_1" name="menge_1" type="number" inputmode="decimal"
                 min="0.1" step="0.1" max={status.restJetzt} required placeholder="frei" />
             </div>
-            <p class="beitrag-zeile">Beitrag: <strong id="beitrag-vorschau">—</strong> <span style="color:var(--ink-soft);">({eur(BEITRAG_PRO_GRAMM)} €/g)</span></p>
           </div>
-          <button class="knopf" type="submit">Buchen und Beleg zeigen</button>
+
+          <details class="mehr-det">
+            <summary>＋ weitere Sorte mitgeben (bis zu 3 zusätzlich)</summary>
+            {[2, 3, 4].map((i) => (
+              <div class="pos-zeile">
+                <select name={`charge_${i}`} aria-label={`Sorte Position ${i}`}>
+                  <option value="">— Sorte {i} (optional) —</option>
+                  {chargen.map((c) => (
+                    <option value={c.id} disabled={chargeGesperrt(c)}>
+                      {c.sorte_name} — {c.thc_prozent ?? '?'} % THC · {c.verfuegbar_g} g da · {c.charge_nr}{chargeGesperrt(c) ? ' — U21 gesperrt' : ''}
+                    </option>
+                  ))}
+                </select>
+                <input name={`menge_${i}`} aria-label={`Menge Position ${i} in Gramm`} type="number"
+                  inputmode="decimal" min="0.1" step="0.1" max={status.restJetzt} placeholder="g" />
+              </div>
+            ))}
+          </details>
+
+          <p class="beitrag-zeile">
+            Zusammen höchstens <strong>{status.restJetzt} g</strong> ·
+            Gesamt: <strong id="summe-vorschau">—</strong> ·
+            Beitrag: <strong id="beitrag-vorschau">—</strong>
+            <span style="color:var(--ink-soft);">({eur(BEITRAG_PRO_GRAMM)} €/g)</span>
+          </p>
+          <button class="knopf" type="submit">Alles buchen — ein Beleg</button>
         </form>
       )}
     </section>
@@ -252,22 +277,29 @@ const schnellMengen = [1, 2, 3, 5, 10];
 </Basis>
 
 <script define:vars={{ preisProGramm: BEITRAG_PRO_GRAMM }}>
-  // Schnellwahl-Mengen + Beitragsvorschau. Rein optional - ohne JS bleibt das
-  // Zahlenfeld voll nutzbar, gebucht/geprueft wird immer serverseitig.
-  const feld = document.getElementById('menge_gramm');
-  const vorschau = document.getElementById('beitrag-vorschau');
+  // Schnellwahl-Mengen + Gesamt-/Beitragsvorschau ueber ALLE Positionen.
+  // Rein optional - ohne JS bleiben die Felder voll nutzbar, gebucht und
+  // geprueft wird immer serverseitig (auf die Summe).
+  const felder = () => Array.from(document.querySelectorAll('input[name^="menge_"]'));
+  const summeEl = document.getElementById('summe-vorschau');
+  const beitragEl = document.getElementById('beitrag-vorschau');
   const zeige = () => {
-    if (!feld || !vorschau) return;
-    const g = parseFloat(String(feld.value).replace(',', '.'));
-    vorschau.textContent = Number.isFinite(g) && g > 0
-      ? (g * preisProGramm).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+    if (!summeEl || !beitragEl) return;
+    const summe = felder().reduce((s, f) => {
+      const g = parseFloat(String(f.value).replace(',', '.'));
+      return s + (Number.isFinite(g) && g > 0 ? g : 0);
+    }, 0);
+    summeEl.textContent = summe > 0 ? summe.toLocaleString('de-DE') + ' g' : '—';
+    beitragEl.textContent = summe > 0
+      ? (summe * preisProGramm).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
       : '—';
   };
-  feld?.addEventListener('input', zeige);
+  felder().forEach((f) => f.addEventListener('input', zeige));
+  const erstes = document.getElementById('menge_1');
   document.querySelectorAll('.menge-knopf').forEach((k) => {
     k.addEventListener('click', () => {
-      if (!feld) return;
-      feld.value = k.dataset.g ?? '';
+      if (!erstes) return;
+      erstes.value = k.dataset.g ?? '';
       zeige();
       document.querySelectorAll('.menge-knopf').forEach((x) => x.classList.toggle('aktiv', x === k));
     });
@@ -388,6 +420,33 @@ const schnellMengen = [1, 2, 3, 5, 10];
   }
   .mengenreihe input {
     width: 7rem;
+    flex: none;
+  }
+  .mehr-det {
+    margin: 0 0 0.9rem;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.9rem;
+  }
+  .mehr-det summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .mehr-det[open] {
+    border-style: solid;
+  }
+  .pos-zeile {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+  }
+  .pos-zeile select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .pos-zeile input {
+    width: 5.5rem;
     flex: none;
   }
   .beitrag-zeile {
