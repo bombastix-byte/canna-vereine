@@ -15,6 +15,10 @@ export interface Dienst {
   datum?: string;
   bedarf: number;
   beschreibung?: string;
+  /** Verknuepfte Anleitung (Record-Id in `anleitungen`), optional. */
+  anleitung?: string;
+  /** Benoetigte Rolle ('anbau'/'ausgabe'/'vorstand'), leer = jedes Mitglied. */
+  benoetigte_rolle?: string;
 }
 
 export interface Eintrag {

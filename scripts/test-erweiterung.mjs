@@ -3,6 +3,7 @@
 import { aggregiereJahr } from '../src/lib/jahresmeldung.ts';
 import { pruefeVermehrung } from '../src/lib/vermehrung.ts';
 import { belegZpl } from '../src/lib/zpl.ts';
+import { darfDienst } from '../src/lib/rollen.ts';
 
 let fehler = 0;
 function pruefe(name, ist, soll) {
@@ -60,6 +61,14 @@ pruefeWahr('ZPL enthaelt Sorte', zpl.includes('Northern Lights'));
 pruefeWahr('ZPL enthaelt Menge', zpl.includes('5 g'));
 const zplBoes = belegZpl({ verein: 'A^B~C\\D' });
 pruefeWahr('ZPL entschaerft Sonderzeichen', !zplBoes.includes('A^B'));
+
+// --- Dienst-Rollen-Gate (wer darf welche Aufgabe uebernehmen) ---
+pruefe('Dienst ohne Anforderung -> jeder', darfDienst(['mitglied'], undefined), true);
+pruefe('Dienst ohne Anforderung (leer) -> jeder', darfDienst(['mitglied'], ''), true);
+pruefe('anbau-Dienst ohne Rolle -> nein', darfDienst(['mitglied'], 'anbau'), false);
+pruefe('anbau-Dienst mit Rolle anbau -> ja', darfDienst(['mitglied', 'anbau'], 'anbau'), true);
+pruefe('anbau-Dienst als Vorstand -> ja', darfDienst(['vorstand'], 'anbau'), true);
+pruefe('ausgabe-Dienst mit nur anbau -> nein', darfDienst(['anbau'], 'ausgabe'), false);
 
 console.log(`\n${fehler === 0 ? 'ALLE ERWEITERUNGS-TESTS BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

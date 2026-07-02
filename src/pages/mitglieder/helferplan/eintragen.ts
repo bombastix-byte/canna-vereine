@@ -1,9 +1,12 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfDienst } from '../../../lib/rollen';
 import { montagVon, parseTag, ymd } from '../../../lib/helfer';
 
 // Trägt das angemeldete Mitglied in einen Helferdienst an einem konkreten Tag
-// ein. mitglied wird stets serverseitig gesetzt. Prüft schon-eingetragen / voll.
+// ein. mitglied wird stets serverseitig gesetzt. Prüft schon-eingetragen /
+// voll / benötigte Rolle. Erste Übernahme eines Dienstes wird erkannt, damit
+// der Helferplan direkt die passende Anleitung zeigt.
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -23,8 +26,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect(`/mitglieder/helferplan?${wocheQ}fehler=fehlend`, 303);
   }
 
+  let erstesMal = false;
   try {
     const d = await pb.collection('helferdienste').getOne(dienst);
+
+    // Rollen-Schutz: manche Aufgaben (z. B. Bestand wiegen, Ernte) duerfen
+    // nur Mitglieder mit passender Rolle uebernehmen.
+    if (!darfDienst(mitglied.rollen, d.benoetigte_rolle)) {
+      return redirect(`/mitglieder/helferplan?${wocheQ}fehler=rolle`, 303);
+    }
+
     const liste = await pb.collection('helfer_eintragungen').getFullList({
       filter: `dienst="${dienst}"`,
     });
@@ -37,6 +48,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       return redirect(`/mitglieder/helferplan?${wocheQ}fehler=voll`, 303);
     }
 
+    // Uebernimmt das Mitglied diesen Dienst zum ersten Mal? Dann zeigt der
+    // Helferplan direkt die Anleitung ("gleich eine Instruktion bekommen").
+    erstesMal = !liste.some((e) => e.mitglied === mitglied.id);
+
     await pb.collection('helfer_eintragungen').create({
       mitglied: mitglied.id,
       dienst,
@@ -46,5 +61,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect(`/mitglieder/helferplan?${wocheQ}fehler=fehlgeschlagen`, 303);
   }
 
-  return redirect(`/mitglieder/helferplan?${wocheQ}ok=1`, 303);
+  const erstesQ = erstesMal ? `&erstesmal=${dienst}` : '';
+  return redirect(`/mitglieder/helferplan?${wocheQ}ok=1${erstesQ}`, 303);
 };

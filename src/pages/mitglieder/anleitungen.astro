@@ -1,0 +1,172 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfDienst, TEAM_LABEL } from '../../lib/rollen';
+
+// Verfahrensbibliothek: alle Arbeitsanleitungen des Vereins ("so wird es
+// gemacht"). Lesen darf jedes Mitglied - Transparenz. Ein Badge zeigt, wer
+// die Aufgabe ausfuehren darf; ausfuehren duerfen nur Berechtigte.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+
+interface Anleitung {
+  id: string;
+  titel: string;
+  kategorie?: string;
+  zweck?: string;
+  schritte: string;
+  hinweise?: string;
+  benoetigte_rolle?: string;
+  aktiv?: boolean;
+  updated?: string;
+}
+
+let anleitungen: Anleitung[] = [];
+try {
+  anleitungen = (
+    (await pb.collection('anleitungen').getFullList({ sort: 'kategorie,titel' })) as Anleitung[]
+  ).filter((a) => a.aktiv !== false);
+} catch {
+  anleitungen = [];
+}
+
+const KATEGORIE_LABEL: Record<string, string> = {
+  anbau: 'Anbau und Pflege',
+  ernte: 'Ernte und Trocknung',
+  lager: 'Lager und Bestand',
+  ausgabe: 'Ausgabe',
+  allgemein: 'Allgemeines',
+};
+const reihenfolge = ['anbau', 'ernte', 'lager', 'ausgabe', 'allgemein'];
+const gruppen = reihenfolge
+  .map((k) => ({ key: k, label: KATEGORIE_LABEL[k], eintraege: anleitungen.filter((a) => (a.kategorie ?? 'allgemein') === k) }))
+  .filter((g) => g.eintraege.length > 0);
+
+// Tief verlinkbar: ?a=<id> klappt die Anleitung direkt auf (vom Helferplan aus).
+const offenId = Astro.url.searchParams.get('a') ?? '';
+
+const schritteVon = (a: Anleitung) => a.schritte.split('\n').map((s) => s.trim()).filter(Boolean);
+const stand = (iso?: string) =>
+  iso ? new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+---
+
+<Basis titel="Anleitungen" beschreibung="Verfahrensbibliothek: so werden die Aufgaben im Verein gemacht.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Anleitungen</h1>
+  <p class="einleitung">
+    So werden die Aufgaben im Verein gemacht — Schritt für Schritt. Lesen darf
+    jedes Mitglied. Das Schild an der Anleitung zeigt, wer die Aufgabe
+    ausführen darf. Wer eine Aufgabe neu übernimmt: erst lesen, dann loslegen,
+    bei Fragen das jeweilige Team ansprechen.
+  </p>
+
+  {anleitungen.length === 0 && (
+    <p style="color:var(--ink-soft);">Noch keine Anleitungen hinterlegt. Der Vorstand pflegt sie im CMS.</p>
+  )}
+
+  {gruppen.map((g) => (
+    <section class="gruppe">
+      <h2>{g.label}</h2>
+      {g.eintraege.map((a) => (
+        <details class="sop" id={`a-${a.id}`} open={a.id === offenId}>
+          <summary>
+            <span class="sop-titel">{a.titel}</span>
+            <span class:list={['sop-badge', { frei: !a.benoetigte_rolle, du: darfDienst(mitglied.rollen, a.benoetigte_rolle) && !!a.benoetigte_rolle }]}>
+              {a.benoetigte_rolle ? `nur ${TEAM_LABEL[a.benoetigte_rolle] ?? a.benoetigte_rolle}` : 'jedes Mitglied'}
+            </span>
+          </summary>
+          {a.zweck && <p class="sop-zweck">{a.zweck}</p>}
+          <ol class="sop-schritte">
+            {schritteVon(a).map((s) => <li>{s}</li>)}
+          </ol>
+          {a.hinweise && (
+            <p class="sop-hinweis"><strong>Wichtig:</strong> {a.hinweise}</p>
+          )}
+          <p class="sop-stand">
+            Stand: {stand(a.updated)}
+            {a.benoetigte_rolle && !darfDienst(mitglied.rollen, a.benoetigte_rolle) && (
+              <span> · Du darfst diese Aufgabe derzeit nicht ausführen — sprich den Vorstand an, wenn du sie übernehmen möchtest.</span>
+            )}
+          </p>
+        </details>
+      ))}
+    </section>
+  ))}
+</Basis>
+
+<style>
+  .gruppe {
+    max-width: var(--mass);
+  }
+  .sop {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.8rem 1.1rem;
+    margin: 0 0 0.7rem;
+    background: var(--bg-rein);
+  }
+  .sop[open] {
+    border-color: var(--accent);
+  }
+  .sop summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .sop-titel {
+    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+  }
+  .sop-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid #c98a00;
+    color: #8a5a00;
+    border-radius: 999px;
+    padding: 0.12rem 0.55rem;
+    white-space: nowrap;
+  }
+  .sop-badge.frei {
+    border-color: var(--line);
+    color: var(--ink-soft);
+  }
+  .sop-badge.du {
+    border-color: #1c7c3a;
+    color: #1c7c3a;
+  }
+  .sop-zweck {
+    margin: 0.8rem 0 0.4rem;
+    color: var(--ink-soft);
+  }
+  .sop-schritte {
+    margin: 0.6rem 0;
+    padding-left: 1.4rem;
+  }
+  .sop-schritte li {
+    margin: 0 0 0.45rem;
+  }
+  .sop-hinweis {
+    border-left: 3px solid #c98a00;
+    padding: 0.5rem 0.8rem;
+    background: var(--line-soft);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 0.93rem;
+    margin: 0.7rem 0 0.4rem;
+  }
+  .sop-stand {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin: 0.5rem 0 0;
+  }
+</style>

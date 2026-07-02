@@ -62,6 +62,23 @@ export function darfVerwalten(rollen?: string[]): boolean {
   return istVorstand(rollen);
 }
 
+/**
+ * Darf jemand mit diesen Rollen einen Dienst mit Rollen-Anforderung
+ * uebernehmen? Ohne Anforderung darf jedes Mitglied; Vorstand darf immer.
+ * (Beispiel: "Bestand wiegen" nur fuer das Anbau-Team.)
+ */
+export function darfDienst(rollen: string[] | undefined, benoetigt?: string): boolean {
+  if (!benoetigt) return true;
+  return hatRolle(rollen, benoetigt as Rolle) || istVorstand(rollen);
+}
+
+/** Kurze Anzeige-Labels fuer Dienst-Anforderungen (Badges). */
+export const TEAM_LABEL: Record<string, string> = {
+  anbau: 'Anbau-Team',
+  ausgabe: 'Ausgabe-Team',
+  vorstand: 'Vorstand',
+};
+
 /** Irgendeine Personal-Rolle (nicht nur einfaches Mitglied). */
 export function istPersonal(rollen?: string[]): boolean {
   return (
