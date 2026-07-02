@@ -1,0 +1,161 @@
+---
+import Basis from '../../../../layouts/Basis.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
+import { darfAusgeben } from '../../../../lib/rollen';
+import { site } from '../../../../config';
+
+// Druckbarer Abgabe-Beleg / Beipackzettel (Tueten-Label) mit den nach KCanG
+// erforderlichen Pflichtangaben. Sichtbar fuer das Personal und fuer das
+// betroffene Mitglied (durch die Collection-Regel abgesichert).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+const personal = darfAusgeben(mitglied.rollen);
+
+const { id } = Astro.params;
+let a;
+try {
+  a = await pb.collection('ausgaben').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/bereich?fehler=beleg', 303);
+}
+
+const neu = Astro.url.searchParams.get('neu');
+const gedruckt = Astro.url.searchParams.get('gedruckt');
+const druckfehler = Astro.url.searchParams.get('druckfehler');
+const datum = (s?: string) =>
+  s ? new Date(s).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+const eur = (n?: number) => (n ?? 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const abgabedatum = a.tag ? datum(a.tag + 'T00:00:00Z') : datum(a.created);
+const praev = site.praeventionsbeauftragter;
+---
+
+<Basis titel={`Beleg ${a.belegnr ?? ''}`} beschreibung="Abgabe-Beleg / Beipackzettel">
+  {neu && (
+    <p class="hinweis" role="status" style="max-width:var(--mass);">
+      Abgabe gebucht. Beleg drucken und der Tüte beilegen. Beitrag an der Kasse kassieren.
+    </p>
+  )}
+
+  {gedruckt && <p class="hinweis" role="status" style="max-width:var(--mass);">An Etikettendrucker gesendet.</p>}
+  {druckfehler && <p class="hinweis" role="alert" style="max-width:var(--mass);border-color:#d99;background:#fbecec;">Drucker nicht erreichbar. Bitte über den Druckdialog drucken.</p>}
+
+  <div class="aktionen">
+    <button class="knopf" type="button" onclick="window.print()">Beleg drucken</button>
+    {personal && (
+      <form method="post" action={`/mitglieder/ausgabe/beleg/${a.id}/drucken`} style="display:inline;">
+        <button class="knopf-sek" type="submit">An Etikettendrucker senden</button>
+      </form>
+    )}
+    <a class="knopf-sek" href="/mitglieder/ausgabe">Zurück zum Tresen</a>
+  </div>
+
+  <div class="beleg">
+    <div class="beleg-kopf">
+      <strong>{site.vereinsname}</strong>
+      <span>{site.kontakt.strasse}, {site.kontakt.plz} {site.kontakt.ort}</span>
+    </div>
+
+    <table class="beleg-tab">
+      <tbody>
+        <tr><td>Beleg-Nr.</td><td>{a.belegnr}</td></tr>
+        <tr><td>Abgabedatum</td><td>{abgabedatum}</td></tr>
+        <tr><td>Mitglied</td><td>{a.mitgliedsnummer || a.mitglied}</td></tr>
+        <tr><td>Sorte</td><td>{a.sorte_name}</td></tr>
+        {a.charge && <tr><td>Charge</td><td>{a.charge}</td></tr>}
+        <tr><td>Menge</td><td><strong>{a.menge_gramm} g</strong></td></tr>
+        <tr><td>THC-Gehalt</td><td>{a.thc_prozent} %</td></tr>
+        <tr><td>CBD-Gehalt</td><td>{a.cbd_prozent} %</td></tr>
+        <tr><td>Selbstkostenbeitrag</td><td>{eur(a.beitrag_euro)} €</td></tr>
+      </tbody>
+    </table>
+
+    <div class="beleg-hinweise">
+      <p><strong>Abgabe ausschließlich an Mitglieder der Vereinigung.</strong> Weitergabe an Dritte ist verboten. Kein Verkauf – Abgabe zum Selbstkostenbeitrag nach der Satzung.</p>
+      <p><strong>Jugend- und Gesundheitsschutz:</strong> Konsum unter 18 Jahren ist verboten. Nicht in Reichweite von Kindern und Jugendlichen aufbewahren. Kein Konsum vor dem Führen von Fahrzeugen.</p>
+      <p><strong>Beratung/Prävention:</strong> {praev.name}{praev.email ? ` · ${praev.email}` : ''}. Kontakt: {site.kontakt.email}.</p>
+    </div>
+  </div>
+</Basis>
+
+<style>
+  .aktionen {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    margin: 1rem 0 1.4rem;
+    max-width: var(--mass);
+  }
+  .knopf-sek {
+    text-decoration: none;
+    color: var(--ink-soft);
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .beleg {
+    max-width: 24rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.2rem;
+    background: var(--bg-rein);
+  }
+  .beleg-kopf {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-bottom: 0.7rem;
+    margin-bottom: 0.7rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.92rem;
+  }
+  .beleg-tab {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .beleg-tab td {
+    padding: 0.28rem 0;
+    vertical-align: top;
+  }
+  .beleg-tab td:first-child {
+    color: var(--ink-soft);
+    width: 45%;
+  }
+  .beleg-hinweise {
+    margin-top: 0.9rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .beleg-hinweise p {
+    margin: 0 0 0.5rem;
+  }
+
+  /* Druck: nur das Label, alles andere ausblenden. */
+  @media print {
+    :global(body *) {
+      visibility: hidden;
+    }
+    .beleg,
+    .beleg * {
+      visibility: visible;
+    }
+    .beleg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 62mm; /* passend fuer schmale Etiketten/Bonrollen */
+      max-width: none;
+      border: none;
+      padding: 0;
+    }
+    .aktionen {
+      display: none;
+    }
+  }
+</style>

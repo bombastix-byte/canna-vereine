@@ -33,10 +33,18 @@ export function dateiUrl(
   return `${PB_PUBLIC_URL}/api/files/${record.collectionId}/${record.id}/${datei}`;
 }
 
+import { alsRollen } from './rollen';
+
 export interface Mitglied {
   id: string;
   email: string;
   name?: string;
+  /** Zugewiesene Rollen (Mehrfach). Steuert alle Rechte. Siehe lib/rollen.ts. */
+  rollen: string[];
+  /** Vereinsinterne Mitgliedsnummer (fuer Beleg/Identifikation). */
+  mitgliedsnummer?: string;
+  /** ISO-Geburtsdatum (fuer die U21-Regel bei der Ausgabe). */
+  geburtsdatum?: string;
 }
 
 /**
@@ -58,6 +66,9 @@ export async function mitgliedAusToken(
         id: record.id,
         email: record.email as string,
         name: (record.name as string) || undefined,
+        rollen: alsRollen(record.rollen).length ? alsRollen(record.rollen) : ['mitglied'],
+        mitgliedsnummer: (record.mitgliedsnummer as string) || undefined,
+        geburtsdatum: (record.geburtsdatum as string) || undefined,
       },
     };
   } catch {

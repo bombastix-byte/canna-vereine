@@ -1,0 +1,321 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import {
+  type Dienst,
+  type Eintrag,
+  ymd,
+  plusTage,
+  tagVon,
+  montagVon,
+  parseTag,
+  findetStatt,
+  belegtAm,
+} from '../../lib/helfer';
+
+// Geschützt. Wochenplan: wiederkehrende Dienste erscheinen automatisch an jedem
+// passenden Tag. Mitglieder tragen sich pro Tag und Dienst ein.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) {
+  return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+}
+const { pb, mitglied } = ergebnis;
+
+let dienste: Dienst[] = [];
+let eintragungen: Eintrag[] = [];
+try {
+  dienste = (await pb.collection('helferdienste').getFullList({ sort: 'titel' })) as Dienst[];
+} catch {
+  dienste = [];
+}
+try {
+  eintragungen = (await pb.collection('helfer_eintragungen').getFullList()) as Eintrag[];
+} catch {
+  eintragungen = [];
+}
+
+// Angezeigte Woche bestimmen (Param ?woche=YYYY-MM-DD = beliebiger Tag der Woche).
+const heute = tagVon(new Date());
+const gewuenscht = parseTag(Astro.url.searchParams.get('woche')) ?? heute;
+const montag = montagVon(gewuenscht);
+const tage = Array.from({ length: 7 }, (_, i) => plusTage(montag, i));
+const vorigeWoche = ymd(plusTage(montag, -7));
+const naechsteWoche = ymd(plusTage(montag, 7));
+const istAktuelleWoche = ymd(montag) === ymd(montagVon(heute));
+
+const meineEinsaetze = eintragungen.filter((e) => e.mitglied === mitglied.id).length;
+
+const fehler = Astro.url.searchParams.get('fehler');
+const ok = Astro.url.searchParams.get('ok');
+const aus = Astro.url.searchParams.get('aus');
+const fehlertext: Record<string, string> = {
+  fehlend: 'Bitte einen Dienst auswählen.',
+  schon: 'Du bist für diesen Tag bereits eingetragen.',
+  voll: 'Dieser Dienst ist an diesem Tag bereits voll belegt.',
+  fehlgeschlagen: 'Das hat nicht geklappt. Bitte erneut versuchen.',
+};
+const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
+
+const rhythmusLabel: Record<string, string> = {
+  taeglich: 'Täglich',
+  woechentlich: 'Wöchentlich',
+  monatlich: 'Monatlich',
+  einmalig: 'Einmalig',
+};
+
+const langerTag = (d: Date) => d.toLocaleDateString('de-DE', { weekday: 'long' });
+const kurzesDatum = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+const istHeute = (d: Date) => ymd(d) === ymd(heute);
+const meinAm = (id: string, tag: Date) =>
+  eintragungen.some(
+    (e) => e.dienst === id && e.mitglied === mitglied.id && String(e.datum).slice(0, 10) === ymd(tag),
+  );
+---
+
+<Basis titel="Helferplan" beschreibung="Wochenplan der anstehenden Vereinsaufgaben.">
+  <MitgliedNav />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Helferplan</h1>
+  <p class="einleitung">
+    Wochenplan der anstehenden Aufgaben rund um den gemeinschaftlichen Anbau.
+    Trage dich bei einem Tag ein, an dem du helfen kannst. So sieht jeder, wo
+    noch Hilfe gebraucht wird.
+  </p>
+
+  {meldung && (
+    <p class="hinweis" role="alert" style="border-color:#d99;background:rgba(180,60,60,0.12);">{meldung}</p>
+  )}
+  {ok && <p class="hinweis" role="status">Danke, deine Eintragung wurde gespeichert.</p>}
+  {aus && <p class="hinweis" role="status">Du wurdest aus dem Dienst ausgetragen.</p>}
+
+  <nav class="wochennav" aria-label="Woche wählen">
+    <a class="wochennav__btn" href={`/mitglieder/helferplan?woche=${vorigeWoche}`}>‹ Vorige</a>
+    <span class="wochennav__bereich">
+      {kurzesDatum(montag)} – {kurzesDatum(tage[6])}
+      {istAktuelleWoche && <span class="wochennav__jetzt">diese Woche</span>}
+    </span>
+    <a class="wochennav__btn" href={`/mitglieder/helferplan?woche=${naechsteWoche}`}>Nächste ›</a>
+  </nav>
+  {!istAktuelleWoche && (
+    <p style="margin:0 0 1rem;"><a href="/mitglieder/helferplan">Zur aktuellen Woche</a></p>
+  )}
+
+  <p class="einsatz-zaehler">Deine Einsätze insgesamt: <strong>{meineEinsaetze}</strong></p>
+
+  <div class="wochenplan">
+    {
+      tage.map((tag) => {
+        const heutige = dienste.filter((d) => findetStatt(d, tag));
+        return (
+          <section class={`tag${istHeute(tag) ? ' tag--heute' : ''}`}>
+            <h2 class="tag__kopf">
+              <span class="tag__name">{langerTag(tag)}</span>
+              <span class="tag__datum">{kurzesDatum(tag)}</span>
+            </h2>
+            {heutige.length === 0 ? (
+              <p class="tag__leer">Keine Dienste.</p>
+            ) : (
+              <ul class="dienste">
+                {heutige.map((d) => {
+                  const belegt = belegtAm(eintragungen, d.id, tag);
+                  const voll = typeof d.bedarf === 'number' && belegt >= d.bedarf;
+                  const mein = meinAm(d.id, tag);
+                  return (
+                    <li class="dienst">
+                      <span class="dienst__haupt">
+                        <span class="dienst__titel">
+                          {d.titel}
+                          {d.rhythmus && (
+                            <span class="dienst__tag">{rhythmusLabel[d.rhythmus] ?? d.rhythmus}</span>
+                          )}
+                        </span>
+                        <span class="dienst__meta">{belegt} von {d.bedarf} belegt</span>
+                      </span>
+                      <span class="dienst__aktion">
+                        {mein ? (
+                          <form method="post" action="/mitglieder/helferplan/austragen">
+                            <input type="hidden" name="dienst" value={d.id} />
+                            <input type="hidden" name="datum" value={ymd(tag)} />
+                            <span class="dienst__mit">Du hilfst mit</span>
+                            <button class="knopf knopf--leise" type="submit">Austragen</button>
+                          </form>
+                        ) : voll ? (
+                          <span class="dienst__voll">Voll belegt</span>
+                        ) : (
+                          <form method="post" action="/mitglieder/helferplan/eintragen">
+                            <input type="hidden" name="dienst" value={d.id} />
+                            <input type="hidden" name="datum" value={ymd(tag)} />
+                            <button class="knopf" type="submit">Ich helfe mit</button>
+                          </form>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })
+    }
+  </div>
+</Basis>
+
+<style>
+  .wochennav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin: 0 0 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--line);
+    max-width: var(--mass);
+  }
+  .wochennav__btn {
+    text-decoration: none;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  .wochennav__btn:hover {
+    background: var(--line-soft);
+  }
+  .wochennav__bereich {
+    font-family: var(--font-display);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .wochennav__jetzt {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.1rem 0.45rem;
+  }
+  .einsatz-zaehler {
+    color: var(--ink-soft);
+    margin: 0 0 1.4rem;
+  }
+
+  .wochenplan {
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    max-width: var(--mass);
+  }
+  .tag {
+    background: var(--bg-rein);
+    padding: 1rem 1.2rem 1.1rem;
+  }
+  .tag--heute {
+    background: var(--line-soft);
+  }
+  .tag__kopf {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0 0 0.7rem;
+    font-size: 1.05rem;
+  }
+  .tag__name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--brand-strong);
+  }
+  .tag__datum {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    font-family: var(--font-body);
+    font-weight: 400;
+  }
+  .tag__leer {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .dienste {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .dienst {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+  }
+  .dienst__haupt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .dienst__titel {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+  .dienst__tag {
+    font-family: var(--font-body);
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.08rem 0.4rem;
+  }
+  .dienst__meta {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+  .dienst__aktion {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .dienst__mit {
+    font-size: 0.82rem;
+    color: var(--brand);
+    font-weight: 600;
+  }
+  .dienst__voll {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .knopf--leise {
+    background: transparent;
+    color: var(--ink-soft);
+    border-color: var(--line);
+    padding: 0.45rem 0.9rem;
+  }
+  .knopf--leise:hover {
+    background: var(--line-soft);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+</style>

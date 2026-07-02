@@ -1,0 +1,6 @@
+mitgliedsnummer,name,email,geburtsdatum,rollen,passwort
+M-001,Max Mustermann,max@example.de,1990-05-05,mitglied,
+M-002,Erika Beispiel,erika@example.de,2006-03-15,mitglied,
+V-001,Vera Vorstand,vera@example.de,1980-01-20,vorstand,
+G-001,Georg Gaertner,georg@example.de,1985-07-07,anbau,
+A-001,Anke Ausgabe,anke@example.de,1992-09-09,ausgabe;anbau,

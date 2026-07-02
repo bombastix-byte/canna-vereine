@@ -14,7 +14,7 @@ export const leipzig: SiteConfig = {
     'Erlaubnis zum gemeinschaftlichen Eigenanbau nach Paragraf 11 KCanG: TODO Aktenzeichen / Status',
 
   kontakt: {
-    strasse: 'TODO Strasse und Hausnummer',
+    strasse: 'TODO Straße und Hausnummer',
     plz: '04109',
     ort: 'Leipzig',
     email: 'kontakt@TODO-leipzig-domain.de',
@@ -29,7 +29,7 @@ export const leipzig: SiteConfig = {
 
   praeventionsbeauftragter: {
     name: 'TODO Vorname Nachname',
-    rolle: 'Praeventionsbeauftragte Person nach Paragraf 23 KCanG',
+    rolle: 'Präventionsbeauftragte Person nach Paragraf 23 KCanG',
     email: 'praevention@TODO-leipzig-domain.de',
   },
 
@@ -42,7 +42,7 @@ export const leipzig: SiteConfig = {
     },
     {
       name: 'BZgA: Infotelefon zur Suchtvorbeugung',
-      beschreibung: 'Bundeszentrale fuer gesundheitliche Aufklaerung, anonyme Beratung.',
+      beschreibung: 'Bundeszentrale für gesundheitliche Aufklärung, anonyme Beratung.',
       telefon: '0221 892031',
       url: 'https://www.bzga.de',
     },

@@ -3,7 +3,7 @@ import Basis from '../../layouts/Basis.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 
 // Serverseitig, damit Status-/Fehlermeldungen und bereits angemeldete
-// Mitglieder behandelt werden koennen.
+// Mitglieder behandelt werden können.
 export const prerender = false;
 
 // Bereits angemeldet? Direkt in den Bereich.
@@ -17,7 +17,7 @@ const abgemeldet = Astro.url.searchParams.get('abgemeldet');
 
 const fehlertext: Record<string, string> = {
   fehlend: 'Bitte E-Mail-Adresse und Passwort eingeben.',
-  ungueltig: 'Anmeldung nicht moeglich. Bitte pruefen Sie Ihre Zugangsdaten.',
+  ungueltig: 'Anmeldung nicht möglich. Bitte prüfen Sie Ihre Zugangsdaten.',
   anmeldung: 'Bitte melden Sie sich an, um den Mitgliederbereich zu sehen.',
 };
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;

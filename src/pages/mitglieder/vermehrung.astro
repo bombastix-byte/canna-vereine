@@ -1,0 +1,126 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfAusgeben } from '../../lib/rollen';
+import { berlinTag, berlinMonat } from '../../lib/ausgabe';
+import { ARTEN, ART_LABEL, limitFuer, summeStueck } from '../../lib/vermehrung';
+
+// Weitergabe von Vermehrungsmaterial (Samen/Stecklinge) an Mitglieder. Personal.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied: personal } = ergebnis;
+if (!darfAusgeben(personal.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface UserRow { id: string; name?: string; email: string; mitgliedsnummer?: string }
+interface VRow { id: string; mitglied: string; mitgliedsnummer?: string; art: string; anzahl: number; tag: string }
+
+const tag = berlinTag();
+const monat = berlinMonat(tag);
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const mitglieder = await ladeListe<UserRow>('users', { sort: 'mitgliedsnummer,name' });
+const heuteAlle = await ladeListe<VRow>('vermehrung_ausgaben', { filter: `tag="${tag}"`, sort: '-created' });
+
+const fehler = Astro.url.searchParams.get('fehler');
+const msg = Astro.url.searchParams.get('msg');
+const ok = Astro.url.searchParams.get('ok');
+
+const gewaehltId = Astro.url.searchParams.get('mitglied') ?? '';
+const gewaehlt = mitglieder.find((m) => m.id === gewaehltId) ?? null;
+let stand: Record<string, { genutzt: number; limit: number; rest: number }> | null = null;
+if (gewaehlt) {
+  const saetze = await ladeListe<VRow>('vermehrung_ausgaben', { filter: `mitglied="${gewaehlt.id}" && monat="${monat}"` });
+  stand = {};
+  for (const art of ARTEN) {
+    const genutzt = summeStueck(saetze.filter((s) => s.art === art));
+    const limit = limitFuer(art);
+    stand[art] = { genutzt, limit, rest: Math.max(0, limit - genutzt) };
+  }
+}
+
+const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '') + (m.name || m.email);
+---
+
+<Basis titel="Vermehrungsmaterial" beschreibung="Samen/Stecklinge an Mitglieder, KCanG-konform.">
+  <MitgliedNav rollen={personal.rollen} />
+  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <h1 style="margin-bottom:0.4rem;">Vermehrungsmaterial</h1>
+  <p class="einleitung">
+    Weitergabe von Samen und Stecklingen an Mitglieder. Monatsgrenze je Mitglied:
+    {limitFuer('samen')} Samen oder {limitFuer('stecklinge')} Stecklinge. Wird beim Buchen automatisch geprüft.
+  </p>
+
+  {fehler && msg && <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{msg}</p>}
+  {ok && <p class="hinweis" role="status">Weitergabe gebucht.</p>}
+
+  <form class="kasten" method="get" action="/mitglieder/vermehrung" style="margin-bottom:1rem;">
+    <div class="feld">
+      <label for="mitglied-sel">Mitglied</label>
+      <select id="mitglied-sel" name="mitglied" onchange="this.form.submit()">
+        <option value="">— Mitglied wählen —</option>
+        {mitglieder.map((m) => <option value={m.id} selected={m.id === gewaehltId}>{mnr(m)}</option>)}
+      </select>
+      <noscript><button class="knopf" type="submit">Laden</button></noscript>
+    </div>
+  </form>
+
+  {gewaehlt && stand && (
+    <div class="statuskarte">
+      <strong>{mnr(gewaehlt)}</strong>
+      <div class="sk-zeile"><span>Samen diesen Monat: {stand.samen.genutzt} / {stand.samen.limit}</span><span>noch <strong>{stand.samen.rest}</strong></span></div>
+      <div class="sk-zeile"><span>Stecklinge diesen Monat: {stand.stecklinge.genutzt} / {stand.stecklinge.limit}</span><span>noch <strong>{stand.stecklinge.rest}</strong></span></div>
+    </div>
+  )}
+
+  <form class="kasten" method="post" action="/mitglieder/vermehrung/buchen">
+    <input type="hidden" name="mitglied" value={gewaehltId} />
+    <div class="feld">
+      <label for="art">Art</label>
+      <select id="art" name="art" required>
+        {ARTEN.map((a) => <option value={a}>{ART_LABEL[a]} (max. {limitFuer(a)}/Monat)</option>)}
+      </select>
+    </div>
+    <div class="feld">
+      <label for="anzahl">Stückzahl</label>
+      <input id="anzahl" name="anzahl" type="number" min="1" step="1" required />
+    </div>
+    <button class="knopf" type="submit" disabled={!gewaehltId}>Weitergabe buchen</button>
+    {!gewaehltId && <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.6rem 0 0;">Zuerst oben ein Mitglied wählen.</p>}
+  </form>
+
+  <h2>Heutige Weitergaben ({tag})</h2>
+  {heuteAlle.length === 0 ? (
+    <p style="color:var(--ink-soft);">Heute noch nichts gebucht.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Mitglied</th><th>Art</th><th style="text-align:right;">Anzahl</th></tr></thead>
+      <tbody>
+        {heuteAlle.map((v) => (
+          <tr>
+            <td>{v.mitgliedsnummer || v.mitglied.slice(0, 6)}</td>
+            <td>{ART_LABEL[v.art as keyof typeof ART_LABEL] ?? v.art}</td>
+            <td style="text-align:right;">{v.anzahl}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Basis>
+
+<style>
+  select, .feld input { width: 100%; padding: 0.6rem 0.7rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .statuskarte { max-width: var(--mass); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.2rem; margin: 0 0 1rem; background: var(--bg-rein); }
+  .sk-zeile { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; border-top: 1px solid var(--line); margin-top: 0.4rem; }
+  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; }
+  .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+</style>

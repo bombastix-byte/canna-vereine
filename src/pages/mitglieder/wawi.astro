@@ -1,0 +1,279 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfAnbau } from '../../lib/rollen';
+import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } from '../../lib/wawi';
+import { berlinTag } from '../../lib/ausgabe';
+
+// Warenwirtschaft: Chargen vom Anbau bis zur Freigabe + Vernichtung.
+// Nur Anbauverantwortliche/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface Sorte { id: string; name: string; thc_prozent?: number; cbd_prozent?: number }
+interface Charge {
+  id: string;
+  charge_nr?: string;
+  sorte_name?: string;
+  status?: string;
+  herkunft?: string;
+  pflanzenzahl?: number;
+  anbau_start?: string;
+  ernte_datum?: string;
+  frischgewicht_g?: number;
+  trockengewicht_g?: number;
+  verfuegbar_g?: number;
+  thc_prozent?: number;
+  cbd_prozent?: number;
+  standort?: string;
+}
+interface Vernichtung {
+  id: string;
+  charge_nr?: string;
+  sorte_name?: string;
+  menge_gramm: number;
+  grund?: string;
+  datum?: string;
+  zeuge?: string;
+}
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const sorten = await ladeListe<Sorte>('sorten', { sort: 'name' });
+const chargen = await ladeListe<Charge>('chargen', { sort: 'status,sorte_name,charge_nr' });
+const vernichtungen = await ladeListe<Vernichtung>('vernichtungen', { sort: '-created' });
+
+// Bestand je Sorte aus freigegebenen Chargen.
+const bestand = new Map<string, number>();
+for (const c of chargen) {
+  if (c.status === 'freigegeben') {
+    bestand.set(c.sorte_name ?? '?', (bestand.get(c.sorte_name ?? '?') ?? 0) + (c.verfuegbar_g ?? 0));
+  }
+}
+const bestandGesamt = [...bestand.values()].reduce((a, b) => a + b, 0);
+
+const heute = berlinTag();
+const fehler = Astro.url.searchParams.get('fehler');
+const ok = Astro.url.searchParams.get('ok');
+const fehlertext: Record<string, string> = {
+  fehlend: 'Bitte die Pflichtfelder ausfüllen.',
+  menge: 'Bitte eine gültige Menge/Gewicht angeben.',
+  status: 'Diese Aktion ist im aktuellen Status nicht möglich.',
+  fehlgeschlagen: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+};
+const oktext: Record<string, string> = {
+  angelegt: 'Charge angelegt.',
+  ernte: 'Ernte erfasst.',
+  freigabe: 'Charge freigegeben – jetzt am Tresen abgebbar.',
+  sperren: 'Charge gesperrt.',
+  vernichtet: 'Vernichtung dokumentiert.',
+};
+const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
+const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
+
+const datum = (iso?: string) =>
+  iso ? new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+const g = (n?: number | null) => (n == null ? '—' : `${n} g`);
+---
+
+<Basis titel="Warenwirtschaft" beschreibung="Chargen vom Anbau bis zur Ausgabe, KCanG-dokumentiert.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <h1 style="margin-bottom:0.4rem;">Warenwirtschaft</h1>
+  <p class="einleitung">
+    Jedes Anbaulos als Charge vom Anbau über Ernte und Trocknung bis zur Freigabe.
+    Freigegebene Chargen stehen am Tresen zur Abgabe; jede Abgabe bleibt bis zum
+    Anbaulos rückverfolgbar. Vernichtungen werden dokumentiert.
+  </p>
+
+  {fmeldung && <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{fmeldung}</p>}
+  {omeldung && <p class="hinweis" role="status">{omeldung}</p>}
+
+  <h2>Bestand (freigegeben)</h2>
+  {bestand.size === 0 ? (
+    <p style="color:var(--ink-soft);">Kein freigegebener Bestand.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Sorte</th><th style="text-align:right;">Verfügbar</th></tr></thead>
+      <tbody>
+        {[...bestand.entries()].map(([name, g]) => (
+          <tr><td>{name}</td><td style="text-align:right;">{g} g</td></tr>
+        ))}
+        <tr><td><strong>Gesamt</strong></td><td style="text-align:right;"><strong>{bestandGesamt} g</strong></td></tr>
+      </tbody>
+    </table>
+  )}
+
+  <h2>Neue Charge anlegen</h2>
+  <form class="kasten" method="post" action="/mitglieder/wawi/charge-neu">
+    <div class="feld">
+      <label for="sorte">Sorte</label>
+      <select id="sorte" name="sorte" required>
+        <option value="">— Sorte wählen —</option>
+        {sorten.map((s) => <option value={s.id}>{s.name}</option>)}
+      </select>
+    </div>
+    <div class="feld">
+      <label for="herkunft">Herkunft (Samen/Stecklinge, Quelle)</label>
+      <input id="herkunft" name="herkunft" type="text" placeholder="z. B. Stecklinge, Mutterpflanze intern" />
+    </div>
+    <div class="feld-reihe">
+      <div class="feld">
+        <label for="pflanzenzahl">Pflanzenzahl</label>
+        <input id="pflanzenzahl" name="pflanzenzahl" type="number" min="0" step="1" />
+      </div>
+      <div class="feld">
+        <label for="anbau_start">Anbaubeginn</label>
+        <input id="anbau_start" name="anbau_start" type="date" value={heute} />
+      </div>
+      <div class="feld">
+        <label for="standort">Standort</label>
+        <input id="standort" name="standort" type="text" placeholder="z. B. Anbauraum 1" />
+      </div>
+    </div>
+    <button class="knopf" type="submit">Charge anlegen</button>
+  </form>
+
+  <h2>Chargen</h2>
+  {chargen.length === 0 ? (
+    <p style="color:var(--ink-soft);">Noch keine Charge angelegt.</p>
+  ) : (
+    chargen.map((c) => (
+      <div class="charge" id={`c-${c.id}`}>
+        <div class="charge-kopf">
+          <span><strong>{c.charge_nr}</strong> · {c.sorte_name}</span>
+          <span class:list={['badge', `st-${c.status}`]}>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</span>
+        </div>
+        <div class="charge-daten">
+          <span>Herkunft: {c.herkunft || '—'}</span>
+          <span>Pflanzen: {c.pflanzenzahl ?? '—'}</span>
+          <span>Anbau seit: {datum(c.anbau_start)}</span>
+          <span>Ernte: {datum(c.ernte_datum)}</span>
+          <span>Frisch: {g(c.frischgewicht_g)}</span>
+          <span>Trocken: {g(c.trockengewicht_g)}
+            {schwundProzent(c.frischgewicht_g, c.trockengewicht_g) != null && ` (Schwund ${schwundProzent(c.frischgewicht_g, c.trockengewicht_g)} %)`}
+          </span>
+          <span>Verfügbar: <strong>{g(c.verfuegbar_g)}</strong></span>
+          <span>THC/CBD: {c.thc_prozent ?? '—'} % / {c.cbd_prozent ?? '—'} %</span>
+        </div>
+
+        {moeglicheAktionen(c.status).length > 0 && (
+          <details class="aktionen-det">
+            <summary>Aktionen</summary>
+
+            {moeglicheAktionen(c.status).includes('ernte') && (
+              <form class="aktion" method="post" action="/mitglieder/wawi/aktion">
+                <input type="hidden" name="charge" value={c.id} />
+                <input type="hidden" name="aktion" value="ernte" />
+                <strong>Ernte erfassen</strong>
+                <label>Frischgewicht (g)<input name="frischgewicht_g" type="number" min="0" step="0.1" required /></label>
+                <label>Erntedatum<input name="ernte_datum" type="date" value={heute} /></label>
+                <button class="knopf" type="submit">Ernte speichern</button>
+              </form>
+            )}
+
+            {moeglicheAktionen(c.status).includes('freigabe') && (
+              <form class="aktion" method="post" action="/mitglieder/wawi/aktion">
+                <input type="hidden" name="charge" value={c.id} />
+                <input type="hidden" name="aktion" value="freigabe" />
+                <strong>Freigeben (nach Trocknung)</strong>
+                <label>Trockengewicht (g)<input name="trockengewicht_g" type="number" min="0" step="0.1" required /></label>
+                <label>THC %<input name="thc_prozent" type="number" min="0" step="0.1" value={c.thc_prozent} /></label>
+                <label>CBD %<input name="cbd_prozent" type="number" min="0" step="0.1" value={c.cbd_prozent} /></label>
+                <button class="knopf" type="submit">Freigeben</button>
+              </form>
+            )}
+
+            {moeglicheAktionen(c.status).includes('vernichten') && (
+              <form class="aktion" method="post" action="/mitglieder/wawi/vernichten">
+                <input type="hidden" name="charge" value={c.id} />
+                <strong>Vernichtung dokumentieren</strong>
+                <label>Menge (g)<input name="menge_gramm" type="number" min="0" step="0.1" required /></label>
+                <label>Grund
+                  <select name="grund">
+                    {VERNICHTUNG_GRUENDE.map((gr) => <option value={gr}>{gr}</option>)}
+                  </select>
+                </label>
+                <label>Zeuge (Name)<input name="zeuge" type="text" /></label>
+                <button class="knopf" type="submit">Vernichtung buchen</button>
+              </form>
+            )}
+
+            {moeglicheAktionen(c.status).includes('sperren') && (
+              <form class="aktion" method="post" action="/mitglieder/wawi/aktion">
+                <input type="hidden" name="charge" value={c.id} />
+                <input type="hidden" name="aktion" value="sperren" />
+                <button class="knopf-sek" type="submit">Charge sperren</button>
+              </form>
+            )}
+          </details>
+        )}
+      </div>
+    ))
+  )}
+
+  <h2>Vernichtungen</h2>
+  {vernichtungen.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine Vernichtungen dokumentiert.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Datum</th><th>Charge</th><th>Sorte</th><th style="text-align:right;">Menge</th><th>Grund</th><th>Zeuge</th></tr></thead>
+      <tbody>
+        {vernichtungen.map((v) => (
+          <tr>
+            <td>{v.datum}</td><td>{v.charge_nr}</td><td>{v.sorte_name}</td>
+            <td style="text-align:right;">{v.menge_gramm} g</td><td>{v.grund}</td><td>{v.zeuge || '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Basis>
+
+<style>
+  select, .feld input, .aktion input, .aktion select {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-rein);
+    color: var(--ink);
+    font: inherit;
+  }
+  .feld-reihe { display: flex; gap: 0.9rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 8rem; }
+  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; margin-bottom: 1rem; }
+  .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+  .charge {
+    max-width: var(--mass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    margin: 0 0 0.9rem;
+    background: var(--bg-rein);
+  }
+  .charge-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; }
+  .charge-daten { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.3rem 1rem; font-size: 0.92rem; color: var(--ink-soft); }
+  .charge-daten strong { color: var(--ink); }
+  .badge { font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+  .st-freigegeben { color: #1c7c3a; border-color: #1c7c3a; }
+  .st-anbau { color: #8a5a00; border-color: #c98a00; }
+  .st-geerntet { color: #556; border-color: #99a; }
+  .st-gesperrt, .st-aufgebraucht { color: #a33; border-color: #d99; }
+  .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
+  .aktionen-det summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+  .aktion { display: flex; flex-direction: column; gap: 0.4rem; max-width: 22rem; margin: 0.8rem 0; padding: 0.8rem; border: 1px solid var(--line); border-radius: var(--radius); }
+  .aktion label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9rem; color: var(--ink-soft); }
+  .knopf-sek { background: none; border: 1px solid var(--line); color: var(--ink-soft); padding: 0.5rem 0.9rem; border-radius: var(--radius); cursor: pointer; font: inherit; }
+</style>

@@ -1,0 +1,140 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+
+// Geschützt. Mitglieder reservieren eine Sorte zur späteren Abholung.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) {
+  return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+}
+const { pb, mitglied } = ergebnis;
+
+interface Bestellung {
+  id: string;
+  sorte: string;
+  menge_gramm: number;
+  abholdatum?: string;
+  hinweis?: string;
+  status?: string;
+  created: string;
+}
+interface Bericht {
+  sorte?: string;
+}
+
+let bestellungen: Bestellung[] = [];
+let sorten: string[] = [];
+try {
+  bestellungen = (await pb.collection('vorbestellungen').getFullList({
+    sort: '-created',
+  })) as Bestellung[];
+} catch {
+  bestellungen = [];
+}
+try {
+  const berichte = (await pb.collection('sortenberichte').getFullList({ sort: 'sorte' })) as Bericht[];
+  sorten = [...new Set(berichte.map((b) => b.sorte).filter((s): s is string => !!s))];
+} catch {
+  sorten = [];
+}
+
+const fehler = Astro.url.searchParams.get('fehler');
+const ok = Astro.url.searchParams.get('ok');
+const fehlertext: Record<string, string> = {
+  fehlend: 'Bitte Sorte und Menge angeben.',
+  menge: 'Bitte eine gültige Menge in Gramm angeben.',
+  fehlgeschlagen: 'Die Vorbestellung konnte nicht gespeichert werden. Bitte erneut versuchen.',
+};
+const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
+
+const datum = (iso?: string) =>
+  iso
+    ? new Date(iso).toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : '';
+
+const statusLabel: Record<string, string> = {
+  offen: 'Offen',
+  bestaetigt: 'Bestätigt',
+  abgeholt: 'Abgeholt',
+  storniert: 'Storniert',
+};
+---
+
+<Basis titel="Vorbestellung" beschreibung="Sorte zur späteren Abholung reservieren.">
+  <MitgliedNav />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Vorbestellung zur Abholung</h1>
+  <p class="einleitung">
+    Reservieren Sie eine Sorte aus der aktuellen Abgabe zur späteren Abholung im
+    Verein. Die Vorbestellung ist eine unverbindliche Reservierung; die Abgabe
+    erfolgt zum Selbstkostenbeitrag nach der Satzung.
+  </p>
+
+  {meldung && (
+    <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{meldung}</p>
+  )}
+  {ok && (
+    <p class="hinweis" role="status">
+      Ihre Vorbestellung wurde aufgenommen. Der Vorstand bestätigt sie zu den
+      Vereinszeiten.
+    </p>
+  )}
+
+  <form class="kasten" method="post" action="/mitglieder/vorbestellung/absenden">
+    <div class="feld">
+      <label for="sorte">Sorte</label>
+      <input id="sorte" name="sorte" type="text" list="sortenliste" required />
+      {sorten.length > 0 && (
+        <datalist id="sortenliste">
+          {sorten.map((s) => <option value={s} />)}
+        </datalist>
+      )}
+    </div>
+    <div class="feld">
+      <label for="menge_gramm">Menge in Gramm</label>
+      <input id="menge_gramm" name="menge_gramm" type="number" min="1" step="1" required />
+    </div>
+    <div class="feld">
+      <label for="abholdatum">Gewünschtes Abholdatum (optional)</label>
+      <input id="abholdatum" name="abholdatum" type="date" />
+    </div>
+    <div class="feld">
+      <label for="hinweis">Hinweis (optional)</label>
+      <textarea id="hinweis" name="hinweis" rows="3"></textarea>
+    </div>
+    <button class="knopf" type="submit">Vorbestellung absenden</button>
+  </form>
+
+  <h2>Ihre Vorbestellungen</h2>
+  {
+    bestellungen.length === 0 ? (
+      <p style="color:var(--ink-soft);">Sie haben noch keine Vorbestellung aufgegeben.</p>
+    ) : (
+      <ul>
+        {bestellungen.map((b) => (
+          <li>
+            <strong>{b.menge_gramm} g {b.sorte}</strong>
+            {b.status && (
+              <span style="color:var(--ink-soft);"> — {statusLabel[b.status] ?? b.status}</span>
+            )}
+            {b.abholdatum && (
+              <div style="color:var(--ink-soft);font-size:0.92rem;">
+                Abholung: {datum(b.abholdatum)}
+              </div>
+            )}
+            {b.hinweis && (
+              <div style="color:var(--ink-soft);font-size:0.92rem;">{b.hinweis}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Basis>

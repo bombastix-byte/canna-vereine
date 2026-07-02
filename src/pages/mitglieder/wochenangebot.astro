@@ -1,0 +1,136 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+
+// Geschützt. Sachliche Info zur aktuellen Abgabe an Mitglieder (KCanG Paragraf 6:
+// kein öffentliches Marketing, rein interne Vereinsinformation).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) {
+  return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+}
+const { pb } = ergebnis;
+
+interface Sorte {
+  name: string;
+  typ?: string;
+  thc?: string;
+  cbd?: string;
+}
+interface Angebot {
+  id: string;
+  titel: string;
+  inhalt: string;
+  sorten?: Sorte[];
+  gueltig_von?: string;
+  gueltig_bis?: string;
+}
+
+let angebote: Angebot[] = [];
+try {
+  angebote = (await pb.collection('wochenangebot').getFullList({
+    sort: '-gueltig_von',
+  })) as Angebot[];
+} catch {
+  angebote = [];
+}
+
+const datum = (iso?: string) =>
+  iso
+    ? new Date(iso).toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : '';
+
+const zeitraum = (a: Angebot) => {
+  if (a.gueltig_von && a.gueltig_bis) return `${datum(a.gueltig_von)} bis ${datum(a.gueltig_bis)}`;
+  if (a.gueltig_von) return `ab ${datum(a.gueltig_von)}`;
+  return '';
+};
+
+// Nach Typ gruppieren (Indica, Sativa, Hybrid), dann nach Name.
+const typReihenfolge: Record<string, number> = { Indica: 0, Sativa: 1, Hybrid: 2 };
+const sortiere = (sorten: Sorte[]) =>
+  [...sorten].sort((a, b) => {
+    const ta = typReihenfolge[a.typ ?? ''] ?? 99;
+    const tb = typReihenfolge[b.typ ?? ''] ?? 99;
+    return ta - tb || a.name.localeCompare(b.name, 'de');
+  });
+---
+
+<Basis titel="Angebot der Woche" beschreibung="Aktuelle Abgabe an Mitglieder.">
+  <MitgliedNav />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Angebot der Woche</h1>
+  <p class="einleitung">
+    Aktuelle Abgabe an Mitglieder zum Selbstkostenbeitrag. Diese Angaben sind rein
+    interne Vereinsinformation und nicht öffentlich einsehbar.
+  </p>
+
+  {
+    angebote.length === 0 ? (
+      <p style="color:var(--ink-soft);">Derzeit ist keine Abgabe eingetragen.</p>
+    ) : (
+      angebote.map((a) => (
+        <div class="kasten">
+          <h3 style="margin-top:0;">{a.titel}</h3>
+          {zeitraum(a) && (
+            <p style="color:var(--ink-soft);font-size:0.82rem;margin:0 0 0.8rem;">
+              {zeitraum(a)}
+            </p>
+          )}
+          {a.sorten && a.sorten.length > 0 && (
+            <table class="sortentabelle">
+              <thead>
+                <tr>
+                  <th>Sorte</th>
+                  <th>Typ</th>
+                  <th class="num">THC</th>
+                  <th class="num">CBD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortiere(a.sorten).map((s) => (
+                  <tr>
+                    <td>{s.name}</td>
+                    <td><span class="typ">{s.typ}</span></td>
+                    <td class="num">{s.thc}</td>
+                    <td class="num">{s.cbd}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {a.inhalt && (
+            <p style="margin:0 0 1rem;white-space:pre-line;color:var(--ink-soft);font-size:0.92rem;">
+              {a.inhalt}
+            </p>
+          )}
+          <a class="knopf" href="/mitglieder/vorbestellung">Zur Vorbestellung</a>
+        </div>
+      ))
+    )
+  }
+</Basis>
+
+<style>
+  .sortentabelle {
+    margin: 0 0 1.1rem;
+  }
+  .sortentabelle .num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .sortentabelle .typ {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+</style>

@@ -1,0 +1,279 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfAusgeben } from '../../lib/rollen';
+import {
+  berlinTag,
+  berlinMonat,
+  istU21,
+  alterAmTag,
+  summeGramm,
+  beitragEuro,
+  LIMIT_TAG_G,
+  LIMIT_MONAT_G,
+  LIMIT_MONAT_U21_G,
+  U21_MAX_THC,
+  BEITRAG_PRO_GRAMM,
+} from '../../lib/ausgabe';
+
+// Tresen: Abgabe an Mitglieder buchen. Nur Personal (Vorstand/Ausgabe).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied: personal } = ergebnis;
+if (!darfAusgeben(personal.rollen)) {
+  return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+}
+
+interface UserRow {
+  id: string;
+  name?: string;
+  email: string;
+  mitgliedsnummer?: string;
+  geburtsdatum?: string;
+  rolle?: string;
+}
+interface ChargeRow {
+  id: string;
+  charge_nr?: string;
+  sorte_name?: string;
+  status?: string;
+  thc_prozent?: number;
+  cbd_prozent?: number;
+  verfuegbar_g?: number;
+}
+interface AusgabeRow {
+  id: string;
+  mitglied: string;
+  mitgliedsnummer?: string;
+  sorte_name: string;
+  menge_gramm: number;
+  thc_prozent?: number;
+  beitrag_euro?: number;
+  tag: string;
+  belegnr?: string;
+}
+
+const tag = berlinTag();
+const monat = berlinMonat(tag);
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown>): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const mitglieder = await ladeListe<UserRow>('users', { sort: 'mitgliedsnummer,name' });
+// Nur freigegebene Chargen mit Restbestand koennen abgegeben werden.
+const chargen = (
+  await ladeListe<ChargeRow>('chargen', { filter: 'status="freigegeben"', sort: 'sorte_name,charge_nr' })
+).filter((c) => (c.verfuegbar_g ?? 0) > 0);
+const heuteAlle = await ladeListe<AusgabeRow>('ausgaben', { filter: `tag="${tag}"`, sort: '-created' });
+
+// Fehlermeldung aus dem Buchungs-Endpoint.
+const fehler = Astro.url.searchParams.get('fehler');
+const msg = Astro.url.searchParams.get('msg');
+
+// Status eines ausgewaehlten Mitglieds (fuer die Restmengen-Anzeige).
+const gewaehltId = Astro.url.searchParams.get('mitglied') ?? '';
+const gewaehlt = mitglieder.find((m) => m.id === gewaehltId) ?? null;
+let status: null | {
+  u21: boolean;
+  alter: number | null;
+  heute: number;
+  monatSumme: number;
+  monatslimit: number;
+  restTag: number;
+  restMonat: number;
+} = null;
+if (gewaehlt) {
+  const saetze = await ladeListe<AusgabeRow>('ausgaben', {
+    filter: `mitglied="${gewaehlt.id}" && monat="${monat}"`,
+  });
+  const monatSumme = summeGramm(saetze);
+  const heute = summeGramm(saetze.filter((r) => r.tag === tag));
+  const u21 = istU21(gewaehlt.geburtsdatum, tag);
+  const monatslimit = u21 ? LIMIT_MONAT_U21_G : LIMIT_MONAT_G;
+  status = {
+    u21,
+    alter: alterAmTag(gewaehlt.geburtsdatum, tag),
+    heute,
+    monatSumme,
+    monatslimit,
+    restTag: Math.max(0, LIMIT_TAG_G - heute),
+    restMonat: Math.max(0, monatslimit - monatSumme),
+  };
+}
+
+const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '') + (m.name || m.email);
+const eur = (n?: number) => (n ?? 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const heuteSumme = summeGramm(heuteAlle);
+---
+
+<Basis titel="Ausgabe (Tresen)" beschreibung="Abgabe an Mitglieder buchen, KCanG-konform.">
+  <MitgliedNav rollen={personal.rollen} />
+  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <h1 style="margin-bottom:0.4rem;">Ausgabe am Tresen</h1>
+  <p class="einleitung">
+    Abgabe an ein Mitglied buchen. Tages-, Monats- und U21-Grenzen werden beim
+    Buchen automatisch geprüft. Der Selbstkostenbeitrag beträgt
+    {eur(BEITRAG_PRO_GRAMM)} € je Gramm; kassiert wird an der Kasse.
+  </p>
+
+  {fehler && msg && (
+    <p class="hinweis" role="alert" style="border-color:#d99;background:#fbecec;">{msg}</p>
+  )}
+
+  <form class="kasten" method="get" action="/mitglieder/ausgabe" style="margin-bottom:1rem;">
+    <div class="feld">
+      <label for="mitglied-sel">Mitglied</label>
+      <select id="mitglied-sel" name="mitglied" onchange="this.form.submit()">
+        <option value="">— Mitglied wählen —</option>
+        {mitglieder.map((m) => (
+          <option value={m.id} selected={m.id === gewaehltId}>{mnr(m)}</option>
+        ))}
+      </select>
+      <noscript><button class="knopf" type="submit">Mitglied laden</button></noscript>
+    </div>
+  </form>
+
+  {gewaehlt && status && (
+    <div class:list={['statuskarte', { warn: status.u21 }]}>
+      <div class="sk-kopf">
+        <strong>{mnr(gewaehlt)}</strong>
+        {status.alter != null ? (
+          <span class="sk-alter">{status.alter} Jahre{status.u21 ? ' · unter 21' : ''}</span>
+        ) : (
+          <span class="sk-alter sk-fehlt">Geburtsdatum fehlt → als U21 behandelt</span>
+        )}
+      </div>
+      <div class="sk-zeile">
+        <span>Heute: <strong>{status.heute} g</strong> / {LIMIT_TAG_G} g</span>
+        <span>Noch heute: <strong>{status.restTag} g</strong></span>
+      </div>
+      <div class="sk-zeile">
+        <span>Monat: <strong>{status.monatSumme} g</strong> / {status.monatslimit} g</span>
+        <span>Noch diesen Monat: <strong>{status.restMonat} g</strong></span>
+      </div>
+      {status.u21 && (
+        <p class="sk-warn">Unter 21: nur Sorten mit höchstens {U21_MAX_THC} % THC zulässig.</p>
+      )}
+    </div>
+  )}
+
+  <form class="kasten" method="post" action="/mitglieder/ausgabe/buchen">
+    <input type="hidden" name="mitglied" value={gewaehltId} />
+    <div class="feld">
+      <label for="charge">Sorte / Charge</label>
+      <select id="charge" name="charge" required>
+        <option value="">— Charge wählen —</option>
+        {chargen.map((c) => (
+          <option value={c.id}>
+            {c.sorte_name} · {c.charge_nr} — {c.thc_prozent ?? '?'} % THC · {c.verfuegbar_g} g verfügbar
+          </option>
+        ))}
+      </select>
+      {chargen.length === 0 && (
+        <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.4rem 0 0;">Keine freigegebene Charge mit Bestand. Zuerst in der Warenwirtschaft eine Charge freigeben.</p>
+      )}
+    </div>
+    <div class="feld">
+      <label for="menge_gramm">Menge in Gramm</label>
+      <input id="menge_gramm" name="menge_gramm" type="number" min="0.1" step="0.1" required />
+    </div>
+    <button class="knopf" type="submit" disabled={!gewaehltId}>Abgabe buchen &amp; Beleg drucken</button>
+    {!gewaehltId && <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.6rem 0 0;">Zuerst oben ein Mitglied wählen.</p>}
+  </form>
+
+  <h2>Heutige Abgaben ({tag})</h2>
+  <p style="color:var(--ink-soft);">Gesamt heute: <strong>{heuteSumme} g</strong> · {heuteAlle.length} Buchungen</p>
+  {heuteAlle.length === 0 ? (
+    <p style="color:var(--ink-soft);">Heute noch keine Abgabe gebucht.</p>
+  ) : (
+    <table class="tabelle">
+      <thead>
+        <tr><th>Mitglied</th><th>Sorte</th><th style="text-align:right;">Menge</th><th style="text-align:right;">THC</th><th style="text-align:right;">Beitrag</th><th>Beleg</th></tr>
+      </thead>
+      <tbody>
+        {heuteAlle.map((a) => (
+          <tr>
+            <td>{a.mitgliedsnummer || a.mitglied.slice(0, 6)}</td>
+            <td>{a.sorte_name}</td>
+            <td style="text-align:right;">{a.menge_gramm} g</td>
+            <td style="text-align:right;">{a.thc_prozent ?? '—'} %</td>
+            <td style="text-align:right;">{eur(a.beitrag_euro)} €</td>
+            <td><a href={`/mitglieder/ausgabe/beleg/${a.id}`}>{a.belegnr || 'Beleg'}</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Basis>
+
+<style>
+  .statuskarte {
+    max-width: var(--mass);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin: 0 0 1rem;
+    background: var(--bg-rein);
+  }
+  .statuskarte.warn {
+    border-left-color: #c98a00;
+  }
+  .sk-kopf {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+  }
+  .sk-alter {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+  .sk-fehlt {
+    color: #c0392b;
+    font-weight: 600;
+  }
+  .sk-zeile {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.25rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .sk-warn {
+    margin: 0.6rem 0 0;
+    color: #8a5a00;
+    font-size: 0.92rem;
+  }
+  .tabelle {
+    width: 100%;
+    max-width: var(--mass);
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .tabelle th,
+  .tabelle td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  select {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-rein);
+    color: var(--ink);
+    font: inherit;
+  }
+</style>

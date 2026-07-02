@@ -1,0 +1,102 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfBerichte } from '../../lib/rollen';
+import { aggregiereJahr, gramm } from '../../lib/jahresmeldung';
+import { berlinTag } from '../../lib/ausgabe';
+import { site } from '../../config';
+
+// Jahresmeldung: Aggregat als Grundlage der behoerdlichen Mitteilung nach KCanG.
+// Einsicht fuer Vorstand und Praeventionsperson.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfBerichte(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+async function ladeListe<T>(collection: string): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList()) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const chargen = await ladeListe<{ ernte_datum?: string; trockengewicht_g?: number }>('chargen');
+const ausgaben = await ladeListe<{ menge_gramm?: number; monat?: string }>('ausgaben');
+const vernichtungen = await ladeListe<{ menge_gramm?: number; datum?: string }>('vernichtungen');
+const mitglieder = await ladeListe<{ id: string }>('users');
+
+const jetztJahr = berlinTag().slice(0, 4);
+const jahr = Astro.url.searchParams.get('jahr') ?? jetztJahr;
+const jahre = [String(Number(jetztJahr)), String(Number(jetztJahr) - 1)];
+
+const w = aggregiereJahr(jahr, {
+  chargen,
+  ausgaben,
+  vernichtungen,
+  mitgliederzahl: mitglieder.length,
+});
+---
+
+<Basis titel="Jahresmeldung" beschreibung="Aggregat für die behördliche Mitteilung nach KCanG.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich · Personal</p>
+  <h1 style="margin-bottom:0.4rem;">Jahresmeldung {w.jahr}</h1>
+  <p class="einleitung">
+    Zusammenfassung der dokumentierten Mengen als Grundlage für die jährliche
+    Mitteilung an die zuständige Behörde. Die Werte stammen direkt aus den
+    erfassten Chargen, Abgaben und Vernichtungen.
+  </p>
+
+  <div class="jahrwahl">
+    {jahre.map((j) => (
+      <a class:list={['jahr-knopf', { aktiv: j === jahr }]} href={`/mitglieder/jahresmeldung?jahr=${j}`}>{j}</a>
+    ))}
+    <button class="jahr-knopf" type="button" onclick="window.print()">Drucken</button>
+  </div>
+
+  <div class="bericht">
+    <div class="bericht-kopf">
+      <strong>{site.vereinsname}</strong>
+      <span>Berichtsjahr {w.jahr}</span>
+    </div>
+    <table class="tabelle">
+      <tbody>
+        <tr><td>Angebaute (getrocknete) Menge</td><td class="r"><strong>{gramm(w.angebaut_g)}</strong></td></tr>
+        <tr><td>An Mitglieder abgegebene Menge</td><td class="r"><strong>{gramm(w.abgegeben_g)}</strong></td></tr>
+        <tr><td>Vernichtete Menge</td><td class="r">{gramm(w.vernichtet_g)}</td></tr>
+        <tr><td>Mitgliederzahl (Stichtag)</td><td class="r"><strong>{w.mitgliederzahl}</strong></td></tr>
+        <tr><td>Zahl der Abgaben</td><td class="r">{w.anzahl_abgaben}</td></tr>
+        <tr><td>Zahl der geernteten Chargen</td><td class="r">{w.anzahl_chargen}</td></tr>
+      </tbody>
+    </table>
+    <p class="fuss">
+      Erstellt aus dem Vereinssystem am {new Date().toLocaleDateString('de-DE')}. Die
+      Mitgliederzahl ist der aktuelle Bestand; für die Meldung ist der Stand zum
+      31.12. maßgeblich. Vor Übermittlung fachlich/rechtlich prüfen.
+    </p>
+  </div>
+</Basis>
+
+<style>
+  .jahrwahl { display: flex; gap: 0.6rem; margin: 0 0 1.2rem; flex-wrap: wrap; }
+  .jahr-knopf {
+    text-decoration: none; color: var(--ink-soft); font: inherit; cursor: pointer;
+    padding: 0.4rem 0.9rem; border: 1px solid var(--line); border-radius: var(--radius); background: none;
+  }
+  .jahr-knopf.aktiv { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+  .bericht { max-width: 34rem; border: 1px solid var(--line); border-radius: var(--radius); padding: 1.2rem 1.3rem; background: var(--bg-rein); }
+  .bericht-kopf { display: flex; flex-direction: column; gap: 0.15rem; padding-bottom: 0.7rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
+  .tabelle { width: 100%; border-collapse: collapse; }
+  .tabelle td { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
+  .tabelle td.r { text-align: right; }
+  .fuss { font-size: 0.8rem; color: var(--ink-soft); margin: 0.8rem 0 0; line-height: 1.4; }
+  @media print {
+    :global(body *) { visibility: hidden; }
+    .bericht, .bericht * { visibility: visible; }
+    .bericht { position: absolute; top: 0; left: 0; border: none; }
+  }
+</style>

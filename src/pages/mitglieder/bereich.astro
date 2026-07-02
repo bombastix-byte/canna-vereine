@@ -1,8 +1,11 @@
 ---
 import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
+import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from '../../lib/rollen';
+import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../lib/helfer';
 
-// Geschuetztes Mitglieder-Dashboard. Serverseitig gerendert.
+// Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
 export const prerender = false;
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
@@ -43,10 +46,34 @@ interface Dokument {
   kategorie?: string;
   datei: string;
 }
-
+interface Angebot {
+  id: string;
+  titel: string;
+  inhalt: string;
+  gueltig_von?: string;
+  gueltig_bis?: string;
+}
+interface Bestellung {
+  id: string;
+  status?: string;
+}
 const mitteilungen = await ladeListe<Mitteilung>('mitteilungen', '-datum');
 const termine = await ladeListe<Termin>('termine', 'datum');
 const dokumente = await ladeListe<Dokument>('dokumente', 'titel');
+const angebote = await ladeListe<Angebot>('wochenangebot', '-gueltig_von');
+const bestellungen = await ladeListe<Bestellung>('vorbestellungen', '-created');
+const dienste = await ladeListe<Dienst>('helferdienste', 'titel');
+const helferEintraege = await ladeListe<Eintrag>('helfer_eintragungen', 'created');
+
+const jetzt = new Date();
+const naechsterTermin = termine.find((t) => new Date(t.datum) >= jetzt) ?? termine[0];
+const neuesteMitteilung = mitteilungen[0];
+const aktuellesAngebot = angebote[0];
+const offeneBestellungen = bestellungen.filter((b) => b.status === 'offen').length;
+const heuteTag = tagVon(new Date());
+const offeneDienste = dienste.filter(
+  (d) => findetStatt(d, heuteTag) && belegtAm(helferEintraege, d.id, heuteTag) < d.bedarf,
+).length;
 
 const datum = (iso: string) =>
   iso
@@ -61,19 +88,138 @@ const downloadUrl = (d: Dokument) =>
   d.datei ? dateiUrl(d as unknown as { collectionId: string; id: string }, d.datei) : '#';
 ---
 
-<Basis titel="Mitgliederbereich" beschreibung="Interner Bereich fuer Mitglieder.">
-  <div class="seitenkopf" style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;">
-    <div>
-      <p class="eyebrow">Mitgliederbereich</p>
-      <h1 style="margin-bottom:0;">Aktuelles</h1>
-    </div>
-    <p style="margin:0;color:var(--ink-soft);font-size:0.9rem;">
-      Angemeldet als {mitglied.name ?? mitglied.email}.
-      <a href="/mitglieder/abmelden">Abmelden</a>
-    </p>
-  </div>
+<Basis titel="Mitgliederbereich" beschreibung="Interner Bereich für Mitglieder.">
+  <MitgliedNav rollen={mitglied.rollen} />
 
-  <h2>Mitteilungen</h2>
+  <header class="willkommen">
+    <p class="eyebrow">Mitgliederbereich</p>
+    <h1>Willkommen zurück{mitglied.name ? `, ${mitglied.name}` : ''}</h1>
+    <p class="willkommen__sub">
+      Aktuelle Mitteilungen, Termine, das Angebot der Woche und deine
+      Vorbestellungen auf einen Blick.
+    </p>
+  </header>
+
+  <section class="ueberblick" aria-label="Auf einen Blick">
+    <a class="uk" href="/mitglieder/wochenangebot">
+      <span class="uk__kopf">
+        <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M3 9h18M3 9l2-4h14l2 4M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M9 13h6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="uk__label">Angebot der Woche</span>
+      </span>
+      <span class="uk__wert">{aktuellesAngebot ? aktuellesAngebot.titel : 'Keine Abgabe eingetragen'}</span>
+    </a>
+
+    <a class="uk" href="#termine">
+      <span class="uk__kopf">
+        <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <rect x="3" y="4.5" width="18" height="16" rx="2"/>
+          <path d="M3 9h18M8 2.5v4M16 2.5v4" stroke-linecap="round"/>
+        </svg>
+        <span class="uk__label">Nächster Termin</span>
+      </span>
+      <span class="uk__wert">
+        {naechsterTermin ? `${datum(naechsterTermin.datum)} - ${naechsterTermin.titel}` : 'Keine Termine'}
+      </span>
+    </a>
+
+    <a class="uk" href="#mitteilungen">
+      <span class="uk__kopf">
+        <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M4 9v6h3l5 4V5L7 9H4zM16 8.5a4 4 0 0 1 0 7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="uk__label">Neueste Mitteilung</span>
+      </span>
+      <span class="uk__wert">{neuesteMitteilung ? neuesteMitteilung.titel : 'Keine Mitteilungen'}</span>
+    </a>
+
+    <a class="uk" href="/mitglieder/vorbestellung">
+      <span class="uk__kopf">
+        <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M6 7h12l-1 13H7L6 7zM9 7a3 3 0 0 1 6 0M9.5 12.5l1.8 1.8 3.2-3.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="uk__label">Deine Vorbestellungen</span>
+      </span>
+      <span class="uk__wert">
+        {offeneBestellungen > 0 ? `${offeneBestellungen} offen` : 'Keine offenen'}
+      </span>
+    </a>
+
+    <a class="uk" href="/mitglieder/helferplan">
+      <span class="uk__kopf">
+        <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M12 21s-7-4.5-9.3-9A5 5 0 0 1 12 7a5 5 0 0 1 9.3 5c-2.3 4.5-9.3 9-9.3 9z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="uk__label">Mithelfen</span>
+      </span>
+      <span class="uk__wert">
+        {offeneDienste > 0 ? `${offeneDienste} heute offen` : 'Heute nichts offen'}
+      </span>
+    </a>
+
+    {darfAnbau(mitglied.rollen) && (
+      <a class="uk" href="/mitglieder/wawi">
+        <span class="uk__kopf">
+          <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M12 22V12M12 12c0-3 2-5 5-5 0 3-2 5-5 5zM12 12c0-3-2-5-5-5 0 3 2 5 5 5zM12 12c0-2.5 1.5-4.5 4-4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="uk__label">Warenwirtschaft</span>
+        </span>
+        <span class="uk__wert">Chargen &amp; Bestand</span>
+      </a>
+    )}
+
+    {darfAusgeben(mitglied.rollen) && (
+      <a class="uk" href="/mitglieder/ausgabe">
+        <span class="uk__kopf">
+          <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M4 7h16M6 7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7M9 7V5a3 3 0 0 1 6 0v2M10 12h4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="uk__label">Ausgabe (Tresen)</span>
+        </span>
+        <span class="uk__wert">Abgabe buchen</span>
+      </a>
+    )}
+
+    {darfAusgeben(mitglied.rollen) && (
+      <a class="uk" href="/mitglieder/vermehrung">
+        <span class="uk__kopf">
+          <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M12 20v-6M12 14c-3 0-5-2-5-5 3 0 5 2 5 5zM12 12c0-2.5 2-4.5 5-4.5 0 2.5-2 4.5-5 4.5z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="uk__label">Vermehrung</span>
+        </span>
+        <span class="uk__wert">Samen / Stecklinge</span>
+      </a>
+    )}
+
+    {darfBerichte(mitglied.rollen) && (
+      <a class="uk" href="/mitglieder/jahresmeldung">
+        <span class="uk__kopf">
+          <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M7 3h7l5 5v13a0 0 0 0 1 0 0H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v5h5M9 13h6M9 17h6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="uk__label">Jahresmeldung</span>
+        </span>
+        <span class="uk__wert">Behörden-Aggregat</span>
+      </a>
+    )}
+
+    {darfVerwalten(mitglied.rollen) && (
+      <a class="uk" href="/mitglieder/verwaltung">
+        <span class="uk__kopf">
+          <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20a6 6 0 0 1 12 0M17 8l2 2 3-3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="uk__label">Verwaltung</span>
+        </span>
+        <span class="uk__wert">Mitglieder &amp; Rollen</span>
+      </a>
+    )}
+  </section>
+
+  <h2 id="mitteilungen">Mitteilungen</h2>
   {
     mitteilungen.length === 0 ? (
       <p style="color:var(--ink-soft);">Derzeit liegen keine Mitteilungen vor.</p>
@@ -90,21 +236,22 @@ const downloadUrl = (d: Dokument) =>
     )
   }
 
-  <h2>Termine</h2>
+  <h2 id="termine">Termine</h2>
   {
     termine.length === 0 ? (
       <p style="color:var(--ink-soft);">Keine anstehenden Termine eingetragen.</p>
     ) : (
-      <ul>
+      <ul class="terminliste">
         {termine.map((t) => (
           <li>
-            <strong>{datum(t.datum)}</strong>: {t.titel}
-            {t.ort && <> ({t.ort})</>}
-            {t.beschreibung && (
-              <div style="color:var(--ink-soft);font-size:0.92rem;">
-                {t.beschreibung}
-              </div>
-            )}
+            <span class="termin__datum">{datum(t.datum)}</span>
+            <span class="termin__inhalt">
+              <strong>{t.titel}</strong>
+              {t.ort && <span style="color:var(--ink-soft);"> &middot; {t.ort}</span>}
+              {t.beschreibung && (
+                <span class="termin__text">{t.beschreibung}</span>
+              )}
+            </span>
           </li>
         ))}
       </ul>
@@ -131,3 +278,97 @@ const downloadUrl = (d: Dokument) =>
     )
   }
 </Basis>
+
+<style>
+  .willkommen {
+    margin: 0 0 2rem;
+  }
+  .willkommen h1 {
+    margin: 0 0 0.5rem;
+  }
+  .willkommen__sub {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    max-width: 46ch;
+    margin: 0;
+  }
+
+  .ueberblick {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 0 0 1rem;
+    max-width: var(--mass);
+  }
+  .uk {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.3rem 1.4rem;
+    background: var(--bg-rein);
+    text-decoration: none;
+    color: var(--ink);
+    transition: background 0.12s ease;
+  }
+  .uk:hover {
+    background: var(--line-soft);
+  }
+  .uk__kopf {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+  .uk__icon {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    color: var(--accent);
+  }
+  .uk__label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .uk__wert {
+    font-family: var(--font-display);
+    font-size: 1.08rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--brand-strong);
+  }
+
+  /* Terminliste als saubere Zeitachse */
+  .terminliste {
+    list-style: none;
+    padding: 0;
+    margin: 1.4rem 0;
+    max-width: var(--mass);
+  }
+  .terminliste li {
+    display: flex;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .termin__datum {
+    flex: none;
+    width: 6.5rem;
+    font-weight: 600;
+    color: var(--brand-strong);
+    font-size: 0.92rem;
+  }
+  .termin__inhalt {
+    display: flex;
+    flex-direction: column;
+  }
+  .termin__text {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+</style>

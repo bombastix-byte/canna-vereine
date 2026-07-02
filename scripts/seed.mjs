@@ -65,6 +65,114 @@ await ensureCollection({
   ],
 });
 
+// Angebot der Woche: rein interne, sachliche Info zur aktuellen Abgabe an
+// Mitglieder (kein oeffentliches Marketing, KCanG Paragraf 6). Pflegt der Vorstand.
+await ensureCollection({
+  name: 'wochenangebot',
+  type: 'base',
+  listRule: lesen,
+  viewRule: lesen,
+  fields: [
+    { name: 'titel', type: 'text', required: true },
+    { name: 'inhalt', type: 'text', required: true },
+    // Sortenliste als JSON: [{ name, typ, thc, cbd }]
+    { name: 'sorten', type: 'json', maxSize: 2000000 },
+    { name: 'gueltig_von', type: 'date' },
+    { name: 'gueltig_bis', type: 'date' },
+  ],
+});
+
+// Sortenberichte: sachliche Beschreibungen der angebauten Sorten.
+await ensureCollection({
+  name: 'sortenberichte',
+  type: 'base',
+  listRule: lesen,
+  viewRule: lesen,
+  fields: [
+    { name: 'titel', type: 'text', required: true },
+    { name: 'sorte', type: 'text' },
+    { name: 'inhalt', type: 'text', required: true },
+    { name: 'datum', type: 'date', required: true },
+  ],
+});
+
+// Vorbestellungen zur spaeteren Abholung. Anders als die uebrigen Collections
+// duerfen Mitglieder hier selbst Datensaetze ANLEGEN, aber nur eigene sehen.
+// Aendern/Loeschen bleibt dem Vorstand vorbehalten (Status-Pflege).
+const usersId = (await pb.collections.getOne('users')).id;
+const eigene = '@request.auth.id != "" && mitglied = @request.auth.id';
+// Strenge Anlege-Regel referenziert Felder (@request.data.*) und kann erst
+// gesetzt werden, wenn die Felder existieren -> erst anlegen, dann Regel nachziehen.
+const anlegenStreng =
+  '@request.auth.id != "" && @request.data.mitglied = @request.auth.id && @request.data.status = "offen"';
+await ensureCollection({
+  name: 'vorbestellungen',
+  type: 'base',
+  listRule: eigene,
+  viewRule: eigene,
+  createRule: '@request.auth.id != ""',
+  updateRule: null,
+  deleteRule: null,
+  fields: [
+    { name: 'mitglied', type: 'relation', required: true, maxSelect: 1, collectionId: usersId, cascadeDelete: false },
+    { name: 'sorte', type: 'text', required: true },
+    { name: 'menge_gramm', type: 'number', required: true },
+    { name: 'abholdatum', type: 'date' },
+    { name: 'hinweis', type: 'text' },
+    { name: 'status', type: 'select', maxSelect: 1, values: ['offen', 'bestaetigt', 'abgeholt', 'storniert'] },
+    // PocketBase 0.23+ legt created/updated nicht mehr automatisch an -> explizit.
+    { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+    { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+  ],
+});
+// Strenge Anlege-Regel nachziehen (jetzt existieren die Felder).
+try {
+  await pb.collections.update('vorbestellungen', { createRule: anlegenStreng });
+  console.log('Anlege-Regel fuer vorbestellungen gesetzt.');
+} catch (e) {
+  console.log('Hinweis: strenge Anlege-Regel nicht gesetzt:', e?.message ?? e);
+}
+
+// ---------- Helferplan ----------
+// Helferdienste pflegt der Vorstand (anlegen/aendern nur per Admin). Mitglieder
+// duerfen lesen, um zu sehen, wo Hilfe gebraucht wird.
+await ensureCollection({
+  name: 'helferdienste',
+  type: 'base',
+  listRule: lesen,
+  viewRule: lesen,
+  fields: [
+    { name: 'titel', type: 'text', required: true },
+    { name: 'rhythmus', type: 'select', maxSelect: 1, values: ['taeglich', 'woechentlich', 'monatlich', 'einmalig'] },
+    { name: 'wochentag', type: 'number' }, // 1=Mo..7=So, nur bei woechentlich
+    { name: 'monatstag', type: 'number' }, // 1..31, nur bei monatlich
+    { name: 'datum', type: 'date' }, // nur bei einmalig
+    { name: 'bedarf', type: 'number', required: true },
+    { name: 'beschreibung', type: 'text' },
+    { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+    { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
+  ],
+});
+
+// Eintragungen legen Mitglieder selbst an (nur fuer sich), loeschen nur die
+// eigenen. Lesen duerfen alle Angemeldeten, damit die Belegung sichtbar ist.
+const dienstId = (await pb.collections.getOne('helferdienste')).id;
+await ensureCollection({
+  name: 'helfer_eintragungen',
+  type: 'base',
+  listRule: lesen,
+  viewRule: lesen,
+  createRule: '@request.auth.id != ""',
+  updateRule: null,
+  deleteRule: '@request.auth.id != "" && mitglied = @request.auth.id',
+  fields: [
+    { name: 'mitglied', type: 'relation', required: true, maxSelect: 1, collectionId: usersId, cascadeDelete: true },
+    { name: 'dienst', type: 'relation', required: true, maxSelect: 1, collectionId: dienstId, cascadeDelete: true },
+    { name: 'datum', type: 'date', required: true }, // konkreter Tag der Eintragung
+    { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
+  ],
+});
+
 // Testmitglied
 async function ensureMitglied() {
   try {
@@ -102,13 +210,13 @@ await seedWennLeer('mitteilungen', [
   {
     titel: 'Einladung zur Mitgliederversammlung',
     inhalt:
-      'Die naechste ordentliche Mitgliederversammlung findet im Vereinsraum statt. Die Tagesordnung liegt im Dokumentenbereich bereit.',
+      'Die nächste ordentliche Mitgliederversammlung findet im Vereinsraum statt. Die Tagesordnung liegt im Dokumentenbereich bereit.',
     datum: '2026-06-12 10:00:00.000Z',
   },
   {
     titel: 'Aktualisierte Hausordnung',
     inhalt:
-      'Die Hausordnung wurde redaktionell ueberarbeitet. Die aktuelle Fassung steht unter Dokumente zur Verfuegung.',
+      'Die Hausordnung wurde redaktionell überarbeitet. Die aktuelle Fassung steht unter Dokumente zur Verfügung.',
     datum: '2026-06-05 09:00:00.000Z',
   },
 ]);
@@ -118,13 +226,13 @@ await seedWennLeer('termine', [
     titel: 'Ordentliche Mitgliederversammlung',
     datum: '2026-07-04 17:00:00.000Z',
     ort: 'Vereinsraum',
-    beschreibung: 'Berichte des Vorstands, Aussprache, Beschluesse.',
+    beschreibung: 'Berichte des Vorstands, Aussprache, Beschlüsse.',
   },
   {
-    titel: 'Offene Sprechstunde des Praeventionsbeauftragten',
+    titel: 'Offene Sprechstunde des Präventionsbeauftragten',
     datum: '2026-06-25 16:00:00.000Z',
     ort: 'Vereinsraum',
-    beschreibung: 'Vertrauliche Fragen rund um Gesundheit und Praevention.',
+    beschreibung: 'Vertrauliche Fragen rund um Gesundheit und Prävention.',
   },
 ]);
 
@@ -136,7 +244,7 @@ async function seedDokument() {
     return;
   }
   const inhalt =
-    'Beispieldokument der Anbauvereinigung Goerlitz e. V.\nPlatzhalter fuer die echte Hausordnung.';
+    'Beispieldokument der Anbauvereinigung Görlitz e. V.\nPlatzhalter für die echte Hausordnung.';
   const fd = new FormData();
   fd.set('titel', 'Hausordnung (Stand 06/2026)');
   fd.set('kategorie', 'Vereinsdokumente');
@@ -145,5 +253,82 @@ async function seedDokument() {
   console.log('Dokument eingespielt.');
 }
 await seedDokument();
+
+await seedWennLeer('wochenangebot', [
+  {
+    titel: 'Aktuelle Abgabe diese Woche',
+    inhalt:
+      'Die Abgabe erfolgt zum Selbstkostenbeitrag im Rahmen der Satzung, Abholung zu den ausgehängten Vereinszeiten. Alle THC- und CBD-Werte stammen aus eigener Messung der Vereinigung.',
+    sorten: [
+      { name: 'Northern Lights', typ: 'Indica', thc: '18,2 %', cbd: '0,6 %' },
+      { name: 'Granddaddy Purple', typ: 'Indica', thc: '17,4 %', cbd: '0,5 %' },
+      { name: 'Lemon Haze', typ: 'Sativa', thc: '20,1 %', cbd: '0,4 %' },
+      { name: 'Amnesia Haze', typ: 'Sativa', thc: '21,8 %', cbd: '0,3 %' },
+      { name: 'White Widow', typ: 'Hybrid', thc: '19,0 %', cbd: '1,1 %' },
+    ],
+    gueltig_von: '2026-06-22 00:00:00.000Z',
+    gueltig_bis: '2026-06-28 00:00:00.000Z',
+  },
+]);
+
+await seedWennLeer('sortenberichte', [
+  {
+    titel: 'Lemon Haze',
+    sorte: 'Lemon Haze',
+    inhalt:
+      'Sativa-betonte Sorte mit zitrusartigem Aroma. Anbau aus dem laufenden Vereinszyklus. Diese Angaben dienen der sachlichen Information der Mitglieder, nicht der Bewerbung.',
+    datum: '2026-06-14 09:00:00.000Z',
+  },
+  {
+    titel: 'Northern Lights',
+    sorte: 'Northern Lights',
+    inhalt:
+      'Indica-betonte, robuste Sorte. Ernte aus dem aktuellen Anbau der Vereinigung. Sachliche Sortenbeschreibung für Mitglieder.',
+    datum: '2026-06-10 09:00:00.000Z',
+  },
+]);
+
+await seedWennLeer('helferdienste', [
+  {
+    titel: 'Gießen',
+    rhythmus: 'taeglich',
+    bedarf: 1,
+    beschreibung: 'Tägliches Gießen der Pflanzen im Vereinsraum.',
+  },
+  {
+    titel: 'Kontrolle und Lüften',
+    rhythmus: 'taeglich',
+    bedarf: 1,
+    beschreibung: 'Täglicher Kontrollgang: Temperatur und Luftfeuchte prüfen, lüften.',
+  },
+  {
+    titel: 'Düngen',
+    rhythmus: 'woechentlich',
+    wochentag: 1,
+    bedarf: 2,
+    beschreibung: 'Wöchentliche Düngung nach Plan (montags).',
+  },
+  {
+    titel: 'Beschneiden und Pflege',
+    rhythmus: 'woechentlich',
+    wochentag: 4,
+    bedarf: 2,
+    beschreibung: 'Wöchentlicher Schnitt und Pflege (donnerstags).',
+  },
+  {
+    titel: 'Umtopfen',
+    rhythmus: 'monatlich',
+    monatstag: 5,
+    bedarf: 3,
+    beschreibung: 'Pflanzen in größere Töpfe umsetzen (Monatsanfang).',
+  },
+  {
+    titel: 'Arbeitseinsatz: Ernte vorbereiten',
+    rhythmus: 'einmalig',
+    datum: '2026-07-15 09:00:00.000Z',
+    bedarf: 5,
+    beschreibung: 'Gemeinsamer Arbeitseinsatz Mitte Juli, viele Hände gesucht.',
+  },
+]);
 
 console.log('\nFertig. Login zum Testen: ' + MITGLIED + ' / ' + MITGLIED_PW);

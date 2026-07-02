@@ -3,7 +3,7 @@ import { goerlitz } from './goerlitz';
 import { goerlitz2 } from './goerlitz2';
 import { leipzig } from './leipzig';
 
-// Registry aller Vereinsseiten. Weitere Seite: Config importieren und ergaenzen.
+// Registry aller Vereinsseiten. Weitere Seite: Config importieren und ergänzen.
 const sites: Record<string, SiteConfig> = {
   goerlitz,
   goerlitz2,
@@ -15,15 +15,11 @@ const aktiveId = (import.meta.env.SITE_ID as string | undefined) ?? 'goerlitz';
 
 export const site: SiteConfig = sites[aktiveId] ?? goerlitz;
 
-// Zentrale, fuer alle Vereine identische Navigation. Bewusst nuechtern,
+// Zentrale, für alle Vereine identische Navigation. Bewusst nüchtern,
 // ohne werbende Begriffe, rein nach Informationszweck gegliedert.
 export const navigation: NavPunkt[] = [
   { label: 'Start', href: '/' },
-  { label: 'Aufnahmeverfahren', href: '/aufnahmeverfahren' },
-  { label: 'Satzung und Beitraege', href: '/satzung-beitraege' },
-  { label: 'Gesundheit und Jugendschutz', href: '/gesundheit-jugendschutz' },
-  { label: 'Praevention und Beratung', href: '/praevention-beratung' },
-  { label: 'Anbau und Sorten', href: '/anbau-sorten' },
+  { label: 'Prävention und Beratung', href: '/praevention-beratung' },
   { label: 'Rechtliche Hinweise', href: '/rechtliche-hinweise' },
   { label: 'Kontakt', href: '/kontakt' },
 ];

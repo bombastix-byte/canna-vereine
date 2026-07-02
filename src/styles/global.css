@@ -5,8 +5,8 @@
 */
 
 :root {
-  --mass: 38rem; /* optimale Textbreite */
-  --rahmen: 70rem; /* Layoutbreite */
+  --mass: 46rem; /* optimale Textbreite */
+  --rahmen: 66rem; /* Layoutbreite */
 }
 
 *,
@@ -280,7 +280,7 @@ input:focus-visible {
 
 .hero h1 {
   color: var(--hero-ink);
-  max-width: 20ch;
+  max-width: 28ch;
   font-size: clamp(2.3rem, 5.2vw, 3.4rem);
   margin: 0 0 1.2rem;
   overflow-wrap: break-word;
@@ -290,7 +290,7 @@ input:focus-visible {
 .hero p {
   color: var(--hero-sub);
   font-size: 1.16rem;
-  max-width: 46ch;
+  max-width: 54ch;
   margin: 0;
 }
 

@@ -1,24 +1,25 @@
 import type { SiteConfig } from './types';
 
-// PLATZHALTER: Mit echten Vereinsdaten ersetzen. Felder mit "TODO" muessen
+// PLATZHALTER: Mit echten Vereinsdaten ersetzen. Felder mit "TODO" müssen
 // vor dem Livegang vom Verein geliefert werden.
 export const goerlitz: SiteConfig = {
   id: 'goerlitz',
-  theme: 'botanik',
-  vereinsname: 'Anbauvereinigung Goerlitz e. V.', // TODO: exakter Name laut Satzung
-  kurzname: 'Anbauvereinigung Goerlitz',
-  stadt: 'Goerlitz',
+  theme: 'nacht',
+  vereinsname: 'Anbauvereinigung Görlitz e. V.', // TODO: exakter Name laut Satzung
+  kurzname: 'Anbauvereinigung Görlitz',
+  stadt: 'Görlitz',
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',
   erlaubnisHinweis:
     'Erlaubnis zum gemeinschaftlichen Eigenanbau nach Paragraf 11 KCanG: TODO Aktenzeichen / Status',
 
   kontakt: {
-    strasse: 'TODO Strasse und Hausnummer',
+    strasse: 'TODO Straße und Hausnummer',
     plz: '02826',
-    ort: 'Goerlitz',
+    ort: 'Görlitz',
     email: 'kontakt@TODO-domain.de',
     telefon: undefined,
     erreichbarkeit: 'Schriftliche Anfragen werden innerhalb weniger Werktage beantwortet.',
+    besuchszeiten: 'Werktags 14 bis 18 Uhr',
   },
 
   vorstand: [
@@ -28,20 +29,20 @@ export const goerlitz: SiteConfig = {
 
   praeventionsbeauftragter: {
     name: 'TODO Vorname Nachname',
-    rolle: 'Praeventionsbeauftragte Person nach Paragraf 23 KCanG',
+    rolle: 'Präventionsbeauftragte Person nach Paragraf 23 KCanG',
     email: 'praevention@TODO-domain.de',
   },
 
   externeBeratung: [
     {
-      name: 'Suchtberatung Diakonie Goerlitz',
+      name: 'Suchtberatung Diakonie Görlitz',
       beschreibung: 'Kostenlose und vertrauliche Beratung zu Suchtfragen.',
       telefon: 'TODO',
       url: undefined,
     },
     {
       name: 'BZgA: Infotelefon zur Suchtvorbeugung',
-      beschreibung: 'Bundeszentrale fuer gesundheitliche Aufklaerung, anonyme Beratung.',
+      beschreibung: 'Bundeszentrale für gesundheitliche Aufklärung, anonyme Beratung.',
       telefon: '0221 892031',
       url: 'https://www.bzga.de',
     },

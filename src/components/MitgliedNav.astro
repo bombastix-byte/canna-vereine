@@ -1,0 +1,75 @@
+---
+import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from '../lib/rollen';
+
+// Interne Navigation des Mitgliederbereichs. Wird auf allen geschützten
+// Seiten eingebunden. Hebt den aktuellen Punkt hervor. Die Personal-Punkte
+// (Tresen, Warenwirtschaft) erscheinen nur bei passender Rolle; dazu Prop
+// `rollen` übergeben.
+interface Props {
+  rollen?: string[];
+}
+const { rollen } = Astro.props;
+const punkte = [
+  { label: 'Aktuelles', href: '/mitglieder/bereich' },
+  { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
+  { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
+  { label: 'Helferplan', href: '/mitglieder/helferplan' },
+  { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' },
+];
+if (darfAnbau(rollen)) {
+  punkte.push({ label: 'Warenwirtschaft', href: '/mitglieder/wawi' });
+}
+if (darfAusgeben(rollen)) {
+  punkte.push({ label: 'Ausgabe (Tresen)', href: '/mitglieder/ausgabe' });
+  punkte.push({ label: 'Vermehrung', href: '/mitglieder/vermehrung' });
+}
+if (darfBerichte(rollen)) {
+  punkte.push({ label: 'Jahresmeldung', href: '/mitglieder/jahresmeldung' });
+}
+if (darfVerwalten(rollen)) {
+  punkte.push({ label: 'Verwaltung', href: '/mitglieder/verwaltung' });
+}
+const aktiv = Astro.url.pathname.replace(/\/$/, '');
+---
+
+<nav class="mnav" aria-label="Mitgliederbereich">
+  {
+    punkte.map((p) => (
+      <a href={p.href} aria-current={aktiv === p.href ? 'page' : undefined}>
+        {p.label}
+      </a>
+    ))
+  }
+  <a class="mnav-aus" href="/mitglieder/abmelden">Abmelden</a>
+</nav>
+
+<style>
+  .mnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+    align-items: center;
+    margin: 0 0 1.6rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.95rem;
+    max-width: var(--mass);
+  }
+  .mnav a {
+    text-decoration: none;
+    color: var(--ink-soft);
+    padding: 0.15rem 0;
+    border-bottom: 2px solid transparent;
+  }
+  .mnav a:hover {
+    color: var(--ink);
+  }
+  .mnav a[aria-current='page'] {
+    color: var(--ink);
+    border-bottom-color: currentColor;
+    font-weight: 600;
+  }
+  .mnav-aus {
+    margin-left: auto;
+  }
+</style>

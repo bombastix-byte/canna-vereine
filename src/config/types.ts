@@ -1,15 +1,15 @@
-// Datenmodell fuer eine Anbauvereinigungs-Website.
+// Datenmodell für eine Anbauvereinigungs-Website.
 // Alle sichtbaren Inhalte einer Seite stammen aus genau einer SiteConfig,
-// damit eine weitere Vereinsseite nur eine neue Config-Datei benoetigt.
+// damit eine weitere Vereinsseite nur eine neue Config-Datei benötigt.
 
-// Visuelles Theme. Aendert Schrift, Farbe und Anmutung (Token-Ebene).
+// Visuelles Theme. Ändert Schrift, Farbe und Anmutung (Token-Ebene).
 export type ThemeName = 'botanik' | 'klar' | 'warm' | 'nacht';
 
-// Layout. Bestimmt die Grundstruktur, unabhaengig vom Theme:
+// Layout. Bestimmt die Grundstruktur, unabhängig vom Theme:
 //  'standard'  = Kopfleiste oben mit horizontaler Navigation (Default)
-//  'sidebar'   = feste Seitenleiste am Desktop, Hamburger-Menue am Handy
+//  'sidebar'   = feste Seitenleiste am Desktop, Hamburger-Menü am Handy
 //  'zentriert' = zentrierter Masthead mit mittiger Navigation (formell)
-// Alle Layouts nutzen am Handy ein Hamburger-Menue.
+// Alle Layouts nutzen am Handy ein Hamburger-Menü.
 export type LayoutName = 'standard' | 'sidebar' | 'zentriert';
 
 export interface Ansprechpartner {
@@ -38,14 +38,14 @@ export interface SiteConfig {
   theme: ThemeName;
   /** Grundlayout (Default: standard) */
   layout?: LayoutName;
-  /** vollstaendiger Vereinsname laut Satzung */
+  /** vollständiger Vereinsname laut Satzung */
   vereinsname: string;
-  /** kurzer Name fuer Kopfzeile/Titel */
+  /** kurzer Name für Kopfzeile/Titel */
   kurzname: string;
   stadt: string;
   /** Vereinsregister, z. B. "VR 12345, Amtsgericht Dresden" */
   registereintrag?: string;
-  /** Erlaubnis-/Aktenzeichen der zustaendigen Behoerde, falls vorhanden */
+  /** Erlaubnis-/Aktenzeichen der zuständigen Behörde, falls vorhanden */
   erlaubnisHinweis?: string;
 
   kontakt: {
@@ -54,8 +54,10 @@ export interface SiteConfig {
     ort: string;
     email: string;
     telefon?: string;
-    /** rein sachlich: Zeiten der telefonischen/persoenlichen Erreichbarkeit */
+    /** rein sachlich: Zeiten der telefonischen/persönlichen Erreichbarkeit */
     erreichbarkeit?: string;
+    /** Besuchszeiten vor Ort, rein sachlich (z. B. "Werktags 14 bis 18 Uhr") */
+    besuchszeiten?: string;
   };
 
   vorstand: Ansprechpartner[];
