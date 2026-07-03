@@ -266,11 +266,13 @@ const schnellMengen = [1, 2, 3, 5, 10];
           <input type="hidden" name="mitglied" value={gewaehltId} />
 
           <div class="feld">
-            <label for="charge_1">Sorte (Charge)</label>
+            <label for="charge_1">Sorte (Charge)
+              <button class="knopf-mini" type="button" id="qr-charge" hidden>Gebinde-QR scannen</button>
+            </label>
             <select id="charge_1" name="charge_1" required>
               <option value="">— bitte wählen —</option>
               {chargen.map((c) => (
-                <option value={c.id} disabled={chargeGesperrt(c)}>
+                <option value={c.id} data-nr={c.charge_nr} disabled={chargeGesperrt(c)}>
                   {chargeText(c)}{chargeGesperrt(c) ? ' — für U21 gesperrt' : ''}
                 </option>
               ))}
@@ -294,7 +296,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
                 <select class="eingabe" name={`charge_${i}`} aria-label={`Sorte Position ${i}`}>
                   <option value="">— Sorte {i} (optional) —</option>
                   {chargen.map((c) => (
-                    <option value={c.id} disabled={chargeGesperrt(c)}>
+                    <option value={c.id} data-nr={c.charge_nr} disabled={chargeGesperrt(c)}>
                       {chargeText(c)}{chargeGesperrt(c) ? ' — U21 gesperrt' : ''}
                     </option>
                   ))}
@@ -419,21 +421,20 @@ const schnellMengen = [1, 2, 3, 5, 10];
 </script>
 
 <script is:inline>
-  // Kamera-QR-Scan fuer den Mitgliedsausweis (QR-Inhalt = Mitgliedsnummer).
+  // Kamera-QR-Scan am Tresen. Zwei Ausloeser, ein Overlay:
+  //  - Mitgliedsausweis (QR = Mitgliedsnummer) -> Schnellfeld + Formular ab
+  //  - Gebinde-Etikett (QR = Chargennummer, auch Pflanzen-QRs "…-P01")
+  //    -> waehlt die Charge in der naechsten freien Position
   // Nutzt die BarcodeDetector-API des Browsers/WebViews (Android/Chrome und
-  // die Vereins-App). Wo sie fehlt (z. B. iOS-Safari), bleibt der Knopf
+  // die Vereins-App). Wo sie fehlt (z. B. iOS-Safari), bleiben die Knoepfe
   // verborgen - Tippen und USB-Scanner funktionieren immer.
   (() => {
-    const knopf = document.getElementById('qr-kamera');
     const overlay = document.getElementById('scan-overlay');
     const video = document.getElementById('scan-video');
     const fehlerEl = document.getElementById('scan-fehler');
     const abbruch = document.getElementById('scan-abbruch');
-    const nrFeld = document.getElementById('nr');
-    const nrForm = document.getElementById('nr-form');
-    if (!knopf || !overlay || !video || !nrFeld || !nrForm) return;
+    if (!overlay || !video) return;
     if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) return;
-    knopf.hidden = false;
 
     let stream = null;
     let aktiv = false;
@@ -452,7 +453,10 @@ const schnellMengen = [1, 2, 3, 5, 10];
       fehlerEl.hidden = false;
     };
 
-    knopf.addEventListener('click', async () => {
+    // Oeffnet das Overlay und ruft auswerten(wert) je gelesenem Code auf.
+    // Rueckgabe true = fertig (Overlay zu), false/String = weiterscannen
+    // (String wird als Hinweis angezeigt, z. B. "Charge nicht gefunden").
+    const starteScan = async (auswerten) => {
       if (fehlerEl) fehlerEl.hidden = true;
       overlay.hidden = false;
       try {
@@ -467,16 +471,23 @@ const schnellMengen = [1, 2, 3, 5, 10];
       video.srcObject = stream;
       aktiv = true;
       const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      let letzterFehlwert = '';
       const pruefe = async () => {
         if (!aktiv) return;
         try {
           const codes = video.readyState >= 2 ? await detector.detect(video) : [];
           const wert = codes[0]?.rawValue?.trim();
           if (wert) {
-            nrFeld.value = wert;
-            zu();
-            nrForm.submit();
-            return;
+            const ergebnis = auswerten(wert);
+            if (ergebnis === true) {
+              zu();
+              return;
+            }
+            // Denselben Fehlwert nicht in jedem Frame neu melden.
+            if (typeof ergebnis === 'string' && wert !== letzterFehlwert) {
+              letzterFehlwert = wert;
+              zeigeFehler(ergebnis);
+            }
           }
         } catch {
           // Einzelner Frame nicht lesbar - einfach weiterprobieren.
@@ -484,10 +495,53 @@ const schnellMengen = [1, 2, 3, 5, 10];
         setTimeout(pruefe, 150);
       };
       pruefe();
-    });
+    };
 
     abbruch?.addEventListener('click', zu);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) zu(); });
+
+    // --- Ausloeser 1: Mitgliedsausweis ---
+    const mKnopf = document.getElementById('qr-kamera');
+    const nrFeld = document.getElementById('nr');
+    const nrForm = document.getElementById('nr-form');
+    if (mKnopf && nrFeld && nrForm) {
+      mKnopf.hidden = false;
+      mKnopf.addEventListener('click', () =>
+        starteScan((wert) => {
+          nrFeld.value = wert;
+          nrForm.submit();
+          return true;
+        }),
+      );
+    }
+
+    // --- Ausloeser 2: Gebinde-QR (Chargennummer) ---
+    const cKnopf = document.getElementById('qr-charge');
+    if (cKnopf && document.querySelector('select[name^="charge_"]')) {
+      cKnopf.hidden = false;
+      cKnopf.addEventListener('click', () =>
+        starteScan((wert) => {
+          // Pflanzen-Etiketten ("2026-0001-P01") auf die Charge abbilden.
+          const nr = wert.replace(/-P\d+$/i, '');
+          const selects = [...document.querySelectorAll('select[name^="charge_"]')];
+          const passt = (o) => (o.dataset.nr || '') !== '' && o.dataset.nr.toLowerCase() === nr.toLowerCase();
+          const option = [...selects[0].options].find(passt);
+          if (!option) return `Charge „${nr}" nicht gefunden oder nicht freigegeben.`;
+          if (option.disabled) return `Charge ${nr}: für dieses Mitglied gesperrt (U21/THC).`;
+          // Naechste freie Position; ist die Charge schon gewaehlt, dorthin.
+          const ziel =
+            selects.find((s) => [...s.options].find(passt)?.value === s.value) ??
+            selects.find((s) => !s.value);
+          if (!ziel) return 'Alle Positionen sind belegt.';
+          ziel.value = [...ziel.options].find(passt).value;
+          // Positionen 2-4 liegen in der zugeklappten Klappe - aufmachen.
+          ziel.closest('details')?.setAttribute('open', '');
+          const i = ziel.name.split('_')[1];
+          document.querySelector(`input[name="menge_${i}"]`)?.focus();
+          return true;
+        }),
+      );
+    }
   })();
 </script>
 
@@ -532,6 +586,18 @@ const schnellMengen = [1, 2, 3, 5, 10];
     font-size: 0.92rem;
     text-align: center;
   }
+  .knopf-mini {
+    margin-left: 0.6rem;
+    padding: 0.15rem 0.6rem;
+    font: inherit;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .knopf-mini:hover { color: var(--ink); border-color: var(--accent); }
   .v-doppel { display: flex; gap: 1rem; flex-wrap: wrap; }
   .v-doppel .feld { flex: 1 1 12rem; }
   .v-doppel input:disabled { opacity: 0.5; }

@@ -105,3 +105,37 @@ export function pflanzeZpl(d: PflanzenEtikett): string {
 export function pflanzenZplStapel(pflanzen: PflanzenEtikett[]): string {
   return pflanzen.map(pflanzeZpl).join('');
 }
+
+export interface GebindeEtikett {
+  verein?: string;
+  /** QR-Inhalt: die Chargennummer - am Tresen scanbar (waehlt die Sorte). */
+  chargeNr: string;
+  sorte?: string;
+  /** Produkt-Label, z. B. 'Blüte', 'Haschisch', 'Rosin'. */
+  produkt?: string;
+  thcProzent?: number | null;
+}
+
+/**
+ * Gebinde-Etikett (~50 mm) fuer Abgabeglaeser/-tueten: QR = Chargennummer,
+ * dazu Produkt, Sorte und THC. Der Tresen-Scanner waehlt darueber die Charge.
+ */
+export function gebindeZpl(d: GebindeEtikett): string {
+  const nr = z(d.chargeNr);
+  const kopf = [d.produkt, d.sorte].filter(Boolean).join(' · ');
+  const fuss = [d.thcProzent != null ? `THC ${d.thcProzent} %` : '', d.verein ?? '']
+    .filter(Boolean)
+    .join(' · ');
+  const zeilen = [
+    `^FO180,20^A0N,26,26^FD${z(kopf)}^FS`,
+    `^FO180,54^A0N,30,30^FD${nr}^FS`,
+    `^FO180,92^A0N,22,22^FD${z(fuss)}^FS`,
+    `^FO20,20^BQN,2,6^FDLA,${nr}^FS`,
+  ];
+  return `^XA\n^CI28\n^PW496\n^LL150\n${zeilen.join('\n')}\n^XZ\n`;
+}
+
+/** N gleiche Gebinde-Etiketten einer Charge (ein Druckauftrag). */
+export function gebindeZplStapel(e: GebindeEtikett, anzahl: number): string {
+  return Array.from({ length: Math.max(1, anzahl) }, () => gebindeZpl(e)).join('');
+}

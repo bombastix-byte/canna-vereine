@@ -336,6 +336,12 @@ const statusVariante: Record<string, string> = {
           </form>
         )}
 
+        {c.status === 'freigegeben' && (
+          <p class="gebinde-link">
+            <a href={`/mitglieder/wawi/gebinde/${c.id}`}>→ Gebinde-Etiketten drucken (QR für den Tresen-Scan)</a>
+          </p>
+        )}
+
         {pflanzenVon(c.id).length > 0 && (
           <details class="pflanzen-det">
             <summary>
@@ -609,6 +615,7 @@ const statusVariante: Record<string, string> = {
   .charge-daten { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.3rem 1rem; font-size: 0.92rem; color: var(--ink-soft); }
   .charge-daten strong { color: var(--ink); }
   .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
+  .gebinde-link { margin: 0.7rem 0 0; font-size: 0.92rem; }
   .pflanzen-det { margin-top: 0.7rem; font-size: 0.92rem; }
   .pflanzen-det summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; }
   .pflanzenliste { list-style: none; padding: 0.5rem 0 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }

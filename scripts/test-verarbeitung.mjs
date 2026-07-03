@@ -55,6 +55,16 @@ pruefe('Ausbeute 50 -> 8 = 16 %', ausbeuteProzent(50, 8), 16);
 pruefe('Ausbeute 30 -> 4,5 = 15 %', ausbeuteProzent(30, 4.5), 15);
 pruefe('Ausbeute ohne Einsatz = null', ausbeuteProzent(0, 5), null);
 
+// --- Gebinde-Etikett (ZPL): QR = Chargennummer, N Kopien ---
+const { gebindeZpl, gebindeZplStapel } = await import('../src/lib/zpl.ts');
+const et = { verein: 'AVG', chargeNr: '2026-0024', sorte: 'CBD Aurora', produkt: 'Haschisch', thcProzent: 32 };
+const zpl = gebindeZpl(et);
+pruefe('Gebinde-ZPL QR-Inhalt = Chargennummer', zpl.includes('^FDLA,2026-0024^FS'), true);
+pruefe('Gebinde-ZPL Kopfzeile Produkt · Sorte', zpl.includes('Haschisch · CBD Aurora'), true);
+pruefe('Gebinde-ZPL THC-Zeile', zpl.includes('THC 32 %'), true);
+pruefe('Gebinde-Stapel = 5 Etiketten', (gebindeZplStapel(et, 5).match(/\^XA/g) ?? []).length, 5);
+pruefe('Gebinde-Stapel mindestens 1', (gebindeZplStapel(et, 0).match(/\^XA/g) ?? []).length, 1);
+
 // --- Jahresmeldung: Split Marihuana / Haschisch (Paragraf 26) ---
 const { aggregiereJahr } = await import('../src/lib/jahresmeldung.ts');
 const w = aggregiereJahr('2026', {
