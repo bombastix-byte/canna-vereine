@@ -110,6 +110,20 @@
   color: var(--ink-soft);
 }
 
+/* Gruppen-Ueberschriften (Mitgliederbereich / Vereinsarbeit) */
+[data-layout='sidebar'] .sb-gruppe {
+  margin: 1.1rem 0 0.35rem;
+  padding: 0 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+[data-layout='sidebar'] .sb-nav .sb-gruppe:first-child {
+  margin-top: 0;
+}
+
 /* Navigation */
 [data-layout='sidebar'] .sb-nav ul {
   list-style: none;

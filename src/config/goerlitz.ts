@@ -5,6 +5,9 @@ import type { SiteConfig } from './types';
 export const goerlitz: SiteConfig = {
   id: 'goerlitz',
   theme: 'nacht',
+  // App-Shell: feste Seitenleiste am Desktop, Hamburger-Schublade am Handy.
+  // Angemeldete Mitglieder sehen dort die komplette Mitglieder-Navigation.
+  layout: 'sidebar',
   //   = geschütztes Leerzeichen: "Görlitz e. V." bricht nie auseinander.
   vereinsname: 'Anbauvereinigung Görlitz e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'Anbauvereinigung Görlitz',

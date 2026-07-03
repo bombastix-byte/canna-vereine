@@ -1,60 +1,28 @@
 ---
-import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from '../lib/rollen';
+import { site } from '../config';
+import {
+  MITGLIED_PUNKTE,
+  arbeitPunkteFuer,
+  istAktiv as punktAktiv,
+  type NavPunkt,
+} from '../lib/mitglied-nav';
 
-// Interne Navigation des Mitgliederbereichs. Wird auf allen geschützten
-// Seiten eingebunden. Hebt den aktuellen Punkt hervor. Zwei Gruppen:
-// Mitglieder-Punkte und (nur bei passender Rolle) "Vereinsarbeit".
-// Dazu Prop `rollen` übergeben - sonst fehlen die Personal-Punkte.
+// Interne Navigation des Mitgliederbereichs fuer die Layouts "standard"/
+// "zentriert". Im Layout "sidebar" uebernimmt die Seitenleiste (Sidebar.astro)
+// die komplette Mitglieder-Navigation - dann rendert diese Komponente nichts.
+// Die Punkte-Definition liegt zentral in lib/mitglied-nav.ts.
 interface Props {
   rollen?: string[];
 }
 const { rollen } = Astro.props;
 
-// Gebuendelte Punkte fuehren mehrere Seiten unter einem Eintrag (die
-// Unterseiten wechselt man dort per UnterNav-Reitern); `auch` zaehlt fuer
-// die Hervorhebung mit.
-interface Punkt {
-  label: string;
-  href: string;
-  auch?: string[];
-}
-
-const mitgliedPunkte: Punkt[] = [
-  { label: 'Aktuelles', href: '/mitglieder/bereich' },
-  { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
-  { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
-  { label: 'Helferplan', href: '/mitglieder/helferplan' },
-  { label: 'Abstimmungen', href: '/mitglieder/abstimmungen' },
-  { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte'] },
-  { label: 'Ausweis', href: '/mitglieder/ausweis' },
-  { label: 'App', href: '/mitglieder/app' },
-  { label: 'Sicherheit', href: '/mitglieder/sicherheit' },
-];
-
-const arbeitPunkte: Punkt[] = [];
-if (darfAusgeben(rollen)) {
-  // Tresen buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
-  arbeitPunkte.push({ label: 'Tresen', href: '/mitglieder/ausgabe' });
-}
-if (darfAnbau(rollen)) {
-  arbeitPunkte.push({ label: 'Anbau heute', href: '/mitglieder/anbau' });
-  arbeitPunkte.push({ label: 'Warenwirtschaft', href: '/mitglieder/wawi' });
-}
-if (darfBerichte(rollen)) {
-  arbeitPunkte.push({ label: 'Jahresmeldung', href: '/mitglieder/jahresmeldung' });
-}
-if (darfVerwalten(rollen)) {
-  arbeitPunkte.push({
-    label: 'Verwaltung',
-    href: '/mitglieder/verwaltung',
-    auch: ['/mitglieder/antraege', '/mitglieder/beitraege', '/mitglieder/nachricht'],
-  });
-}
-
-const aktiv = Astro.url.pathname.replace(/\/$/, '');
-const istAktiv = (p: Punkt) =>
-  [p.href, ...(p.auch ?? [])].some((h) => aktiv === h || aktiv.startsWith(h + '/'));
+const sidebarLayout = (site.layout ?? 'standard') === 'sidebar';
+const mitgliedPunkte = MITGLIED_PUNKTE;
+const arbeitPunkte = arbeitPunkteFuer(rollen);
+const istAktiv = (p: NavPunkt) => punktAktiv(p, Astro.url.pathname);
 ---
+
+{!sidebarLayout && (
 
 <nav class="mnav" aria-label="Mitgliederbereich">
   <div class="mnav-zeile">
@@ -80,6 +48,7 @@ const istAktiv = (p: Punkt) =>
     )
   }
 </nav>
+)}
 
 <style>
   .mnav {
