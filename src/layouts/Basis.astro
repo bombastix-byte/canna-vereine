@@ -12,9 +12,11 @@ import { pfad } from '../lib/url';
 interface Props {
   titel: string;
   beschreibung?: string;
+  /** robots-Meta; 'noindex, nofollow' fuer Seiten, die nicht in Suchmaschinen sollen. */
+  robots?: string;
 }
 
-const { titel, beschreibung } = Astro.props;
+const { titel, beschreibung, robots = 'index, follow' } = Astro.props;
 const seitentitel = `${titel} | ${site.kurzname}`;
 const hatHero = Astro.slots.has('hero');
 const layout = site.layout ?? 'standard';
@@ -27,7 +29,7 @@ const layout = site.layout ?? 'standard';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{seitentitel}</title>
     {beschreibung && <meta name="description" content={beschreibung} />}
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content={robots} />
     <meta name="theme-color" content="#1e3a2c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />

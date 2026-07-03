@@ -2,9 +2,12 @@
 import Basis from '../layouts/Basis.astro';
 import { site } from '../config';
 
-// Oeffentlicher Beitrittsantrag. Bewusst nuechtern (KCanG Paragraf 6: keine
-// Werbung) - reine Sachinformation zum Aufnahmeverfahren plus Formular.
-// Antraege landen in der Warteliste des Vorstands.
+// Beitrittsantrag. Bewusst nuechtern (KCanG Paragraf 6: keine Werbung) -
+// reine Sachinformation zum Aufnahmeverfahren plus Formular. Antraege landen
+// in der Warteliste des Vorstands.
+// NICHT in der Navigation verlinkt und noindex: ein oeffentlich beworbener
+// Einstieg koennte mit dem Werbeverbot kollidieren. Der Verein gibt den Link
+// nur auf direkte Anfrage weiter (z. B. nach persoenlichem Kontakt).
 
 const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
@@ -16,7 +19,7 @@ const fehlertext: Record<string, string> = {
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 ---
 
-<Basis titel="Mitglied werden" beschreibung="Sachinformationen zum Aufnahmeverfahren der Vereinigung.">
+<Basis titel="Mitglied werden" beschreibung="Sachinformationen zum Aufnahmeverfahren der Vereinigung." robots="noindex, nofollow">
   <div class="seitenkopf">
     <p class="eyebrow">Aufnahme</p>
     <h1>Mitglied werden</h1>

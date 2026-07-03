@@ -19,7 +19,10 @@ export const site: SiteConfig = sites[aktiveId] ?? goerlitz;
 // ohne werbende Begriffe, rein nach Informationszweck gegliedert.
 export const navigation: NavPunkt[] = [
   { label: 'Start', href: '/' },
-  { label: 'Mitglied werden', href: '/mitglied-werden' },
+  // BEWUSST NICHT verlinkt: /mitglied-werden. Ein öffentlich beworbener
+  // "Mitglied werden"-Punkt könnte als Werbung i. S. v. Paragraf 6 KCanG
+  // gelesen werden. Die Antragsseite bleibt unter ihrer URL erreichbar -
+  // der Verein gibt den Link nur auf direkte Anfrage weiter.
   { label: 'Prävention und Beratung', href: '/praevention-beratung' },
   { label: 'Rechtliche Hinweise', href: '/rechtliche-hinweise' },
   { label: 'Kontakt', href: '/kontakt' },
