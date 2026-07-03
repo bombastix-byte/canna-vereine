@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vereins-App">
+  <rect width="512" height="512" rx="104" fill="#1e3a2c"/>
+  <!-- Spross: Stiel + zwei Blaetter, mittig im maskable-Schutzbereich (~60%) -->
+  <g stroke="#c9a86d" stroke-width="18" stroke-linecap="round" fill="none">
+    <path d="M256 372 V 236"/>
+  </g>
+  <g fill="#a7c8b2">
+    <path d="M256 250 C 200 250 168 214 168 162 C 224 162 256 200 256 250 Z"/>
+    <path d="M256 250 C 312 250 344 214 344 162 C 288 162 256 200 256 250 Z"/>
+  </g>
+  <circle cx="256" cy="372" r="12" fill="#c9a86d"/>
+</svg>

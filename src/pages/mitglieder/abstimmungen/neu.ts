@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
+import { pushAnAlle } from '../../../lib/push-broadcast';
 
 // Legt eine neue Abstimmung an. Nur Vorstand. Optionen: eine je Zeile.
 export const prerender = false;
@@ -34,6 +35,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     return redirect('/mitglieder/abstimmungen?fehler=fehlgeschlagen', 303);
   }
+
+  // Mitglieder mit Push-Abo benachrichtigen (falls konfiguriert).
+  await pushAnAlle(pb, { titel: 'Neue Abstimmung', text: titel, url: '/mitglieder/abstimmungen' });
 
   return redirect('/mitglieder/abstimmungen?ok=neu', 303);
 };

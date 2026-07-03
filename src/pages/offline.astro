@@ -1,0 +1,18 @@
+---
+import Basis from '../layouts/Basis.astro';
+// Offline-Fallback der PWA (statisch). Wird vom Service Worker angezeigt,
+// wenn keine Verbindung besteht.
+export const prerender = true;
+---
+
+<Basis titel="Offline" beschreibung="Keine Internetverbindung.">
+  <div class="seitenkopf">
+    <p class="eyebrow">Verbindung</p>
+    <h1>Du bist offline</h1>
+    <p class="einleitung">
+      Gerade besteht keine Internetverbindung. Sobald du wieder online bist,
+      lädt die Seite normal. Zum erneuten Versuch die Seite neu laden.
+    </p>
+  </div>
+  <p><a class="knopf" href="/mitglieder/bereich">Nochmal versuchen</a></p>
+</Basis>

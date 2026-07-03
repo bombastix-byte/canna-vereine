@@ -29,6 +29,20 @@ const layout = site.layout ?? 'standard';
     {beschreibung && <meta name="description" content={beschreibung} />}
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#1e3a2c" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={site.kurzname} />
+    <script is:inline>
+      // Service Worker registrieren (PWA: installierbar, Offline-Grundgeruest,
+      // Push). Nur in sicheren Kontexten (https/localhost).
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      }
+    </script>
     <script is:inline>
       (function () {
         var erlaubt = ['botanik', 'klar', 'warm', 'nacht'];

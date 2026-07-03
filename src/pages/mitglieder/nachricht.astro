@@ -1,0 +1,62 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+import { pushKonfiguriert } from '../../lib/push';
+
+// Vorstand: Push-Nachricht an alle Mitglieder mit Abo senden.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+let abos = 0;
+try {
+  abos = (await pb.collection('push_abos').getList(1, 1)).totalItems;
+} catch {
+  abos = 0;
+}
+const konfiguriert = pushKonfiguriert();
+
+const ok = Astro.url.searchParams.get('ok');
+const n = Astro.url.searchParams.get('n');
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  push_aus: 'Der Push-Versand ist nicht eingerichtet (VAPID-Schlüssel in der Server-.env fehlen).',
+  fehlend: 'Bitte einen Titel angeben.',
+};
+---
+
+<Basis titel="Nachricht senden" beschreibung="Push-Nachricht an alle Mitglieder.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <h1 style="margin-bottom:0.4rem;">Nachricht senden</h1>
+  <p class="einleitung">
+    Sendet eine Push-Benachrichtigung an alle Mitglieder, die auf einem Gerät
+    Benachrichtigungen aktiviert haben. Für kurze, wichtige Hinweise gedacht.
+  </p>
+
+  {ok && <p class="hinweis" role="status">Gesendet an {n ?? '0'} Gerät(e).</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Das hat nicht geklappt.'}</p>}
+  {!konfiguriert && (
+    <p class="hinweis hinweis--fehler">Push-Versand noch nicht eingerichtet — VAPID-Schlüssel (VAPID_PUBLIC/PRIVATE) in der Server-.env hinterlegen.</p>
+  )}
+
+  <p style="color:var(--ink-soft);">Aktive Abos: <strong>{abos}</strong></p>
+
+  <form class="kasten" method="post" action="/mitglieder/push/senden">
+    <div class="feld">
+      <label for="titel">Titel</label>
+      <input id="titel" name="titel" type="text" required maxlength="80" placeholder="z. B. Erinnerung: Arbeitseinsatz Samstag" />
+    </div>
+    <div class="feld">
+      <label for="text">Text (optional)</label>
+      <input id="text" name="text" type="text" maxlength="180" placeholder="Kurzer Hinweis …" />
+    </div>
+    <button class="knopf" type="submit" disabled={!konfiguriert || abos === 0}>An alle senden</button>
+    {abos === 0 && <p style="color:var(--ink-soft);font-size:0.9rem;margin:0.6rem 0 0;">Noch niemand hat Benachrichtigungen aktiviert.</p>}
+  </form>
+</Basis>

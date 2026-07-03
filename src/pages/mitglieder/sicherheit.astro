@@ -88,7 +88,101 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
     Handy verloren? Der Vorstand kann die Zwei-Faktor-Anmeldung für dein Konto
     im System zurücksetzen — danach richtest du sie hier neu ein.
   </p>
+
+  <h2>Benachrichtigungen</h2>
+  <div class="kasten" id="push-box">
+    <p style="margin-top:0;">
+      Erhalte eine Push-Nachricht auf dieses Gerät, wenn es etwas Wichtiges gibt
+      (z. B. eine neue Abstimmung). Funktioniert am besten in der installierten App.
+    </p>
+    <p id="push-status" class="push-status">Status wird geprüft …</p>
+    <div class="push-knoepfe">
+      <button class="knopf" type="button" id="push-an" hidden>Benachrichtigungen aktivieren</button>
+      <button class="knopf-sek" type="button" id="push-aus" hidden>Deaktivieren</button>
+    </div>
+  </div>
 </Basis>
+
+<script is:inline>
+  (function () {
+    var statusEl = document.getElementById('push-status');
+    var anBtn = document.getElementById('push-an');
+    var ausBtn = document.getElementById('push-aus');
+    if (!statusEl) return;
+
+    function b64ToU8(base64) {
+      var pad = '='.repeat((4 - (base64.length % 4)) % 4);
+      var s = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+      var raw = atob(s);
+      var arr = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+      return arr;
+    }
+    function setze(text, an, aus) {
+      statusEl.textContent = text;
+      anBtn.hidden = !an;
+      ausBtn.hidden = !aus;
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setze('Dieses Gerät/dieser Browser unterstützt keine Push-Benachrichtigungen.', false, false);
+      return;
+    }
+
+    async function pruefe() {
+      try {
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.getSubscription();
+        if (sub) setze('Benachrichtigungen sind auf diesem Gerät aktiv.', false, true);
+        else if (Notification.permission === 'denied') setze('Benachrichtigungen sind im Browser blockiert — bitte in den Website-Einstellungen erlauben.', false, false);
+        else setze('Benachrichtigungen sind auf diesem Gerät nicht aktiv.', true, false);
+      } catch (e) {
+        setze('Status konnte nicht geprüft werden.', true, false);
+      }
+    }
+
+    anBtn.addEventListener('click', async function () {
+      anBtn.disabled = true;
+      try {
+        var vapid = await (await fetch('/mitglieder/push/vapid')).json();
+        if (!vapid.konfiguriert || !vapid.key) {
+          setze('Der Verein hat den Push-Versand noch nicht eingerichtet.', false, false);
+          return;
+        }
+        var perm = await Notification.requestPermission();
+        if (perm !== 'granted') { setze('Ohne Erlaubnis keine Benachrichtigungen.', true, false); return; }
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(vapid.key) });
+        var r = await fetch('/mitglieder/push/anmelden', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sub) });
+        if (r.ok) setze('Benachrichtigungen sind jetzt aktiv.', false, true);
+        else setze('Das Speichern hat nicht geklappt. Bitte erneut versuchen.', true, false);
+      } catch (e) {
+        setze('Das hat nicht geklappt: ' + (e && e.message ? e.message : e), true, false);
+      } finally {
+        anBtn.disabled = false;
+      }
+    });
+
+    ausBtn.addEventListener('click', async function () {
+      ausBtn.disabled = true;
+      try {
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await fetch('/mitglieder/push/abmelden', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+          await sub.unsubscribe();
+        }
+        setze('Benachrichtigungen sind deaktiviert.', true, false);
+      } catch (e) {
+        setze('Das hat nicht geklappt.', false, true);
+      } finally {
+        ausBtn.disabled = false;
+      }
+    });
+
+    pruefe();
+  })();
+</script>
 
 <style>
   .qr {
@@ -99,4 +193,6 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
     background: #fff;
     border-radius: var(--radius);
   }
+  .push-status { color: var(--ink-soft); }
+  .push-knoepfe { display: flex; gap: 0.8rem; flex-wrap: wrap; }
 </style>
