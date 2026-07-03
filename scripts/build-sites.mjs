@@ -12,6 +12,10 @@ const root = process.cwd();
 const mitglieder = join(root, 'src', 'pages', 'mitglieder');
 const backup = join(root, 'src', 'pages', '_mitglieder_backup');
 const platzhalter = join(root, 'src', 'pages', 'mitglieder.astro');
+// Server-Endpoint des Beitrittsformulars: braucht SSR, fuer den statischen
+// Pages-Build beiseitelegen (sonst NoAdapterInstalled).
+const antrag = join(root, 'src', 'pages', 'mitglied-werden');
+const antragBackup = join(root, 'src', 'pages', '_mitglied-werden_backup');
 const dist = join(root, 'dist');
 
 // Welche Vereine, in welcher Reihenfolge, mit welchem Theme (nur fuer Anzeige).
@@ -102,6 +106,7 @@ async function main() {
   await mkdir(dist, { recursive: true });
 
   if (existsSync(mitglieder)) await rename(mitglieder, backup);
+  if (existsSync(antrag)) await rename(antrag, antragBackup);
   await writeFile(platzhalter, PLATZHALTER);
   try {
     for (const s of SITES) {
@@ -120,6 +125,7 @@ async function main() {
   } finally {
     await rm(platzhalter, { force: true });
     if (existsSync(backup)) await rename(backup, mitglieder);
+    if (existsSync(antragBackup)) await rename(antragBackup, antrag);
   }
 
   await writeFile(join(dist, 'index.html'), landing());
