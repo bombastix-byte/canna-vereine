@@ -7,6 +7,8 @@ import { darfDienst } from '../src/lib/rollen.ts';
 import { csvFeld, csvText } from '../src/lib/csv.ts';
 import { hotp, totpPruefen, zeitschritt, base32Encode, base32Decode, neuesSecret } from '../src/lib/totp.ts';
 import { zyklustag, aktuellePhase, istFaelligAm, offeneSchritte, kommendeSchritte } from '../src/lib/anbauplan.ts';
+import { mailAufnahme, mailAntragEingang } from '../src/lib/mail-vorlagen.ts';
+import { buildPain008, normIban, sepaName, centStr, xmlEsc } from '../src/lib/sepa.ts';
 
 let fehler = 0;
 function pruefe(name, ist, soll) {
@@ -132,6 +134,46 @@ pruefe('Fremde Charge unberuehrt', offeneSchritte(P, erl, 'c2', 26).length, 2);
 const kommend = kommendeSchritte(P, 20, 7);
 pruefe('Vorschau: Duenger in 3 Tagen zuerst', kommend[0]?.schritt.id === 'dng' && kommend[0]?.inTagen === 3, true);
 pruefe('Vorschau: Topping in 5 Tagen', kommend.find((k) => k.schritt.id === 'top')?.inTagen, 5);
+
+// --- Mail-Vorlagen ---
+const vk = { vereinsname: 'Anbauvereinigung Test e. V.', email: 'v@test.de', ort: 'Görlitz' };
+const auf = mailAufnahme(vk, 'Anna Berg', 'M-101', 'anna@x.de', 'Start-ab12-cd34');
+pruefeWahr('Mail Aufnahme enthaelt Startpasswort', auf.text.includes('Start-ab12-cd34'));
+pruefeWahr('Mail Aufnahme enthaelt Mitgliedsnummer', auf.text.includes('M-101'));
+pruefeWahr('Mail Aufnahme Betreff mit Verein', auf.betreff.includes('Anbauvereinigung Test'));
+pruefeWahr('Mail Antrag-Eingang enthaelt Namen', mailAntragEingang(vk, 'Toni').text.includes('Toni'));
+
+// --- SEPA-Helfer ---
+pruefe('IBAN normalisiert (Leerzeichen weg, gross)', normIban('de89 3704 0044 0532 0130 00'), 'DE89370400440532013000');
+pruefe('Cent -> String', centStr(1550), '15.50');
+pruefe('Cent glatt', centStr(1500), '15.00');
+pruefe('Cent krumm', centStr(2999), '29.99');
+pruefe('sepaName kuerzt + saeubert', sepaName('Müller & Söhne <GmbH> ' + 'x'.repeat(80)).length <= 70, true);
+pruefe('sepaName ersetzt Sonderzeichen', sepaName('a&b<c>').includes('&'), false);
+pruefe('xmlEsc', xmlEsc('a&b<c>'), 'a&amp;b&lt;c&gt;');
+
+// --- pain.008 ---
+const sepa = buildPain008({
+  msgId: 'SEPA-TEST-1', creDtTm: '2026-07-03T09:00:00',
+  glaeubiger: { name: 'Verein e. V.', iban: 'DE89370400440532013000', bic: 'COBADEFFXXX', glaeubigerId: 'DE98ZZZ09999999999' },
+  seqTyp: 'RCUR', ausfuehrungsdatum: '2026-07-15', verwendungszweck: 'Mitgliedsbeitrag 2026-07',
+  mandate: [
+    { name: 'Anna Berg', iban: 'DE89370400440532013000', bic: 'COBADEFFXXX', mandatsref: 'MANDAT-1', mandatsdatum: '2026-05-01', betragCent: 1500 },
+    { name: 'Bengt Cordes', iban: 'DE02120300000000202051', mandatsref: 'MANDAT-2', mandatsdatum: '2026-06-01', betragCent: 2000 },
+  ],
+});
+pruefe('pain.008 Anzahl = 2', sepa.anzahl, 2);
+pruefe('pain.008 Summe = 3500 Cent', sepa.summeCent, 3500);
+pruefeWahr('pain.008 CtrlSum 35.00 zweimal (GrpHdr+PmtInf)', (sepa.xml.match(/<CtrlSum>35.00<\/CtrlSum>/g) ?? []).length === 2);
+pruefeWahr('pain.008 NbOfTxs 2 zweimal', (sepa.xml.match(/<NbOfTxs>2<\/NbOfTxs>/g) ?? []).length === 2);
+pruefeWahr('pain.008 korrekter Namespace', sepa.xml.includes('pain.008.001.02'));
+pruefeWahr('pain.008 SeqTp RCUR', sepa.xml.includes('<SeqTp>RCUR</SeqTp>'));
+pruefeWahr('pain.008 Glaeubiger-ID', sepa.xml.includes('DE98ZZZ09999999999'));
+pruefeWahr('pain.008 beide Schuldner-IBANs', sepa.xml.includes('DE89370400440532013000') && sepa.xml.includes('DE02120300000000202051'));
+pruefeWahr('pain.008 fehlende BIC -> NOTPROVIDED', sepa.xml.includes('NOTPROVIDED'));
+let warf = false;
+try { buildPain008({ msgId: 'x', creDtTm: 'x', glaeubiger: { name: 'a', iban: 'b', glaeubigerId: 'c' }, seqTyp: 'RCUR', ausfuehrungsdatum: '2026-07-15', verwendungszweck: 'x', mandate: [] }); } catch { warf = true; }
+pruefeWahr('pain.008 wirft bei 0 Mandaten', warf);
 
 console.log(`\n${fehler === 0 ? 'ALLE ERWEITERUNGS-TESTS BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

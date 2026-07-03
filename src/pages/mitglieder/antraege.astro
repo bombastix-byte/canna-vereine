@@ -35,10 +35,16 @@ const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
 const passwort = Astro.url.searchParams.get('pw');
 const nr = Astro.url.searchParams.get('nr');
+const mailGesendet = Astro.url.searchParams.get('mail') === '1';
+const zugangHinweis = mailGesendet
+  ? 'Die Zugangsdaten wurden per E-Mail an das neue Mitglied gesendet.'
+  : `Startpasswort: ${passwort ?? '—'} — bitte sicher übermitteln und ändern lassen (keine E-Mail versendet).`;
 const oktext: Record<string, string> = {
   warteliste: 'Auf die Warteliste gesetzt.',
   abgelehnt: 'Antrag abgelehnt.',
-  aufgenommen: `Mitglied aufgenommen${nr ? ` (Nr. ${nr})` : ''}. Startpasswort: ${passwort ?? '—'} — bitte sicher übermitteln und ändern lassen.`,
+  aufgenommen: `Mitglied aufgenommen${nr ? ` (Nr. ${nr})` : ''}. ${zugangHinweis}`,
+  testmail: 'Testmail wurde versendet — bitte im Postfach prüfen.',
+  testmail_aus: 'E-Mail-Versand ist nicht konfiguriert (SMTP-Zugang in der Server-.env hinterlegen).',
 };
 
 const gruppen: Array<{ key: string; label: string; abzeichen?: string }> = [
@@ -62,8 +68,12 @@ const datum = (iso?: string) =>
     „Aufnehmen" legt sofort das Mitgliedskonto mit Startpasswort an.
   </p>
 
-  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {ok && <p class:list={['hinweis', { 'hinweis--fehler': ok === 'testmail_aus' }]} role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
   {fehler && <p class="hinweis hinweis--fehler" role="alert">Aktion fehlgeschlagen{fehler === 'existiert' ? ' — für diese E-Mail existiert bereits ein Mitgliedskonto.' : '. Bitte erneut versuchen.'}</p>}
+
+  <form method="post" action="/mitglieder/antraege/testmail" style="margin:0 0 1.2rem;">
+    <button class="knopf-sek" type="submit">Test-E-Mail an das Vereinspostfach senden</button>
+  </form>
 
   {antraege.length === 0 && <p style="color:var(--ink-soft);">Keine Anträge vorhanden.</p>}
 

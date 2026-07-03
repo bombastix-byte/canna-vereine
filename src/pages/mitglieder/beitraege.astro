@@ -1,0 +1,146 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+import { sepaGlaeubigerAusEnv } from '../../lib/sepa';
+import { berlinTag } from '../../lib/ausgabe';
+
+// Mitgliedsbeitraege: SEPA-Lastschriftdatei erzeugen. Nur Vorstand.
+// Bewusst schlank - kein Buchhaltungssystem, nur die Einzugsdatei fuer die Bank.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface UserRow {
+  id: string;
+  name?: string;
+  email: string;
+  mitgliedsnummer?: string;
+  iban?: string;
+  mandatsref?: string;
+  mandatsdatum?: string;
+  beitrag_monatlich?: number;
+}
+let users: UserRow[] = [];
+try {
+  users = (await pb.collection('users').getFullList({ sort: 'mitgliedsnummer' })) as UserRow[];
+} catch {
+  users = [];
+}
+
+const vollstaendig = (u: UserRow) => !!(u.iban && u.mandatsref && u.mandatsdatum && Number(u.beitrag_monatlich) > 0);
+const mitMandat = users.filter(vollstaendig);
+const summe = mitMandat.reduce((s, u) => s + Number(u.beitrag_monatlich || 0), 0);
+const ohneVollstaendig = users.filter((u) => (Number(u.beitrag_monatlich) > 0 || u.iban || u.mandatsref) && !vollstaendig(u));
+
+const glaeubiger = sepaGlaeubigerAusEnv();
+const heute = berlinTag();
+// Vorschlag Ausfuehrungsdatum: heute + 5 Tage (Vorlauffrist).
+const vorschlag = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+const monat = heute.slice(0, 7);
+
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  glaeubiger: 'Gläubiger-Daten fehlen — SEPA_GLAEUBIGER_* in der Server-.env hinterlegen.',
+  leer: 'Kein Mitglied mit vollständigem Mandat und Beitrag gefunden.',
+  eingabe: 'Bitte Ausführungsdatum und Sequenztyp prüfen.',
+};
+const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+---
+
+<Basis titel="Mitgliedsbeiträge" beschreibung="SEPA-Lastschrift für die Monatsbeiträge erzeugen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <h1 style="margin-bottom:0.4rem;">Mitgliedsbeiträge (SEPA)</h1>
+  <p class="einleitung">
+    Erzeugt eine SEPA-Lastschriftdatei (pain.008) für alle Mitglieder mit
+    hinterlegtem Mandat. Die Datei reichst du bei der Bank ein — Buchung und
+    Kontoführung bleiben dort. IBAN und Mandat pflegst du je Mitglied in der
+    <a href="/mitglieder/verwaltung">Mitgliederverwaltung</a>.
+  </p>
+
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Das hat nicht geklappt.'}</p>}
+
+  {!glaeubiger && (
+    <p class="hinweis hinweis--fehler">
+      <strong>Gläubiger noch nicht hinterlegt.</strong> Trage Name, IBAN und
+      Gläubiger-Identifikationsnummer des Vereins in der Server-.env ein
+      (SEPA_GLAEUBIGER_NAME / _IBAN / _BIC / _ID), dann kann die Datei erzeugt werden.
+    </p>
+  )}
+
+  <div class="statuskarte">
+    <div class="sk-gross">
+      <div class="sk-box"><span class="sk-box-label">Mit Mandat</span><span class="sk-box-wert">{mitMandat.length}</span></div>
+      <div class="sk-box sk-box-soft"><span class="sk-box-label">Monatssumme</span><span class="sk-box-wert">{eur(summe)} €</span></div>
+      <div class="sk-box sk-box-soft"><span class="sk-box-label">Unvollständig</span><span class="sk-box-wert">{ohneVollstaendig.length}</span></div>
+    </div>
+  </div>
+
+  {glaeubiger && mitMandat.length > 0 && (
+    <form class="kasten" method="post" action="/mitglieder/beitraege/sepa">
+      <h2 style="margin-top:0;">Lastschriftdatei erzeugen</h2>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="datum">Ausführungsdatum</label>
+          <input id="datum" name="ausfuehrungsdatum" type="date" value={vorschlag} required />
+        </div>
+        <div class="feld">
+          <label for="seq">Sequenztyp</label>
+          <select id="seq" name="seq_typ">
+            <option value="RCUR">Wiederkehrend (RCUR)</option>
+            <option value="FRST">Erste Lastschrift (FRST)</option>
+            <option value="OOFF">Einmalig (OOFF)</option>
+            <option value="FNAL">Letzte (FNAL)</option>
+          </select>
+        </div>
+      </div>
+      <div class="feld">
+        <label for="zweck">Verwendungszweck</label>
+        <input id="zweck" name="verwendungszweck" type="text" value={`Mitgliedsbeitrag ${monat}`} />
+      </div>
+      <button class="knopf" type="submit">SEPA-Datei herunterladen ({mitMandat.length} Einzüge · {eur(summe)} €)</button>
+      <p style="color:var(--ink-soft);font-size:0.88rem;margin:0.7rem 0 0;">
+        Beim ersten Einzug eines Mandats „Erste Lastschrift" wählen, danach „Wiederkehrend".
+      </p>
+    </form>
+  )}
+
+  {ohneVollstaendig.length > 0 && (
+    <>
+      <h2>Unvollständige Mandate ({ohneVollstaendig.length})</h2>
+      <p style="color:var(--ink-soft);">Diese Mitglieder werden nicht eingezogen — es fehlt IBAN, Mandat oder Beitrag.</p>
+      <table class="tabelle">
+        <thead><tr><th>Mitglied</th><th>IBAN</th><th>Mandat</th><th class="r">Beitrag</th></tr></thead>
+        <tbody>
+          {ohneVollstaendig.map((u) => (
+            <tr>
+              <td>{u.mitgliedsnummer || ''} {u.name || u.email}</td>
+              <td>{u.iban ? '✓' : '—'}</td>
+              <td>{u.mandatsref && u.mandatsdatum ? '✓' : '—'}</td>
+              <td class="r">{Number(u.beitrag_monatlich) > 0 ? `${eur(Number(u.beitrag_monatlich))} €` : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+</Basis>
+
+<style>
+  .statuskarte { margin-bottom: 1.4rem; }
+  .sk-gross { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.6rem; }
+  .sk-box { border: 1px solid var(--accent); border-radius: var(--radius); padding: 0.55rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .sk-box-soft { border-color: var(--line); }
+  .sk-box-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+  .sk-box-wert { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; color: var(--brand-strong); }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 12rem; min-width: 0; }
+  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; }
+  .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+  .tabelle .r { text-align: right; }
+</style>

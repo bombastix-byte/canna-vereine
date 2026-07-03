@@ -1,6 +1,9 @@
 import type { APIRoute } from 'astro';
 import { neuePb } from '../../lib/pb';
 import { alterAmTag, berlinTag } from '../../lib/ausgabe';
+import { sendeMail } from '../../lib/mail';
+import { mailAntragEingang } from '../../lib/mail-vorlagen';
+import { site } from '../../config';
 
 // Nimmt einen oeffentlichen Beitrittsantrag entgegen und legt ihn als
 // "offen" in der Antragsliste des Vorstands ab. Honeypot + Mindestalter 18.
@@ -41,6 +44,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   } catch {
     return redirect('/mitglied-werden?fehler=fehlgeschlagen', 303);
   }
+
+  // Eingangsbestaetigung (falls SMTP konfiguriert; Fehler schlucken).
+  const v = mailAntragEingang({ vereinsname: site.vereinsname, email: site.kontakt.email, ort: site.kontakt.ort }, name);
+  await sendeMail({ an: email, betreff: v.betreff, text: v.text });
 
   return redirect('/mitglied-werden?ok=1', 303);
 };

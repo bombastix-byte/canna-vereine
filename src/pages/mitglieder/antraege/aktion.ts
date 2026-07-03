@@ -1,6 +1,11 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
+import { sendeMail } from '../../../lib/mail';
+import { mailAufnahme, mailAblehnung } from '../../../lib/mail-vorlagen';
+import { site } from '../../../config';
+
+const vereinKopf = { vereinsname: site.vereinsname, email: site.kontakt.email, ort: site.kontakt.ort };
 
 // Bearbeitet einen Beitrittsantrag: Warteliste, ablehnen oder aufnehmen.
 // "Aufnehmen" legt das Mitgliedskonto an (naechste freie M-Nummer,
@@ -37,6 +42,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       await pb.collection('antraege').update(antragId, { status });
     } catch {
       return redirect('/mitglieder/antraege?fehler=1', 303);
+    }
+    if (aktion === 'ablehnen') {
+      const v = mailAblehnung(vereinKopf, antrag.name);
+      await sendeMail({ an: antrag.email, betreff: v.betreff, text: v.text });
     }
     return redirect(`/mitglieder/antraege?ok=${status}`, 303);
   }
@@ -81,7 +90,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       return redirect('/mitglieder/antraege?fehler=1', 303);
     }
 
-    const q = new URLSearchParams({ ok: 'aufgenommen', nr: mitgliedsnummer, pw: passwort });
+    // Zugangsdaten per Mail (falls SMTP konfiguriert); sonst zeigt die Seite
+    // das Startpasswort zum manuellen Weitergeben.
+    const v = mailAufnahme(vereinKopf, antrag.name, mitgliedsnummer, antrag.email, passwort);
+    const mail = await sendeMail({ an: antrag.email, betreff: v.betreff, text: v.text });
+
+    const q = new URLSearchParams({ ok: 'aufgenommen', nr: mitgliedsnummer, pw: passwort, mail: mail.ok ? '1' : '0' });
     return redirect(`/mitglieder/antraege?${q.toString()}`, 303);
   }
 

@@ -16,6 +16,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const mitgliedsnummer = String(daten.get('mitgliedsnummer') ?? '').trim();
   const geburtsdatum = String(daten.get('geburtsdatum') ?? '').trim();
   const beitragBis = String(daten.get('beitrag_bis') ?? '').trim();
+  const beitragMonatlich = Number(String(daten.get('beitrag_monatlich') ?? '').trim().replace(',', '.'));
+  const iban = String(daten.get('iban') ?? '').replace(/\s+/g, '').toUpperCase();
+  const bic = String(daten.get('bic') ?? '').trim().toUpperCase();
+  const mandatsref = String(daten.get('mandatsref') ?? '').trim();
+  const mandatsdatum = String(daten.get('mandatsdatum') ?? '').trim();
   const rollen = daten
     .getAll('rollen')
     .map((r) => String(r))
@@ -28,6 +33,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       mitgliedsnummer,
       geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
       beitrag_bis: beitragBis ? `${beitragBis} 00:00:00.000Z` : null,
+      beitrag_monatlich: Number.isFinite(beitragMonatlich) && beitragMonatlich > 0 ? beitragMonatlich : null,
+      iban,
+      bic,
+      mandatsref,
+      mandatsdatum: mandatsdatum ? `${mandatsdatum} 00:00:00.000Z` : null,
       rollen: rollen.length ? rollen : ['mitglied'],
     });
   } catch {
