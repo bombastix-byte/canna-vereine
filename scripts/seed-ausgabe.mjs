@@ -192,9 +192,9 @@ async function seedWennLeer(collection, datensaetze) {
 }
 
 await seedWennLeer('sorten', [
-  { name: 'CBD Aurora', typ: 'Hybrid', thc_prozent: 9, cbd_prozent: 8, charge: '2026-06-A', bestand_gramm: 400, aktiv: true, notiz: 'Unter 10 % THC - auch fuer unter 21-Jaehrige zulaessig.' },
-  { name: 'Northern Lights', typ: 'Indica', thc_prozent: 18, cbd_prozent: 0.6, charge: '2026-06-B', bestand_gramm: 600, aktiv: true, notiz: 'Ueber 10 % THC - nicht an unter 21-Jaehrige.' },
-  { name: 'Lemon Haze', typ: 'Sativa', thc_prozent: 20, cbd_prozent: 0.4, charge: '2026-06-C', bestand_gramm: 500, aktiv: true, notiz: 'Ueber 10 % THC - nicht an unter 21-Jaehrige.' },
+  { name: 'CBD Aurora', typ: 'Hybrid', thc_prozent: 9, cbd_prozent: 8, charge: '2026-06-A', bestand_gramm: 400, aktiv: true, notiz: 'Synthetischer Testfall fuer den U21-Pfad - der Verein fuehrt aktuell keine echte Sorte <=10 % THC. Unter 10 % THC, auch fuer unter 21-Jaehrige zulaessig.' },
+  { name: 'Gushers', typ: 'Indica', thc_prozent: 26, cbd_prozent: 2, charge: '2026-06-B', bestand_gramm: 600, aktiv: true, notiz: 'Ueber 10 % THC - nicht an unter 21-Jaehrige.' },
+  { name: 'Pineapple Express', typ: 'Sativa', thc_prozent: 30, cbd_prozent: 2, charge: '2026-06-C', bestand_gramm: 500, aktiv: true, notiz: 'Ueber 10 % THC - nicht an unter 21-Jaehrige.' },
 ]);
 
 console.log('\nFertig. Tresen-Login (Demo): ' + STAFF + ' / ' + STAFF_PW);

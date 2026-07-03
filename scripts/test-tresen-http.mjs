@@ -22,7 +22,7 @@ const anna = await uid('M-101');
 const bengt = await uid('M-102'); // frisch, fuer Multi-Positions-Tests
 const david = await uid('M-104'); // U21 (2007)
 const hugo = await uid('M-108'); // ohne Geburtsdatum -> als U21
-const chNL = await chargeVon('Northern Lights'); // 18 % THC
+const chNL = await chargeVon('Gushers'); // 26 % THC
 const chCBD = await chargeVon('CBD Aurora'); // 9 % THC
 
 // Deterministischer Startzustand: Abgaben leeren, Anna 22 g heute setzen.
@@ -30,7 +30,7 @@ const heute = berlinTag();
 const monat = berlinMonat(heute);
 for (const a of await pb.collection('ausgaben').getFullList()) await pb.collection('ausgaben').delete(a.id);
 await pb.collection('ausgaben').create({
-  mitglied: anna, mitgliedsnummer: 'M-101', sorte_name: 'Northern Lights',
+  mitglied: anna, mitgliedsnummer: 'M-101', sorte_name: 'Gushers',
   menge_gramm: 22, beitrag_euro: beitragEuro(22), tag: heute, monat, belegnr: 'RESET',
 });
 
@@ -73,9 +73,9 @@ function pruefe(name, loc, enthaelt) {
 }
 
 pruefe('Anna (22g heute) + 5g -> Tageslimit blockt', await buchen(anna, chNL, 5), 'Tageslimit');
-pruefe('David (U21) + Charge 18% THC -> blockt', await buchen(david, chNL, 5), 'THC');
+pruefe('David (U21) + Charge 26% THC -> blockt', await buchen(david, chNL, 5), 'THC');
 pruefe('David (U21) + Charge 9% THC -> Beleg', await buchen(david, chCBD, 5), '/beleg/');
-pruefe('Hugo (kein Geb.dat) + 18% THC -> blockt (als U21)', await buchen(hugo, chNL, 5), 'THC');
+pruefe('Hugo (kein Geb.dat) + 26% THC -> blockt (als U21)', await buchen(hugo, chNL, 5), 'THC');
 pruefe('Anna (22g heute) + 3g -> Beleg (genau 25)', await buchen(anna, chNL, 3), '/beleg/');
 
 // --- Mehrere Sorten in EINEM Vorgang (gemeinsamer Beleg) ---

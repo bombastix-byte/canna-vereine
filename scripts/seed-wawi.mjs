@@ -171,12 +171,12 @@ if (bestand.totalItems > 0) {
   console.log('Chargen vorhanden, ueberspringe Demo.');
 } else {
   const cbd = await sorteVon('CBD Aurora');
-  const nl = await sorteVon('Northern Lights');
-  const lh = await sorteVon('Lemon Haze');
+  const nl = await sorteVon('Gushers');
+  const lh = await sorteVon('Pineapple Express');
   const demo = [
     cbd && { sorte: cbd, status: 'freigegeben', frisch: 1500, trocken: 400, verf: 400, thc: 9, cbd_p: 8, herkunft: 'Stecklinge, Mutterpflanze intern' },
-    nl && { sorte: nl, status: 'freigegeben', frisch: 2400, trocken: 600, verf: 600, thc: 18, cbd_p: 0.6, herkunft: 'Samen, Fachhandel' },
-    lh && { sorte: lh, status: 'freigegeben', frisch: 2000, trocken: 500, verf: 500, thc: 20, cbd_p: 0.4, herkunft: 'Samen, Fachhandel' },
+    nl && { sorte: nl, status: 'freigegeben', frisch: 2400, trocken: 600, verf: 600, thc: 26, cbd_p: 2, herkunft: 'Samen, Fachhandel' },
+    lh && { sorte: lh, status: 'freigegeben', frisch: 2000, trocken: 500, verf: 500, thc: 30, cbd_p: 2, herkunft: 'Samen, Fachhandel' },
     nl && { sorte: nl, status: 'geerntet', frisch: 2100, trocken: null, verf: null, thc: null, cbd_p: null, herkunft: 'Samen, Fachhandel' },
     cbd && { sorte: cbd, status: 'anbau', frisch: null, trocken: null, verf: null, thc: null, cbd_p: null, herkunft: 'Stecklinge, Mutterpflanze intern' },
   ].filter(Boolean);

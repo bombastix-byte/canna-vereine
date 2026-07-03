@@ -20,13 +20,14 @@ await pb.collection('wochenangebot').create({
     'Abholung zu den ausgehängten Vereinszeiten. Alle THC- und CBD-Werte ' +
     'stammen aus eigener Messung der Vereinigung.',
   sorten: [
-    { name: 'Northern Lights', typ: 'Indica', thc: '18,2 %', cbd: '0,6 %' },
-    { name: 'Granddaddy Purple', typ: 'Indica', thc: '17,4 %', cbd: '0,5 %' },
-    { name: 'Lemon Haze', typ: 'Sativa', thc: '20,1 %', cbd: '0,4 %' },
-    { name: 'Amnesia Haze', typ: 'Sativa', thc: '21,8 %', cbd: '0,3 %' },
-    { name: 'White Widow', typ: 'Hybrid', thc: '19,0 %', cbd: '1,1 %' },
+    { name: 'Pineapple Express', typ: 'Sativa', thc: '30,0 %', cbd: '2,0 %' },
+    { name: 'Hulk Berry', typ: 'Sativa', thc: '24,0 %', cbd: '2,0 %' },
+    { name: 'Fat Bastard', typ: 'Hybrid', thc: '30,0 %', cbd: '2,0 %' },
+    { name: 'Orbital Banana', typ: 'Hybrid', thc: '25,0 %', cbd: '2,0 %' },
+    { name: 'Gushers', typ: 'Indica', thc: '26,0 %', cbd: '2,0 %' },
+    { name: 'Watermelon', typ: 'Indica', thc: '20,0 %', cbd: '2,0 %' },
   ],
-  gueltig_von: '2026-06-22 00:00:00.000Z',
-  gueltig_bis: '2026-06-28 00:00:00.000Z',
+  gueltig_von: '2026-06-29 00:00:00.000Z',
+  gueltig_bis: '2026-07-05 00:00:00.000Z',
 });
-console.log('Angebot der Woche gesetzt (5 Sorten, Tabelle).');
+console.log('Angebot der Woche gesetzt (6 Sorten, Tabelle).');

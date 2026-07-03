@@ -41,7 +41,7 @@ for (const c of await pb.collection('chargen').getFullList({ filter: 'herkunft="
 }
 const start = new Date(Date.now() - 24 * 86400000).toISOString().slice(0, 10);
 const plan = await pb.collection('anbau_plaene').getFirstListItem('aktiv=true');
-const sorte = await pb.collection('sorten').getFirstListItem('name="Lemon Haze"');
+const sorte = await pb.collection('sorten').getFirstListItem('name="Pineapple Express"');
 
 const anbauCookie = await anmelden(ANBAU, ANBAU_PW);
 await post('/mitglieder/wawi/charge-neu', {

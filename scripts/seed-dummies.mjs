@@ -65,7 +65,7 @@ async function sorteVon(name) {
     return null;
   }
 }
-const nl = await sorteVon('Northern Lights'); // >10 % THC
+const nl = await sorteVon('Gushers'); // >10 % THC
 const cbd = await sorteVon('CBD Aurora'); // <=10 % THC
 
 // Etwas Tagesumsatz einspielen, damit die Statuskarten nicht bei 0 stehen.

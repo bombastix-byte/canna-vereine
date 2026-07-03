@@ -60,10 +60,10 @@ pruefe('Samen-Limit = 7', pruefeVermehrung({ art: 'samen', bisherMonat: 0, anzah
 pruefe('Stecklinge-Limit = 5', pruefeVermehrung({ art: 'stecklinge', bisherMonat: 0, anzahlNeu: 1 }).limit, 5);
 
 // --- ZPL ---
-const zpl = belegZpl({ verein: 'Verein e.V.', belegnr: 'A-1', sorte: 'Northern Lights', charge: '2026-0001', menge_gramm: 5, thc_prozent: 18, cbd_prozent: 0.6, beitrag_euro: 42.5 });
+const zpl = belegZpl({ verein: 'Verein e.V.', belegnr: 'A-1', sorte: 'Gushers', charge: '2026-0001', menge_gramm: 5, thc_prozent: 18, cbd_prozent: 0.6, beitrag_euro: 42.5 });
 pruefeWahr('ZPL beginnt mit ^XA', zpl.startsWith('^XA'));
 pruefeWahr('ZPL endet mit ^XZ', zpl.trim().endsWith('^XZ'));
-pruefeWahr('ZPL enthaelt Sorte', zpl.includes('Northern Lights'));
+pruefeWahr('ZPL enthaelt Sorte', zpl.includes('Gushers'));
 pruefeWahr('ZPL enthaelt Menge', zpl.includes('5 g'));
 const zplBoes = belegZpl({ verein: 'A^B~C\\D' });
 pruefeWahr('ZPL entschaerft Sonderzeichen', !zplBoes.includes('A^B'));
@@ -77,7 +77,7 @@ pruefe('anbau-Dienst als Vorstand -> ja', darfDienst(['vorstand'], 'anbau'), tru
 pruefe('ausgabe-Dienst mit nur anbau -> nein', darfDienst(['anbau'], 'ausgabe'), false);
 
 // --- CSV-Export-Helfer ---
-pruefe('CSV: einfaches Feld unveraendert', csvFeld('Northern Lights'), 'Northern Lights');
+pruefe('CSV: einfaches Feld unveraendert', csvFeld('Gushers'), 'Gushers');
 pruefe('CSV: Semikolon wird gequotet', csvFeld('a;b'), '"a;b"');
 pruefe('CSV: Anfuehrungszeichen verdoppelt', csvFeld('sagt "hi"'), '"sagt ""hi"""');
 pruefe('CSV: Zeilenumbruch gequotet', csvFeld('a\nb'), '"a\nb"');
