@@ -19,7 +19,14 @@ Astro-5 + PocketBase-Stack. Deckt die vollständige KCanG-Kette ab.
 | `exporte/[art]` | vorstand, praevention | CSV: jahresmeldung, abgaben, vernichtungen, transporte (?jahr=) |
 | `wawi/transport/[id]` | anbau, ausgabe, vorstand | Druckbare Transportbescheinigung (§ 22 KCanG) |
 
+| `beitraege` | vorstand | SEPA-Lastschriftdatei (pain.008) für Monatsbeiträge erzeugen |
+
 Öffentlich: `/mitglied-werden` — Beitrittsantrag (Honeypot, ab 18), landet in `antraege`.
+
+## E-Mail, Backups, SEPA (Betrieb)
+- **E-Mail** (optional): `SMTP_HOST/PORT/USER/PASS/FROM` in der Server-`.env`. Ohne diese Werte wird nicht gesendet (Abläufe laufen weiter). Antrag-Eingang, Aufnahme-Zugangsdaten und Ablehnung gehen automatisch raus; Testknopf auf `/mitglieder/antraege`.
+- **Backups**: `deploy/backup.sh` (alle PB-Volumes, 14 Tage Rotation) läuft per Cron täglich 3:15 auf dem VPS. Offsite optional via `BACKUP_REMOTE` (rsync-Ziel).
+- **SEPA**: Gläubiger in `.env` (`SEPA_GLAEUBIGER_NAME/IBAN/BIC/ID`), Mandate je Mitglied in der Verwaltung. `/mitglieder/beitraege` erzeugt die pain.008-Datei für die Bank.
 
 ## Rollen
 `mitglied · ausgabe · anbau · praevention · vorstand` (Mehrfach; Vorstand = Vollzugriff).
