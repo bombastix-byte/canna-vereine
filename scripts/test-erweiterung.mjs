@@ -6,6 +6,7 @@ import { belegZpl } from '../src/lib/zpl.ts';
 import { darfDienst } from '../src/lib/rollen.ts';
 import { csvFeld, csvText } from '../src/lib/csv.ts';
 import { hotp, totpPruefen, zeitschritt, base32Encode, base32Decode, neuesSecret } from '../src/lib/totp.ts';
+import { zyklustag, aktuellePhase, istFaelligAm, offeneSchritte, kommendeSchritte } from '../src/lib/anbauplan.ts';
 
 let fehler = 0;
 function pruefe(name, ist, soll) {
@@ -93,6 +94,44 @@ pruefe('TOTP: Vorgaenger-Fenster (+-30s) akzeptiert', totpPruefen(s, hotp(s, zei
 pruefe('TOTP: 2 Schritte alt abgelehnt', totpPruefen(s, hotp(s, zeitschritt(jetzt) - 2), jetzt), null);
 pruefe('TOTP: falscher Code abgelehnt', totpPruefen(s, '000000', jetzt) === zeitschritt(jetzt) ? 'ok' : null, null);
 pruefe('TOTP: Muell abgelehnt', totpPruefen(s, 'abc123', jetzt), null);
+
+// --- Anbau-Plan (Zyklustag, Phasen, faellige Schritte) ---
+pruefe('Zyklustag: Start heute = Tag 1', zyklustag('2026-07-03', '2026-07-03'), 1);
+pruefe('Zyklustag: Start vor 24 Tagen = Tag 25', zyklustag('2026-06-09', '2026-07-03'), 25);
+pruefe('Zyklustag: Start in Zukunft -> null', zyklustag('2026-08-01', '2026-07-03'), null);
+pruefe('Zyklustag: ohne Start -> null', zyklustag(undefined, '2026-07-03'), null);
+
+const P = [
+  { id: 'ph1', plan: 'p', tag_von: 1, titel: 'Keimung', typ: 'phase' },
+  { id: 'ph2', plan: 'p', tag_von: 10, titel: 'Vegetation', typ: 'phase' },
+  { id: 'ph3', plan: 'p', tag_von: 42, titel: 'Bluete', typ: 'phase' },
+  { id: 'top', plan: 'p', tag_von: 25, titel: 'Topping', typ: 'pflege' },
+  { id: 'dng', plan: 'p', tag_von: 14, titel: 'Wuchsduenger', typ: 'duengung', wiederholung_tage: 3 },
+];
+pruefe('Phase Tag 5 = Keimung', aktuellePhase(P, 5)?.titel, 'Keimung');
+pruefe('Phase Tag 25 = Vegetation', aktuellePhase(P, 25)?.titel, 'Vegetation');
+pruefe('Phase Tag 60 = Bluete', aktuellePhase(P, 60)?.titel, 'Bluete');
+pruefe('Einmalig: faellig genau am Tag', istFaelligAm(P[3], 25), true);
+pruefe('Einmalig: nicht am Tag danach', istFaelligAm(P[3], 26), false);
+pruefe('Wiederholung: Tag 14 faellig', istFaelligAm(P[4], 14), true);
+pruefe('Wiederholung: Tag 17 faellig', istFaelligAm(P[4], 17), true);
+pruefe('Wiederholung: Tag 18 nicht', istFaelligAm(P[4], 18), false);
+pruefe('Phase nie als Aufgabe faellig', istFaelligAm(P[0], 1), false);
+
+// offene Schritte an Tag 26: Topping (1 Tag ueberfaellig) + Duenger (juengstes Vorkommen Tag 26)
+const offen26 = offeneSchritte(P, [], 'c1', 26);
+pruefe('Tag 26: zwei offene Aufgaben', String(offen26.length), '2');
+pruefe('Topping 1 Tag ueberfaellig zuerst', offen26[0].schritt.id === 'top' && offen26[0].ueberfaelligTage === 1, true);
+pruefe('Duenger-Vorkommen = Tag 26', offen26.find((o) => o.schritt.id === 'dng')?.faelligTag, 26);
+// erledigt quittiert -> verschwindet; Quittung fuer ANDEREN Tag zaehlt nicht
+const erl = [{ charge_ref: 'c1', schritt: 'top', zyklustag: 25 }, { charge_ref: 'c1', schritt: 'dng', zyklustag: 23 }];
+const offenNach = offeneSchritte(P, erl, 'c1', 26);
+pruefe('Topping quittiert -> nur Duenger offen', offenNach.length === 1 && offenNach[0].schritt.id === 'dng', true);
+pruefe('Fremde Charge unberuehrt', offeneSchritte(P, erl, 'c2', 26).length, 2);
+// kommende Schritte an Tag 20: Topping in 5 Tagen, Duenger in 3 (naechstes Vorkommen Tag 23)
+const kommend = kommendeSchritte(P, 20, 7);
+pruefe('Vorschau: Duenger in 3 Tagen zuerst', kommend[0]?.schritt.id === 'dng' && kommend[0]?.inTagen === 3, true);
+pruefe('Vorschau: Topping in 5 Tagen', kommend.find((k) => k.schritt.id === 'top')?.inTagen, 5);
 
 console.log(`\n${fehler === 0 ? 'ALLE ERWEITERUNGS-TESTS BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);

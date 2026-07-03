@@ -5,6 +5,7 @@ import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
 import { darfAnbau } from '../../lib/rollen';
 import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } from '../../lib/wawi';
 import { berlinTag } from '../../lib/ausgabe';
+import { type PlanSchritt, zyklustag, aktuellePhase } from '../../lib/anbauplan';
 
 // Warenwirtschaft: Chargen vom Anbau bis zur Freigabe + Vernichtung.
 // Nur Anbauverantwortliche/Vorstand.
@@ -34,6 +35,7 @@ interface Charge {
   standort?: string;
   coa?: string;
   testergebnis_url?: string;
+  plan?: string;
 }
 interface Vernichtung {
   id: string;
@@ -78,6 +80,15 @@ const alleChargen = await ladeListe<Charge>('chargen', { sort: 'sorte_name,charg
 const vernichtungen = await ladeListe<Vernichtung>('vernichtungen', { sort: '-created' });
 const transporte = await ladeListe<Transport>('transporte', { sort: '-created' });
 const allePflanzen = await ladeListe<Pflanze>('pflanzen', { sort: 'nummer' });
+const plaene = await ladeListe<{ id: string; name: string }>('anbau_plaene', { sort: 'name' });
+const planSchritte = await ladeListe<PlanSchritt>('plan_schritte', { sort: 'tag_von' });
+const heuteTag = berlinTag();
+const zyklusInfo = (c: Charge) => {
+  const tag = zyklustag(c.anbau_start, heuteTag);
+  if (!tag) return null;
+  const phase = c.plan ? aktuellePhase(planSchritte.filter((s) => s.plan === c.plan), tag) : null;
+  return { tag, phase: phase?.titel ?? null };
+};
 const pflanzenVon = (chargeId: string) => allePflanzen.filter((p) => p.charge_ref === chargeId);
 const PFLANZE_STATUS: Record<string, string> = { wachsend: '🌱', geerntet: '✂️', vernichtet: '✕' };
 
@@ -115,6 +126,7 @@ const oktext: Record<string, string> = {
   sperren: 'Charge gesperrt.',
   vernichtet: 'Vernichtung dokumentiert.',
   labor: 'Laborunterlagen gespeichert.',
+  plan: 'Anbau-Plan zugewiesen — fällige Schritte stehen unter „Anbau heute".',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
@@ -199,6 +211,13 @@ const statusVariante: Record<string, string> = {
         <input id="standort" name="standort" type="text" placeholder="z. B. Anbauraum 1" />
       </div>
     </div>
+    <div class="feld">
+      <label for="plan-neu">Anbau-Plan (Pflege- und Düngeschema)</label>
+      <select id="plan-neu" name="plan">
+        <option value="">— später zuweisen —</option>
+        {plaene.map((p) => <option value={p.id}>{p.name}</option>)}
+      </select>
+    </div>
       <button class="knopf" type="submit">Charge anlegen</button>
     </form>
   </details>
@@ -210,7 +229,12 @@ const statusVariante: Record<string, string> = {
       <div class="charge" id={`c-${c.id}`}>
         <div class="charge-kopf">
           <span><strong>{c.charge_nr}</strong> · {c.sorte_name}</span>
-          <span class:list={['abzeichen', statusVariante[c.status ?? ''] || null]}>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</span>
+          <span class="charge-badges">
+            {c.status === 'anbau' && zyklusInfo(c) && (
+              <span class="abzeichen abzeichen--akzent">Tag {zyklusInfo(c)!.tag}{zyklusInfo(c)!.phase ? ` · ${zyklusInfo(c)!.phase}` : ''}</span>
+            )}
+            <span class:list={['abzeichen', statusVariante[c.status ?? ''] || null]}>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</span>
+          </span>
         </div>
         <div class="charge-daten">
           <span>Herkunft: {c.herkunft || '—'}</span>
@@ -229,6 +253,22 @@ const statusVariante: Record<string, string> = {
             {c.testergebnis_url && <> · <a href={c.testergebnis_url} target="_blank" rel="noopener">Testergebnis</a></>}
           </span>
         </div>
+
+        {c.status === 'anbau' && (
+          <form class="plan-zeile" method="post" action="/mitglieder/wawi/plan">
+            <input type="hidden" name="charge" value={c.id} />
+            <label>Anbau-Plan:
+              <select class="eingabe" name="plan">
+                <option value="">— kein Plan —</option>
+                {plaene.map((p) => (
+                  <option value={p.id} selected={c.plan === p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+            <button class="knopf-sek" type="submit">Zuweisen</button>
+            {c.plan && <a href="/mitglieder/anbau">→ Anbau heute</a>}
+          </form>
+        )}
 
         {pflanzenVon(c.id).length > 0 && (
           <details class="pflanzen-det">
@@ -411,6 +451,11 @@ const statusVariante: Record<string, string> = {
     background: var(--bg-rein);
   }
   .charge-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; }
+  .charge-badges { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+  .plan-zeile { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 0.7rem; font-size: 0.92rem; }
+  .plan-zeile label { display: flex; gap: 0.5rem; align-items: center; color: var(--ink-soft); flex: 1 1 14rem; min-width: 0; }
+  .plan-zeile .eingabe { width: auto; max-width: 18rem; min-width: 0; flex: 1 1 8rem; padding: 0.4rem 0.5rem; font-size: 0.9rem; }
+  .plan-zeile .knopf-sek { padding: 0.4rem 0.8rem; font-size: 0.88rem; }
   .charge-daten { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.3rem 1rem; font-size: 0.92rem; color: var(--ink-soft); }
   .charge-daten strong { color: var(--ink); }
   .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }

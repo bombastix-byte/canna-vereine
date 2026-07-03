@@ -19,6 +19,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const pflanzenzahl = Number(String(daten.get('pflanzenzahl') ?? '').trim());
   const anbauStart = String(daten.get('anbau_start') ?? '').trim();
   const standort = String(daten.get('standort') ?? '').trim();
+  const plan = String(daten.get('plan') ?? '').trim();
 
   if (!sorteId) return redirect('/mitglieder/wawi?fehler=fehlend', 303);
 
@@ -36,6 +37,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       pflanzenzahl: Number.isFinite(pflanzenzahl) ? pflanzenzahl : null,
       anbau_start: anbauStart ? `${anbauStart} 00:00:00.000Z` : null,
       standort,
+      plan: plan || null,
       notiz: '',
     });
     // Pflanzen-Ebene: je Pflanze ein eigener Datensatz (P01, P02, ...).

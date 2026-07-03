@@ -1,0 +1,249 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfAnbau } from '../../lib/rollen';
+import { berlinTag } from '../../lib/ausgabe';
+import {
+  type PlanSchritt,
+  type PflegeEintrag,
+  zyklustag,
+  aktuellePhase,
+  offeneSchritte,
+  kommendeSchritte,
+} from '../../lib/anbauplan';
+
+// Grow-Cockpit: die tägliche Arbeitsliste des Anbau-Teams. Je laufender
+// Charge: Zyklustag, Phase, was heute fällig ist (mit Erledigt-Quittung und
+// Anleitung), was als Nächstes kommt. Nur Anbau/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface Charge {
+  id: string;
+  charge_nr?: string;
+  sorte_name?: string;
+  status?: string;
+  anbau_start?: string;
+  pflanzenzahl?: number;
+  plan?: string;
+  standort?: string;
+}
+interface Plan {
+  id: string;
+  name: string;
+}
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const heute = berlinTag();
+const chargen = await ladeListe<Charge>('chargen', { filter: 'status="anbau"', sort: 'charge_nr' });
+const plaene = await ladeListe<Plan>('anbau_plaene', { sort: 'name' });
+const alleSchritte = await ladeListe<PlanSchritt>('plan_schritte', { sort: 'tag_von' });
+const log = await ladeListe<PflegeEintrag & { id: string }>('pflege_log', {});
+const pflanzen = await ladeListe<{ charge_ref: string; status?: string }>('pflanzen', {});
+
+const planName = (id?: string) => plaene.find((p) => p.id === id)?.name ?? null;
+const schritteVon = (planId?: string) => alleSchritte.filter((s) => s.plan === planId);
+const wachsend = (chargeId: string) => pflanzen.filter((p) => p.charge_ref === chargeId && p.status === 'wachsend').length;
+
+// Je Charge alles vorbereiten; Chargen mit offenen Aufgaben zuerst.
+const karten = chargen
+  .map((c) => {
+    const tag = zyklustag(c.anbau_start, heute);
+    const schritte = schritteVon(c.plan);
+    const offen = tag && c.plan ? offeneSchritte(schritte, log, c.id, tag) : [];
+    const kommend = tag && c.plan ? kommendeSchritte(schritte, tag, 7) : [];
+    const phase = tag ? aktuellePhase(schritte, tag) : null;
+    return { c, tag, offen, kommend, phase };
+  })
+  .sort((a, b) => b.offen.length - a.offen.length);
+
+const offenGesamt = karten.reduce((s, k) => s + k.offen.length, 0);
+
+const TYP_LABEL: Record<string, string> = { pflege: 'Pflege', duengung: 'Düngung', kontrolle: 'Kontrolle' };
+const TYP_KLASSE: Record<string, string> = { duengung: 'abzeichen--ok', kontrolle: 'abzeichen--warn' };
+const anleitungLink = (id?: string) => (id ? `/mitglieder/anleitungen?a=${id}#a-${id}` : '');
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+---
+
+<Basis titel="Anbau heute" beschreibung="Tägliche Arbeitsliste: Zyklustag, Phase und fällige Schritte je Charge.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit</p>
+  <h1 style="margin-bottom:0.4rem;">Anbau heute</h1>
+  <p class="einleitung">
+    {offenGesamt > 0
+      ? `${offenGesamt} ${offenGesamt === 1 ? 'Aufgabe ist' : 'Aufgaben sind'} fällig. Erledigtes abhaken — das dokumentiert zugleich, wer wann gepflegt hat.`
+      : 'Alles erledigt — keine fälligen Aufgaben. Unten steht, was als Nächstes kommt.'}
+  </p>
+
+  {ok && <p class="hinweis" role="status">Erledigt und dokumentiert. 👍</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
+
+  {karten.length === 0 && (
+    <p style="color:var(--ink-soft);">Keine Charge im Anbau. Neue Chargen legst du in der <a href="/mitglieder/wawi">Warenwirtschaft</a> an.</p>
+  )}
+
+  {karten.map(({ c, tag, offen, kommend, phase }) => (
+    <section class="gc" id={`gc-${c.id}`}>
+      <header class="gc-kopf">
+        <div>
+          <strong class="gc-titel">{c.sorte_name}</strong>
+          <span class="gc-sub">Charge {c.charge_nr}{c.standort ? ` · ${c.standort}` : ''} · {wachsend(c.id)} Pflanzen</span>
+        </div>
+        {tag ? (
+          <div class="gc-tag">
+            <span class="gc-tag-zahl">Tag {tag}</span>
+            {phase && <span class="abzeichen abzeichen--akzent">{phase.titel}</span>}
+          </div>
+        ) : (
+          <span class="abzeichen">kein Anbaubeginn gesetzt</span>
+        )}
+      </header>
+
+      {!c.plan ? (
+        <p class="gc-leer">Kein Anbau-Plan zugewiesen — in der <a href={`/mitglieder/wawi#c-${c.id}`}>Warenwirtschaft</a> auswählen, dann erscheint hier der Pflegeplan.</p>
+      ) : (
+        <>
+          {offen.length > 0 ? (
+            <ul class="aufgaben">
+              {offen.map(({ schritt, faelligTag, ueberfaelligTage }) => (
+                <li class="aufgabe">
+                  <div class="aufgabe-info">
+                    <span class="aufgabe-titel">
+                      {schritt.titel}
+                      <span class:list={['abzeichen', TYP_KLASSE[schritt.typ ?? ''] ?? null]}>{TYP_LABEL[schritt.typ ?? ''] ?? schritt.typ}</span>
+                      {ueberfaelligTage > 0 && <span class="abzeichen abzeichen--gefahr">{ueberfaelligTage} {ueberfaelligTage === 1 ? 'Tag' : 'Tage'} überfällig</span>}
+                    </span>
+                    {schritt.details && <span class="aufgabe-details">{schritt.details}</span>}
+                    {schritt.anleitung && <a class="aufgabe-sop" href={anleitungLink(schritt.anleitung)}>Anleitung lesen</a>}
+                  </div>
+                  <form method="post" action="/mitglieder/anbau/erledigt">
+                    <input type="hidden" name="charge" value={c.id} />
+                    <input type="hidden" name="schritt" value={schritt.id} />
+                    <input type="hidden" name="zyklustag" value={faelligTag} />
+                    <button class="knopf" type="submit">✓ Erledigt</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="gc-leer">Heute nichts fällig. ✔</p>
+          )}
+
+          {kommend.length > 0 && (
+            <p class="gc-next">
+              Als Nächstes:
+              {kommend.slice(0, 3).map(({ schritt, inTagen }, i) => (
+                <span>{i > 0 && ' · '}<strong>{schritt.titel}</strong> ({inTagen === 1 ? 'morgen' : `in ${inTagen} Tagen`}, Tag {tag! + inTagen})</span>
+              ))}
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  ))}
+</Basis>
+
+<style>
+  .gc {
+    max-width: var(--mass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.3rem;
+    margin: 0 0 1rem;
+    background: var(--bg-rein);
+  }
+  .gc-kopf {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 0.8rem;
+  }
+  .gc-titel {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    display: block;
+  }
+  .gc-sub {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+  .gc-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .gc-tag-zahl {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--brand-strong);
+  }
+  .aufgaben {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .aufgabe {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.9rem;
+  }
+  .aufgabe-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .aufgabe-titel {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .aufgabe-details {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+  .aufgabe-sop {
+    font-size: 0.9rem;
+  }
+  .gc-leer {
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  .gc-next {
+    margin: 0.9rem 0 0;
+    padding-top: 0.7rem;
+    border-top: 1px dashed var(--line);
+    color: var(--ink-soft);
+    font-size: 0.93rem;
+  }
+</style>
