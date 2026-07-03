@@ -119,6 +119,17 @@ const laufend = alleChargen
   .sort((a, b) => (statusReihe[a.status!] ?? 9) - (statusReihe[b.status!] ?? 9));
 const archiv = alleChargen.filter((c) => !c.status || !(c.status in statusReihe));
 
+// Zusammenklappbare Status-Gruppen statt einer endlosen Kartenliste (bei
+// vielen Chargen sonst zehntausende Pixel Scrollweg, v. a. am Handy).
+// Freigegebene starten zugeklappt - ihr Bestand steht oben in der Tabelle.
+const gruppen = [
+  { key: 'anbau', titel: 'Im Anbau', offen: true },
+  { key: 'geerntet', titel: 'Geerntet — in Trocknung', offen: true },
+  { key: 'freigegeben', titel: 'Freigegeben — am Tresen abgebbar', offen: false },
+]
+  .map((g) => ({ ...g, chargen: laufend.filter((c) => c.status === g.key) }))
+  .filter((g) => g.chargen.length > 0);
+
 // Bestand je Sorte UND Produkt aus freigegebenen Chargen (Haschisch/Rosin
 // erscheinen als eigene Zeile, nicht mit der Bluete vermischt).
 const bestand = new Map<string, number>();
@@ -285,10 +296,13 @@ const statusVariante: Record<string, string> = {
     </form>
   </details>
 
-  {laufend.length === 0 ? (
+  {laufend.length === 0 && (
     <p style="color:var(--ink-soft);">Keine laufende Charge. Oben über „Neue Charge anlegen“ starten.</p>
-  ) : (
-    laufend.map((c) => (
+  )}
+  {gruppen.map((gr) => (
+    <details class="klappe charge-gruppe" open={gr.offen}>
+      <summary>{gr.titel} ({gr.chargen.length})</summary>
+      {gr.chargen.map((c) => (
       <div class="charge" id={`c-${c.id}`}>
         <div class="charge-kopf">
           <span><strong>{c.charge_nr}</strong> · {c.sorte_name}</span>
@@ -440,8 +454,9 @@ const statusVariante: Record<string, string> = {
           </details>
         )}
       </div>
-    ))
-  )}
+      ))}
+    </details>
+  ))}
 
   {archiv.length > 0 && (
     <details class="klappe">
@@ -617,7 +632,7 @@ const statusVariante: Record<string, string> = {
   .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
   .gebinde-link { margin: 0.7rem 0 0; font-size: 0.92rem; }
   .pflanzen-det { margin-top: 0.7rem; font-size: 0.92rem; }
-  .pflanzen-det summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; }
+  .pflanzen-det summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; padding: 0.45rem 0; }
   .pflanzenliste { list-style: none; padding: 0.5rem 0 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }
   .pflanze { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; border-bottom: 1px dashed var(--line); padding-bottom: 0.35rem; }
   .pflanze em { color: var(--ink-soft); font-style: normal; font-size: 0.85rem; }
@@ -625,7 +640,7 @@ const statusVariante: Record<string, string> = {
   .pflanze-form { display: flex; gap: 0.4rem; align-items: center; }
   .pflanze-form .eingabe { width: 11rem; padding: 0.35rem 0.5rem; font-size: 0.88rem; }
   .pflanze-form .knopf-sek { padding: 0.35rem 0.7rem; font-size: 0.85rem; }
-  .aktionen-det summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+  .aktionen-det summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; padding: 0.45rem 0; }
   .aktion { display: flex; flex-direction: column; gap: 0.4rem; max-width: 22rem; margin: 0.8rem 0; padding: 0.8rem; border: 1px solid var(--line); border-radius: var(--radius); }
   .aktion label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9rem; color: var(--ink-soft); }
 </style>

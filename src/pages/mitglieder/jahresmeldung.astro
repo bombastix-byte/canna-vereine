@@ -108,6 +108,12 @@ const w = aggregiereJahr(jahr, {
   .tabelle td { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
   .tabelle td.r { text-align: right; }
   .tabelle td.einzug { padding-left: 1.2rem; color: var(--ink-soft); }
+  /* Zweispaltige Kennzahlen-Tabelle: lange Beschriftungen sollen am Handy
+     umbrechen statt seitlich zu scrollen (globale Tabellen-Regel aufheben). */
+  @media (max-width: 640px) {
+    .bericht .tabelle { display: table; }
+    .bericht .tabelle td { white-space: normal; max-width: none; }
+  }
   .fuss { font-size: 0.8rem; color: var(--ink-soft); margin: 0.8rem 0 0; line-height: 1.4; }
   @media print {
     :global(body *) { visibility: hidden; }

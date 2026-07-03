@@ -124,4 +124,39 @@ const istAktiv = (p: Punkt) =>
   .mnav-aus {
     margin-left: auto;
   }
+
+  /* Handy: statt vieler umgebrochener Zeilen zwei seitlich wischbare
+     Zeilen - die Navigation kostet so ~100px statt ~330px Bildschirmhoehe.
+     Groessere Tippflaechen (~44px) fuer den Daumen. */
+  @media (max-width: 700px) {
+    .mnav-zeile {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .mnav-zeile::-webkit-scrollbar {
+      display: none;
+    }
+    .mnav a {
+      white-space: nowrap;
+      padding: 0.6rem 0.1rem;
+    }
+    .mnav-label {
+      white-space: nowrap;
+    }
+    .mnav-aus {
+      padding-left: 0.9rem;
+    }
+  }
 </style>
+
+<script is:inline>
+  // Handy: den aktiven Nav-Punkt in der wischbaren Zeile in Sicht ruecken
+  // (nur horizontal, damit die Seite nicht springt).
+  document.querySelectorAll('.mnav a[aria-current="page"]').forEach((a) => {
+    const zeile = a.closest('.mnav-zeile');
+    if (!zeile || zeile.scrollWidth <= zeile.clientWidth) return;
+    zeile.scrollLeft = Math.max(0, a.offsetLeft - (zeile.clientWidth - a.offsetWidth) / 2);
+  });
+</script>

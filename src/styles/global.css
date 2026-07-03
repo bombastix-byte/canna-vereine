@@ -642,6 +642,9 @@ thead th {
   cursor: pointer;
   font-weight: 600;
   font-size: 0.95rem;
+  /* Bequemes Tippziel, ohne die Klappe optisch aufzublasen. */
+  padding: 0.45rem 0;
+  margin: -0.45rem 0;
 }
 .klappe[open] {
   border-style: solid;
@@ -717,14 +720,37 @@ table .r {
   h1 {
     font-size: clamp(1.75rem, 7vw, 2.2rem);
   }
+  /* Alle Klapper (Anleitungen, Mitglieder-Details, Aktionen) bekommen am
+     Handy eine daumen-taugliche Tippflaeche. */
+  summary {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+  /* Weniger Polsterung am Handy: Seitenrand + Kasten kosten sonst zusammen
+     ~120px der 375px - Formulare (Tresen-Dropdown!) brauchen die Breite. */
+  .inhalt {
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+  }
+  .kasten {
+    padding: 1.1rem 1rem;
+  }
   /* Tabellen (Abgaben, Chargen-Archiv, Jahresmeldung) am Handy seitlich
-     scrollbar statt das Layout zu sprengen. */
+     scrollbar statt das Layout zu sprengen. Auch die Datenzellen bleiben
+     einzeilig (sonst quetschen sich 6-7 Spalten in Schmalstreifen) -
+     sehr lange Texte (Grund/Notiz) werden gekappt statt umzubrechen. */
   table {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  thead th {
+  thead th,
+  tbody td {
     white-space: nowrap;
+  }
+  tbody td {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
