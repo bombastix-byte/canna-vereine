@@ -92,6 +92,8 @@ const fehler = Astro.url.searchParams.get('fehler');
   {ok && <p class="hinweis" role="status">Erledigt und dokumentiert. 👍</p>}
   {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
 
+  <p><a class="knopf-sek" href="/mitglieder/anbau/plaene">Anbau-Pläne bearbeiten</a></p>
+
   {karten.length === 0 && (
     <p style="color:var(--ink-soft);">Keine Charge im Anbau. Neue Chargen legst du in der <a href="/mitglieder/wawi">Warenwirtschaft</a> an.</p>
   )}

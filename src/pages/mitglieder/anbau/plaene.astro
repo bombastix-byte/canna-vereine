@@ -1,0 +1,250 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfAnbau } from '../../../lib/rollen';
+import type { PlanSchritt } from '../../../lib/anbauplan';
+
+// Pflege-Oberflaeche fuer Anbau-Plaene: Plaene anlegen/umbenennen, Schritte
+// je Zyklustag hinzufuegen und entfernen. Nur Anbau/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface Plan {
+  id: string;
+  name: string;
+  beschreibung?: string;
+  aktiv?: boolean;
+}
+interface Anleitung {
+  id: string;
+  titel: string;
+}
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const plaene = await ladeListe<Plan>('anbau_plaene', { sort: 'name' });
+const schritte = await ladeListe<PlanSchritt>('plan_schritte', { sort: 'tag_von' });
+const anleitungen = await ladeListe<Anleitung>('anleitungen', { sort: 'titel' });
+const chargen = await ladeListe<{ plan?: string; status?: string }>('chargen', {});
+
+const schritteVon = (planId: string) => schritte.filter((s) => s.plan === planId);
+const inBenutzung = (planId: string) =>
+  chargen.filter((c) => c.plan === planId && c.status === 'anbau').length;
+const anleitungTitel = (id?: string) => anleitungen.find((a) => a.id === id)?.titel ?? null;
+
+const TYP_LABEL: Record<string, string> = { phase: 'Phase', pflege: 'Pflege', duengung: 'Düngung', kontrolle: 'Kontrolle' };
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const oktext: Record<string, string> = {
+  plan: 'Plan gespeichert.',
+  schritt: 'Schritt hinzugefügt.',
+  geloescht: 'Schritt entfernt.',
+};
+---
+
+<Basis titel="Anbau-Pläne" beschreibung="Pflege- und Düngeschemata anlegen und bearbeiten.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit</p>
+  <h1 style="margin-bottom:0.4rem;">Anbau-Pläne</h1>
+  <p class="einleitung">
+    Ein Plan ist euer Pflege- und Düngeschema: je Schritt der Zyklustag, ab dem
+    er fällig ist. „Phase" markiert Abschnitte (Keimung, Vegetation, Blüte),
+    alles andere erscheint als Aufgabe unter <a href="/mitglieder/anbau">Anbau heute</a>.
+    Wiederholung „3" heißt: ab dem Starttag alle 3 Tage.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehler === 'fehlend' ? 'Bitte die Pflichtfelder ausfüllen (Titel und Zyklustag ab 1).' : 'Das hat nicht geklappt. Bitte erneut versuchen.'}</p>}
+
+  <details class="klappe">
+    <summary>＋ Neuen Plan anlegen</summary>
+    <form class="kasten" method="post" action="/mitglieder/anbau/plaene/speichern">
+      <div class="feld">
+        <label for="plan-name">Name</label>
+        <input id="plan-name" name="name" type="text" required placeholder="z. B. Autoflower 10 Wochen" />
+      </div>
+      <div class="feld">
+        <label for="plan-beschreibung">Beschreibung (optional)</label>
+        <input id="plan-beschreibung" name="beschreibung" type="text" />
+      </div>
+      <button class="knopf" type="submit">Plan anlegen</button>
+    </form>
+  </details>
+
+  {plaene.length === 0 && <p style="color:var(--ink-soft);">Noch kein Plan angelegt.</p>}
+
+  {plaene.map((p) => (
+    <section class="plan" id={`p-${p.id}`}>
+      <header class="plan-kopf">
+        <div>
+          <strong class="plan-titel">{p.name}</strong>
+          {p.beschreibung && <span class="plan-sub">{p.beschreibung}</span>}
+        </div>
+        <span class="plan-badges">
+          {inBenutzung(p.id) > 0 && <span class="abzeichen abzeichen--ok">{inBenutzung(p.id)} Charge(n) laufen damit</span>}
+          {p.aktiv === false && <span class="abzeichen abzeichen--gefahr">inaktiv</span>}
+        </span>
+      </header>
+
+      {schritteVon(p.id).length === 0 ? (
+        <p style="color:var(--ink-soft);margin:0 0 0.8rem;">Noch keine Schritte — unten den ersten hinzufügen.</p>
+      ) : (
+        <table class="tabelle">
+          <thead>
+            <tr><th class="r">Tag</th><th>Typ</th><th>Schritt</th><th>Details</th><th class="r">Wdh.</th><th>Anleitung</th><th></th></tr>
+          </thead>
+          <tbody>
+            {schritteVon(p.id).map((s) => (
+              <tr>
+                <td class="r">{s.tag_von}</td>
+                <td>{TYP_LABEL[s.typ ?? ''] ?? s.typ}</td>
+                <td><strong>{s.titel}</strong></td>
+                <td style="color:var(--ink-soft);">{s.details || '—'}</td>
+                <td class="r">{s.wiederholung_tage ? `alle ${s.wiederholung_tage} T.` : 'einmalig'}</td>
+                <td>{anleitungTitel(s.anleitung) ?? '—'}</td>
+                <td>
+                  <form method="post" action="/mitglieder/anbau/plaene/schritt">
+                    <input type="hidden" name="aktion" value="loeschen" />
+                    <input type="hidden" name="plan" value={p.id} />
+                    <input type="hidden" name="schritt" value={s.id} />
+                    <button class="knopf-sek" type="submit" title="Schritt entfernen">✕</button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <details class="klappe" style="margin-bottom:0.8rem;">
+        <summary>＋ Schritt hinzufügen</summary>
+        <form class="kasten" method="post" action="/mitglieder/anbau/plaene/schritt">
+          <input type="hidden" name="aktion" value="neu" />
+          <input type="hidden" name="plan" value={p.id} />
+          <div class="feld-reihe">
+            <div class="feld schmal">
+              <label>Ab Zyklustag</label>
+              <input name="tag_von" type="number" min="1" step="1" required placeholder="z. B. 25" />
+            </div>
+            <div class="feld schmal">
+              <label>Typ</label>
+              <select name="typ">
+                <option value="pflege">Pflege</option>
+                <option value="duengung">Düngung</option>
+                <option value="kontrolle">Kontrolle</option>
+                <option value="phase">Phase (Abschnittsmarker)</option>
+              </select>
+            </div>
+            <div class="feld schmal">
+              <label>Alle … Tage (leer = einmalig)</label>
+              <input name="wiederholung_tage" type="number" min="1" step="1" placeholder="z. B. 3" />
+            </div>
+          </div>
+          <div class="feld">
+            <label>Titel</label>
+            <input name="titel" type="text" required placeholder="z. B. Topping (Haupttrieb kappen)" />
+          </div>
+          <div class="feld">
+            <label>Details (z. B. Düngemischung, EC, pH)</label>
+            <input name="details" type="text" placeholder="z. B. BioGrow 2 ml/L, EC 1,0–1,2" />
+          </div>
+          <div class="feld">
+            <label>Anleitung verknüpfen (optional)</label>
+            <select name="anleitung">
+              <option value="">— keine —</option>
+              {anleitungen.map((a) => <option value={a.id}>{a.titel}</option>)}
+            </select>
+          </div>
+          <button class="knopf" type="submit">Schritt hinzufügen</button>
+        </form>
+      </details>
+
+      <details class="klappe">
+        <summary>Plan umbenennen / deaktivieren</summary>
+        <form class="kasten" method="post" action="/mitglieder/anbau/plaene/speichern">
+          <input type="hidden" name="id" value={p.id} />
+          <div class="feld">
+            <label>Name</label>
+            <input name="name" type="text" required value={p.name} />
+          </div>
+          <div class="feld">
+            <label>Beschreibung</label>
+            <input name="beschreibung" type="text" value={p.beschreibung ?? ''} />
+          </div>
+          <label class="chk">
+            <input type="checkbox" name="aktiv" checked={p.aktiv !== false} />
+            Aktiv (steht bei Chargen zur Auswahl)
+          </label>
+          <button class="knopf" type="submit">Speichern</button>
+        </form>
+      </details>
+    </section>
+  ))}
+</Basis>
+
+<style>
+  .plan {
+    max-width: var(--mass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.3rem;
+    margin: 0 0 1rem;
+    background: var(--bg-rein);
+  }
+  .plan-kopf {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+  }
+  .plan-titel {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    display: block;
+  }
+  .plan-sub {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+  .plan-badges {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .feld-reihe {
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .feld-reihe .feld {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+  .chk {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+  }
+  .chk input {
+    width: auto;
+  }
+  .tabelle button.knopf-sek {
+    padding: 0.2rem 0.55rem;
+    font-size: 0.85rem;
+  }
+</style>

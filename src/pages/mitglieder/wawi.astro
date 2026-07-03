@@ -117,6 +117,7 @@ const fehlertext: Record<string, string> = {
   fehlend: 'Bitte die Pflichtfelder ausfüllen.',
   menge: 'Bitte eine gültige Menge/Gewicht angeben.',
   status: 'Diese Aktion ist im aktuellen Status nicht möglich.',
+  sorte_existiert: 'Diese Sorte gibt es bereits.',
   fehlgeschlagen: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
 };
 const oktext: Record<string, string> = {
@@ -127,6 +128,7 @@ const oktext: Record<string, string> = {
   vernichtet: 'Vernichtung dokumentiert.',
   labor: 'Laborunterlagen gespeichert.',
   plan: 'Anbau-Plan zugewiesen — fällige Schritte stehen unter „Anbau heute".',
+  sorte: 'Sorte angelegt — steht jetzt bei „Neue Charge anlegen" zur Auswahl.',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
@@ -219,6 +221,43 @@ const statusVariante: Record<string, string> = {
       </select>
     </div>
       <button class="knopf" type="submit">Charge anlegen</button>
+    </form>
+  </details>
+
+  <details class="klappe">
+    <summary>＋ Neue Sorte anlegen</summary>
+    <form class="kasten" method="post" action="/mitglieder/wawi/sorte-neu">
+      <div class="feld">
+        <label for="sorte-name">Sortenname</label>
+        <input id="sorte-name" name="name" type="text" required placeholder="z. B. Wedding Cake" />
+      </div>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="sorte-typ">Typ</label>
+          <select id="sorte-typ" name="typ">
+            <option>Hybrid</option>
+            <option>Indica</option>
+            <option>Sativa</option>
+          </select>
+        </div>
+        <div class="feld">
+          <label for="sorte-thc">THC % (Richtwert)</label>
+          <input id="sorte-thc" name="thc_prozent" type="number" min="0" step="0.1" />
+        </div>
+        <div class="feld">
+          <label for="sorte-cbd">CBD % (Richtwert)</label>
+          <input id="sorte-cbd" name="cbd_prozent" type="number" min="0" step="0.1" />
+        </div>
+      </div>
+      <div class="feld">
+        <label for="sorte-notiz">Notiz (optional)</label>
+        <input id="sorte-notiz" name="notiz" type="text" placeholder="z. B. Herkunft der Genetik" />
+      </div>
+      <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
+        Die maßgeblichen THC/CBD-Werte je Ernte trägst du bei der Freigabe der
+        Charge ein — hier sind es nur Richtwerte der Sorte.
+      </p>
+      <button class="knopf" type="submit">Sorte anlegen</button>
     </form>
   </details>
 

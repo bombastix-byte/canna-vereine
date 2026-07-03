@@ -78,5 +78,48 @@ const evaCookie = await anmelden('eva@dummy.local', DUMMY_PW);
 const evaR = await fetch(`${BASE}/mitglieder/anbau`, { headers: { cookie: evaCookie }, redirect: 'manual' });
 pruefe('Mitglied ohne Anbau-Rolle -> blockiert', evaR.status === 303, String(evaR.status));
 
+// ---------- Plan-Editor ----------
+for (const p of await pb.collection('anbau_plaene').getFullList({ filter: 'name~"E2E-Testplan"' })) {
+  await pb.collection('anbau_plaene').delete(p.id).catch(() => {});
+}
+const planLoc = (await post('/mitglieder/anbau/plaene/speichern', { name: 'E2E-Testplan', beschreibung: 'Test' }, anbauCookie)).headers.get('location') ?? '';
+pruefe('Plan anlegen -> ok', planLoc.includes('ok=plan'), planLoc);
+const neuerPlan = await pb.collection('anbau_plaene').getFirstListItem('name="E2E-Testplan"');
+const schrittLoc = (await post('/mitglieder/anbau/plaene/schritt', {
+  aktion: 'neu', plan: neuerPlan.id, tag_von: '7', typ: 'duengung', titel: 'E2E-Duengung', details: 'Test 1 ml/L', wiederholung_tage: '2',
+}, anbauCookie)).headers.get('location') ?? '';
+pruefe('Schritt hinzufuegen -> ok', schrittLoc.includes('ok=schritt'), schrittLoc);
+const neuerSchritt = await pb.collection('plan_schritte').getFirstListItem(`plan="${neuerPlan.id}"`);
+pruefe('Schritt korrekt gespeichert (Tag 7, alle 2 Tage)', neuerSchritt.tag_von === 7 && neuerSchritt.wiederholung_tage === 2 && neuerSchritt.typ === 'duengung');
+const editorHtml = await (await fetch(`${BASE}/mitglieder/anbau/plaene`, { headers: { cookie: anbauCookie } })).text();
+pruefe('Editor-Seite zeigt Plan + Schritt', editorHtml.includes('E2E-Testplan') && editorHtml.includes('E2E-Duengung'));
+const delLoc = (await post('/mitglieder/anbau/plaene/schritt', { aktion: 'loeschen', plan: neuerPlan.id, schritt: neuerSchritt.id }, anbauCookie)).headers.get('location') ?? '';
+pruefe('Schritt loeschen -> ok', delLoc.includes('ok=geloescht'), delLoc);
+pruefe('Schritt weg', (await pb.collection('plan_schritte').getFullList({ filter: `plan="${neuerPlan.id}"` })).length === 0);
+// Umbenennen + deaktivieren
+await post('/mitglieder/anbau/plaene/speichern', { id: neuerPlan.id, name: 'E2E-Testplan v2', beschreibung: 'geaendert' }, anbauCookie);
+const planNach = await pb.collection('anbau_plaene').getOne(neuerPlan.id);
+pruefe('Plan umbenannt + deaktiviert (Checkbox aus)', planNach.name === 'E2E-Testplan v2' && planNach.aktiv === false);
+const evaPlanR = await fetch(`${BASE}/mitglieder/anbau/plaene`, { headers: { cookie: evaCookie }, redirect: 'manual' });
+pruefe('Editor als Mitglied -> blockiert', evaPlanR.status === 303, String(evaPlanR.status));
+await pb.collection('anbau_plaene').delete(neuerPlan.id);
+
+// ---------- Sorten-Anlage ----------
+try {
+  const alt = await pb.collection('sorten').getFirstListItem('name="E2E-Sorte"');
+  await pb.collection('sorten').delete(alt.id);
+} catch { /* ok */ }
+const sorteLoc = (await post('/mitglieder/wawi/sorte-neu', { name: 'E2E-Sorte', typ: 'Indica', thc_prozent: '17,5', cbd_prozent: '0.8', notiz: 'Test' }, anbauCookie)).headers.get('location') ?? '';
+pruefe('Sorte anlegen -> ok', sorteLoc.includes('ok=sorte'), sorteLoc);
+const neueSorte = await pb.collection('sorten').getFirstListItem('name="E2E-Sorte"');
+pruefe('Sorte korrekt (Komma-THC geparst, aktiv)', neueSorte.thc_prozent === 17.5 && neueSorte.cbd_prozent === 0.8 && neueSorte.aktiv === true && neueSorte.typ === 'Indica');
+const doppelt = (await post('/mitglieder/wawi/sorte-neu', { name: 'E2E-Sorte', typ: 'Indica' }, anbauCookie)).headers.get('location') ?? '';
+pruefe('Doppelte Sorte -> abgelehnt', doppelt.includes('sorte_existiert'), doppelt);
+const wawiSorten = await (await fetch(`${BASE}/mitglieder/wawi`, { headers: { cookie: anbauCookie } })).text();
+pruefe('Neue Sorte im Charge-Dropdown', wawiSorten.includes('E2E-Sorte'));
+const evaSorte = await fetch(`${BASE}/mitglieder/wawi/sorte-neu`, { method: 'POST', headers: { cookie: evaCookie, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ name: 'Boese' }), redirect: 'manual' });
+pruefe('Sorte anlegen als Mitglied -> blockiert', (evaSorte.headers.get('location') ?? '').includes('keinzugriff'));
+await pb.collection('sorten').delete(neueSorte.id);
+
 console.log(`\n${fehler === 0 ? 'HTTP-E2E ANBAUPLAN BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);
