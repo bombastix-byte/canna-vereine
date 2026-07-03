@@ -10,9 +10,10 @@ import { pruefeVermehrung, summeStueck, ART_LABEL } from '../../../lib/vermehrun
 // geprueft, damit nie nur die halbe Buchung durchgeht. Nur Personal.
 export const prerender = false;
 
+// Die Vermehrung ist Teil der Tresen-Seite (/mitglieder/ausgabe).
 function zurueck(redirect: (u: string, s?: number) => Response, mitgliedId: string, meldung: string) {
   const q = new URLSearchParams({ mitglied: mitgliedId, fehler: '1', msg: meldung });
-  return redirect(`/mitglieder/vermehrung?${q.toString()}`, 303);
+  return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
 }
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -91,6 +92,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     }
   }
 
-  const q = new URLSearchParams({ mitglied: mitgliedId, ok: '1' });
-  return redirect(`/mitglieder/vermehrung?${q.toString()}`, 303);
+  const q = new URLSearchParams({ mitglied: mitgliedId, ok: 'vermehrung' });
+  return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
 };

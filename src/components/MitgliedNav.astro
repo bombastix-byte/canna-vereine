@@ -25,8 +25,8 @@ const mitgliedPunkte = [
 
 const arbeitPunkte: { label: string; href: string }[] = [];
 if (darfAusgeben(rollen)) {
-  arbeitPunkte.push({ label: 'Ausgabe (Tresen)', href: '/mitglieder/ausgabe' });
-  arbeitPunkte.push({ label: 'Vermehrung', href: '/mitglieder/vermehrung' });
+  // Tresen buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
+  arbeitPunkte.push({ label: 'Tresen', href: '/mitglieder/ausgabe' });
 }
 if (darfAnbau(rollen)) {
   arbeitPunkte.push({ label: 'Anbau heute', href: '/mitglieder/anbau' });

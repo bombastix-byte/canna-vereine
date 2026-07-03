@@ -48,9 +48,20 @@ um `charge_ref`, stellt alle Regeln auf das Rollenmodell um und spielt Demo-Char
 - `node --env-file=.env scripts/test-tresen-http.mjs` – Abgabe auf Charge + Limits.
 (HTTP-Tests brauchen laufende PocketBase + `npm run dev`.)
 
+## Weiterverarbeitung (Haschisch / Rosin)
+Aus einer freigegebenen Blüten-Charge entsteht per „Verarbeitung buchen" (Wawi)
+eine **neue, sofort freigegebene Charge** mit `produkt_typ` haschisch/rosin und
+eigenem THC/CBD. Damit gelten am Tresen Limits, U21-THC-Sperre (Konzentrate
+über 10 % sind für U21 automatisch zu) und Rückverfolgung unverändert. Der
+Vorgang steht append-only in `verarbeitungen` (Quelle, Einsatz, Ertrag,
+Ausbeute). Die Jahresmeldung weist Abgaben nach **Marihuana und Haschisch
+getrennt** aus (§ 26 KCanG; Rosin zählt als Harz zu Haschisch). Nur
+lösungsmittelfreie Verfahren. Einrichtung: `node --env-file=.env
+scripts/seed-verarbeitung.mjs`; Tests: `node scripts/test-verarbeitung.mjs`.
+
 ## Inzwischen ergänzt (siehe SYSTEM-UEBERSICHT.md)
-- **Jahresmeldung** `/mitglieder/jahresmeldung` (Aggregat angebaut/abgegeben/vernichtet/Mitgliederzahl).
-- **Vermehrungsmaterial** `/mitglieder/vermehrung` (Samen/Stecklinge, 7/5 pro Monat).
+- **Jahresmeldung** `/mitglieder/jahresmeldung` (Aggregat angebaut/hergestellt/abgegeben je Produkt/vernichtet/Mitgliederzahl).
+- **Vermehrungsmaterial** — in die Tresen-Seite `/mitglieder/ausgabe` integriert (Samen/Stecklinge, 7/5 pro Monat).
 - **Mitglieder-/Rollenverwaltung** `/mitglieder/verwaltung` + CSV-Import `scripts/import-mitglieder.mjs`.
 - **ZPL-Etikettendruck** an Netzwerkdrucker (Port 9100), Datei-Fallback ohne Drucker.
 

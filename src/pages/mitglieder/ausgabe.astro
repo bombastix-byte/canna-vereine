@@ -15,10 +15,14 @@ import {
   U21_MAX_THC,
   BEITRAG_PRO_GRAMM,
 } from '../../lib/ausgabe';
+import { ARTEN, ART_LABEL, limitFuer, summeStueck } from '../../lib/vermehrung';
+import { produktTyp, produktLabel } from '../../lib/verarbeitung';
 
-// Tresen: Abgabe an Mitglieder buchen. Nur Personal (Vorstand/Ausgabe).
-// Gefuehrter Ablauf in zwei Schritten: 1. Mitglied waehlen -> Restmengen sehen,
-// 2. Charge + Menge -> buchen. U21-gesperrte Chargen sind direkt deaktiviert.
+// Tresen: Abgabe (Bluete/Haschisch/Rosin) UND Vermehrungsmaterial (Samen/
+// Stecklinge) an Mitglieder buchen - ein Vorgangskontext, ein Mitglied.
+// Nur Personal (Vorstand/Ausgabe). Gefuehrter Ablauf: 1. Mitglied waehlen ->
+// Restmengen sehen, 2. Charge + Menge buchen, 3. optional Samen/Stecklinge.
+// U21-gesperrte Chargen sind direkt deaktiviert.
 export const prerender = false;
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
@@ -44,6 +48,15 @@ interface ChargeRow {
   thc_prozent?: number;
   cbd_prozent?: number;
   verfuegbar_g?: number;
+  produkt_typ?: string;
+}
+interface VermehrungRow {
+  id: string;
+  mitglied: string;
+  mitgliedsnummer?: string;
+  art: string;
+  anzahl: number;
+  tag: string;
 }
 interface AusgabeRow {
   id: string;
@@ -74,10 +87,12 @@ const chargen = (
   await ladeListe<ChargeRow>('chargen', { filter: 'status="freigegeben"', sort: 'sorte_name,charge_nr' })
 ).filter((c) => (c.verfuegbar_g ?? 0) > 0);
 const heuteAlle = await ladeListe<AusgabeRow>('ausgaben', { filter: `tag="${tag}"`, sort: '-created' });
+const heuteVermehrung = await ladeListe<VermehrungRow>('vermehrung_ausgaben', { filter: `tag="${tag}"`, sort: '-created' });
 
-// Fehlermeldung aus dem Buchungs-Endpoint.
+// Fehlermeldung aus den Buchungs-Endpoints (Abgabe UND Vermehrung).
 const fehler = Astro.url.searchParams.get('fehler');
 const msg = Astro.url.searchParams.get('msg');
+const ok = Astro.url.searchParams.get('ok');
 
 // Status eines ausgewaehlten Mitglieds (fuer die Restmengen-Anzeige).
 // Auswahl per Dropdown (?mitglied=id) ODER Schnellfeld/Scanner (?nr=M-101).
@@ -124,6 +139,24 @@ if (gewaehlt) {
   };
 }
 
+// Vermehrungs-Stand des gewaehlten Mitglieds (eigene Monatsgrenzen je Art).
+let vstand: Record<string, { genutzt: number; limit: number; rest: number }> | null = null;
+if (gewaehlt) {
+  const vsaetze = await ladeListe<VermehrungRow>('vermehrung_ausgaben', {
+    filter: `mitglied="${gewaehlt.id}" && monat="${monat}"`,
+  });
+  vstand = {};
+  for (const art of ARTEN) {
+    const genutzt = summeStueck(vsaetze.filter((s) => s.art === art));
+    const limit = limitFuer(art);
+    vstand[art] = { genutzt, limit, rest: Math.max(0, limit - genutzt) };
+  }
+}
+
+// Dropdown-Text einer Charge: Produkt (nur wenn kein Bluete), Sorte, THC, Rest.
+const chargeText = (c: ChargeRow) =>
+  `${produktTyp(c.produkt_typ) === 'bluete' ? '' : `${produktLabel(c.produkt_typ)} · `}${c.sorte_name} — ${c.thc_prozent ?? '?'} % THC · ${c.verfuegbar_g} g da · ${c.charge_nr}`;
+
 // Fuer U21 gesperrte Chargen direkt im Dropdown deaktivieren (>10 % THC oder
 // THC unbekannt) - die Fehlermeldung kommt so gar nicht erst zustande.
 const chargeGesperrt = (c: ChargeRow) =>
@@ -135,18 +168,21 @@ const heuteSumme = summeGramm(heuteAlle);
 const schnellMengen = [1, 2, 3, 5, 10];
 ---
 
-<Basis titel="Ausgabe (Tresen)" beschreibung="Abgabe an Mitglieder buchen, KCanG-konform.">
+<Basis titel="Tresen" beschreibung="Abgabe und Vermehrungsmaterial an Mitglieder buchen, KCanG-konform.">
   <MitgliedNav rollen={personal.rollen} />
   <p class="eyebrow">Vereinsarbeit</p>
-  <h1 style="margin-bottom:0.4rem;">Ausgabe am Tresen</h1>
+  <h1 style="margin-bottom:0.4rem;">Tresen</h1>
   <p class="einleitung">
-    Erst das Mitglied wählen, dann Sorte und Menge. Alle gesetzlichen Grenzen
-    prüft das System automatisch. Beitrag: {eur(BEITRAG_PRO_GRAMM)} € je Gramm,
-    kassiert wird an der Kasse.
+    Erst das Mitglied wählen, dann Sorte und Menge — Samen und Stecklinge gleich
+    mit dazu. Alle gesetzlichen Grenzen prüft das System automatisch.
+    Beitrag: {eur(BEITRAG_PRO_GRAMM)} € je Gramm, kassiert wird an der Kasse.
   </p>
 
   {fehler && msg && (
     <p class="hinweis hinweis--fehler" role="alert"><strong>Nicht gebucht:</strong> {msg}</p>
+  )}
+  {ok === 'vermehrung' && (
+    <p class="hinweis" role="status">Weitergabe von Vermehrungsmaterial gebucht.</p>
   )}
 
   <section class="schritt" aria-label="Schritt 1">
@@ -235,7 +271,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
               <option value="">— bitte wählen —</option>
               {chargen.map((c) => (
                 <option value={c.id} disabled={chargeGesperrt(c)}>
-                  {c.sorte_name} — {c.thc_prozent ?? '?'} % THC · {c.verfuegbar_g} g da · Charge {c.charge_nr}{chargeGesperrt(c) ? ' — für U21 gesperrt' : ''}
+                  {chargeText(c)}{chargeGesperrt(c) ? ' — für U21 gesperrt' : ''}
                 </option>
               ))}
             </select>
@@ -259,7 +295,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
                   <option value="">— Sorte {i} (optional) —</option>
                   {chargen.map((c) => (
                     <option value={c.id} disabled={chargeGesperrt(c)}>
-                      {c.sorte_name} — {c.thc_prozent ?? '?'} % THC · {c.verfuegbar_g} g da · {c.charge_nr}{chargeGesperrt(c) ? ' — U21 gesperrt' : ''}
+                      {chargeText(c)}{chargeGesperrt(c) ? ' — U21 gesperrt' : ''}
                     </option>
                   ))}
                 </select>
@@ -278,6 +314,32 @@ const schnellMengen = [1, 2, 3, 5, 10];
           <button class="knopf" type="submit">Alles buchen — ein Beleg</button>
         </form>
       )}
+    </section>
+  )}
+
+  {gewaehlt && vstand && (
+    <section class="schritt" aria-label="Samen und Stecklinge">
+      <h2 class="schritt-titel"><span class="snr">3</span> Samen &amp; Stecklinge (optional)</h2>
+      <form class="kasten" method="post" action="/mitglieder/vermehrung/buchen">
+        <input type="hidden" name="mitglied" value={gewaehltId} />
+        <p style="margin:0 0 0.8rem;color:var(--ink-soft);font-size:0.95rem;">
+          Eigene Monatsgrenzen je Mitglied: {limitFuer('samen')} Samen / {limitFuer('stecklinge')} Stecklinge —
+          unabhängig von der Abgabemenge oben.
+        </p>
+        <div class="v-doppel">
+          <div class="feld">
+            <label for="anzahl_samen">Samen (noch {vstand.samen.rest} von {vstand.samen.limit} diesen Monat)</label>
+            <input id="anzahl_samen" name="anzahl_samen" type="number" min="1" step="1"
+              max={vstand.samen.rest} disabled={vstand.samen.rest === 0} placeholder={vstand.samen.rest === 0 ? 'Limit erreicht' : 'Stück'} />
+          </div>
+          <div class="feld">
+            <label for="anzahl_stecklinge">Stecklinge (noch {vstand.stecklinge.rest} von {vstand.stecklinge.limit})</label>
+            <input id="anzahl_stecklinge" name="anzahl_stecklinge" type="number" min="1" step="1"
+              max={vstand.stecklinge.rest} disabled={vstand.stecklinge.rest === 0} placeholder={vstand.stecklinge.rest === 0 ? 'Limit erreicht' : 'Stück'} />
+          </div>
+        </div>
+        <button class="knopf-sek" type="submit" disabled={vstand.samen.rest === 0 && vstand.stecklinge.rest === 0}>Weitergabe buchen</button>
+      </form>
     </section>
   )}
 
@@ -300,6 +362,24 @@ const schnellMengen = [1, 2, 3, 5, 10];
               <td class="r">{a.thc_prozent ?? '—'} %</td>
               <td class="r">{eur(a.beitrag_euro)} €</td>
               <td><a href={`/mitglieder/ausgabe/beleg/${a.id}`}>öffnen</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  {heuteVermehrung.length > 0 && (
+    <>
+      <h2>Heutige Weitergaben (Samen/Stecklinge)</h2>
+      <table class="tabelle">
+        <thead><tr><th>Mitglied</th><th>Art</th><th class="r">Anzahl</th></tr></thead>
+        <tbody>
+          {heuteVermehrung.map((v) => (
+            <tr>
+              <td>{v.mitgliedsnummer || v.mitglied.slice(0, 6)}</td>
+              <td>{ART_LABEL[v.art as keyof typeof ART_LABEL] ?? v.art}</td>
+              <td class="r">{v.anzahl}</td>
             </tr>
           ))}
         </tbody>
@@ -452,6 +532,9 @@ const schnellMengen = [1, 2, 3, 5, 10];
     font-size: 0.92rem;
     text-align: center;
   }
+  .v-doppel { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .v-doppel .feld { flex: 1 1 12rem; }
+  .v-doppel input:disabled { opacity: 0.5; }
   .schritt {
     margin: 0 0 1.6rem;
     max-width: var(--mass);

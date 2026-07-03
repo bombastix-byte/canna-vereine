@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
 import { darfAnbau } from '../../lib/rollen';
 import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } from '../../lib/wawi';
+import { VERARBEITUNG_TYPEN, PRODUKT_LABEL, produktTyp, produktLabel, ausbeuteProzent } from '../../lib/verarbeitung';
 import { berlinTag } from '../../lib/ausgabe';
 import { type PlanSchritt, zyklustag, aktuellePhase } from '../../lib/anbauplan';
 
@@ -36,6 +37,18 @@ interface Charge {
   coa?: string;
   testergebnis_url?: string;
   plan?: string;
+  produkt_typ?: string;
+}
+interface Verarbeitung {
+  id: string;
+  quelle_nr?: string;
+  sorte_name?: string;
+  produkt_typ?: string;
+  einsatz_g?: number;
+  ertrag_g?: number;
+  produkt_nr?: string;
+  datum?: string;
+  notiz?: string;
 }
 interface Vernichtung {
   id: string;
@@ -78,6 +91,11 @@ interface Transport {
 const sorten = await ladeListe<Sorte>('sorten', { sort: 'name' });
 const alleChargen = await ladeListe<Charge>('chargen', { sort: 'sorte_name,charge_nr' });
 const vernichtungen = await ladeListe<Vernichtung>('vernichtungen', { sort: '-created' });
+const verarbeitungen = await ladeListe<Verarbeitung>('verarbeitungen', { sort: '-created' });
+// Nur freigegebene Blueten-Chargen mit Restbestand koennen verarbeitet werden.
+const verarbeitbar = alleChargen.filter(
+  (c) => c.status === 'freigegeben' && produktTyp(c.produkt_typ) === 'bluete' && (c.verfuegbar_g ?? 0) > 0,
+);
 const transporte = await ladeListe<Transport>('transporte', { sort: '-created' });
 const allePflanzen = await ladeListe<Pflanze>('pflanzen', { sort: 'nummer' });
 const plaene = await ladeListe<{ id: string; name: string }>('anbau_plaene', { sort: 'name' });
@@ -101,11 +119,14 @@ const laufend = alleChargen
   .sort((a, b) => (statusReihe[a.status!] ?? 9) - (statusReihe[b.status!] ?? 9));
 const archiv = alleChargen.filter((c) => !c.status || !(c.status in statusReihe));
 
-// Bestand je Sorte aus freigegebenen Chargen.
+// Bestand je Sorte UND Produkt aus freigegebenen Chargen (Haschisch/Rosin
+// erscheinen als eigene Zeile, nicht mit der Bluete vermischt).
 const bestand = new Map<string, number>();
 for (const c of alleChargen) {
   if (c.status === 'freigegeben') {
-    bestand.set(c.sorte_name ?? '?', (bestand.get(c.sorte_name ?? '?') ?? 0) + (c.verfuegbar_g ?? 0));
+    const typ = produktTyp(c.produkt_typ);
+    const name = (c.sorte_name ?? '?') + (typ === 'bluete' ? '' : ` · ${PRODUKT_LABEL[typ]}`);
+    bestand.set(name, (bestand.get(name) ?? 0) + (c.verfuegbar_g ?? 0));
   }
 }
 const bestandGesamt = [...bestand.values()].reduce((a, b) => a + b, 0);
@@ -119,6 +140,8 @@ const fehlertext: Record<string, string> = {
   status: 'Diese Aktion ist im aktuellen Status nicht möglich.',
   sorte_existiert: 'Diese Sorte gibt es bereits.',
   fehlgeschlagen: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+  // Verarbeitung liefert die genaue Meldung im msg-Parameter mit.
+  verarbeitung: Astro.url.searchParams.get('msg') || 'Verarbeitung nicht möglich.',
 };
 const oktext: Record<string, string> = {
   angelegt: 'Charge angelegt.',
@@ -129,6 +152,7 @@ const oktext: Record<string, string> = {
   labor: 'Laborunterlagen gespeichert.',
   plan: 'Anbau-Plan zugewiesen — fällige Schritte stehen unter „Anbau heute".',
   sorte: 'Sorte angelegt — steht jetzt bei „Neue Charge anlegen" zur Auswahl.',
+  verarbeitet: 'Verarbeitung gebucht — das Produkt ist als neue Charge freigegeben und am Tresen abgebbar.',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
@@ -269,6 +293,9 @@ const statusVariante: Record<string, string> = {
         <div class="charge-kopf">
           <span><strong>{c.charge_nr}</strong> · {c.sorte_name}</span>
           <span class="charge-badges">
+            {produktTyp(c.produkt_typ) !== 'bluete' && (
+              <span class="abzeichen abzeichen--akzent">{produktLabel(c.produkt_typ)}</span>
+            )}
             {c.status === 'anbau' && zyklusInfo(c) && (
               <span class="abzeichen abzeichen--akzent">Tag {zyklusInfo(c)!.tag}{zyklusInfo(c)!.phase ? ` · ${zyklusInfo(c)!.phase}` : ''}</span>
             )}
@@ -428,6 +455,89 @@ const statusVariante: Record<string, string> = {
         </tbody>
       </table>
     </details>
+  )}
+
+  <h2>Weiterverarbeitung (Haschisch / Rosin)</h2>
+  <p class="ablauf">
+    Aus einer freigegebenen Blüten-Charge wird ein Konzentrat: Einsatzmenge und
+    Ertrag wiegen, THC/CBD des Produkts eintragen. Das Produkt entsteht als
+    <strong>neue, freigegebene Charge</strong> und steht sofort am Tresen zur
+    Abgabe — Limits und die U21-THC-Sperre gelten automatisch. Nur
+    lösungsmittelfreie Verfahren (Trockensieb, Presse).
+  </p>
+
+  <details class="klappe">
+    <summary>＋ Verarbeitung buchen</summary>
+    {verarbeitbar.length === 0 ? (
+      <p style="color:var(--ink-soft);padding:0.6rem 0;">Keine freigegebene Blüten-Charge mit Bestand vorhanden.</p>
+    ) : (
+      <form class="kasten" method="post" action="/mitglieder/wawi/verarbeiten">
+        <div class="feld">
+          <label for="v-quelle">Blüten-Charge (Quelle)</label>
+          <select id="v-quelle" name="quelle" required>
+            <option value="">— Charge wählen —</option>
+            {verarbeitbar.map((c) => (
+              <option value={c.id}>{c.charge_nr} · {c.sorte_name} (verfügbar {c.verfuegbar_g} g)</option>
+            ))}
+          </select>
+        </div>
+        <div class="feld-reihe">
+          <div class="feld">
+            <label for="v-typ">Produkt</label>
+            <select id="v-typ" name="produkt_typ">
+              {VERARBEITUNG_TYPEN.map((t) => <option value={t}>{PRODUKT_LABEL[t]}</option>)}
+            </select>
+          </div>
+          <div class="feld">
+            <label for="v-einsatz">Einsatz Blüte (g)</label>
+            <input id="v-einsatz" name="einsatz_g" type="number" min="0.1" step="0.1" required />
+          </div>
+          <div class="feld">
+            <label for="v-ertrag">Ertrag Produkt (g)</label>
+            <input id="v-ertrag" name="ertrag_g" type="number" min="0.1" step="0.1" required />
+          </div>
+        </div>
+        <div class="feld-reihe">
+          <div class="feld">
+            <label for="v-thc">THC % (Produkt)</label>
+            <input id="v-thc" name="thc_prozent" type="number" min="0" step="0.1" required />
+          </div>
+          <div class="feld">
+            <label for="v-cbd">CBD % (Produkt)</label>
+            <input id="v-cbd" name="cbd_prozent" type="number" min="0" step="0.1" />
+          </div>
+          <div class="feld">
+            <label for="v-notiz">Verfahren/Notiz</label>
+            <input id="v-notiz" name="notiz" type="text" placeholder="z. B. Trockensieb 160 µm, Rosin-Presse 90 °C" />
+          </div>
+        </div>
+        <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
+          Ohne THC-Wert ist die Abgabe an unter 21-Jährige gesperrt; über 10 %
+          THC (bei Konzentraten der Regelfall) ebenfalls — das prüft der Tresen
+          automatisch.
+        </p>
+        <button class="knopf" type="submit">Verarbeitung buchen</button>
+      </form>
+    )}
+  </details>
+
+  {verarbeitungen.length > 0 && (
+    <table class="tabelle">
+      <thead><tr><th>Datum</th><th>Quelle</th><th>Produkt</th><th class="r">Einsatz</th><th class="r">Ertrag</th><th class="r">Ausbeute</th><th>Neue Charge</th></tr></thead>
+      <tbody>
+        {verarbeitungen.map((v) => (
+          <tr>
+            <td>{v.datum}</td>
+            <td>{v.quelle_nr} · {v.sorte_name}</td>
+            <td>{produktLabel(v.produkt_typ)}</td>
+            <td class="r">{v.einsatz_g} g</td>
+            <td class="r">{v.ertrag_g} g</td>
+            <td class="r">{ausbeuteProzent(v.einsatz_g ?? 0, v.ertrag_g ?? 0) ?? '—'} %</td>
+            <td>{v.produkt_nr}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )}
 
   <h2>Transporte</h2>

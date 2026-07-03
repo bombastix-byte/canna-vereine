@@ -9,6 +9,7 @@ import {
   beitragEuro,
   summeGramm,
 } from '../../../lib/ausgabe';
+import { produktTyp } from '../../../lib/verarbeitung';
 
 // Bucht eine Abgabe am Tresen - EIN Vorgang mit einer oder MEHREREN Positionen
 // (Mitglied nimmt mehrere Sorten mit). Alle Positionen teilen sich eine
@@ -133,6 +134,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         charge: charge.charge_nr || '',
         sorte: charge.sorte || null,
         sorte_name: charge.sorte_name || '',
+        produkt_typ: produktTyp(charge.produkt_typ),
         thc_prozent: thcVon(charge) ?? 0,
         cbd_prozent: charge.cbd_prozent != null ? Number(charge.cbd_prozent) : 0,
         menge_gramm: menge,

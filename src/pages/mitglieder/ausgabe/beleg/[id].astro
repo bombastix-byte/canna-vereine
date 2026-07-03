@@ -3,6 +3,7 @@ import Basis from '../../../../layouts/Basis.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
 import { darfAusgeben } from '../../../../lib/rollen';
 import { site } from '../../../../config';
+import { produktTyp, produktLabel } from '../../../../lib/verarbeitung';
 
 // Druckbarer Abgabe-Beleg / Beipackzettel mit den nach KCanG erforderlichen
 // Pflichtangaben. Ein Vorgang kann MEHRERE Positionen haben (gleiche
@@ -90,7 +91,7 @@ const praev = site.praeventionsbeauftragter;
       <tbody>
         {positionen.map((p) => (
           <tr>
-            <td>{p.sorte_name}{p.charge ? ` · ${p.charge}` : ''}</td>
+            <td>{produktTyp(p.produkt_typ) === 'bluete' ? '' : `${produktLabel(p.produkt_typ)} · `}{p.sorte_name}{p.charge ? ` · ${p.charge}` : ''}</td>
             <td class="r">{p.menge_gramm} g</td>
             <td class="r">{p.thc_prozent} / {p.cbd_prozent} %</td>
             <td class="r">{eur(p.beitrag_euro)} €</td>

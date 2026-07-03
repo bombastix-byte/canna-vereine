@@ -3,6 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfBerichte } from '../../../lib/rollen';
 import { csvAntwort } from '../../../lib/csv';
 import { aggregiereJahr, jahrVon } from '../../../lib/jahresmeldung';
+import { produktLabel } from '../../../lib/verarbeitung';
 import { berlinTag } from '../../../lib/ausgabe';
 
 // Behoerden-/Protokoll-Exporte als CSV (pseudonymisiert: Mitgliedsnummer
@@ -30,8 +31,8 @@ export const GET: APIRoute = async ({ params, url, cookies, redirect }) => {
   if (art === 'abgaben') {
     const rows = (await alle<Record<string, any>>('ausgaben')).filter((r) => (r.monat ?? '').slice(0, 4) === jahr);
     return csvAntwort(`abgaben-${jahr}.csv`, [
-      ['Datum', 'Belegnr', 'Mitgliedsnummer', 'Sorte', 'Charge', 'Menge (g)', 'THC (%)', 'CBD (%)', 'Beitrag (EUR)'],
-      ...rows.map((r) => [r.tag, r.belegnr, r.mitgliedsnummer, r.sorte_name, r.charge, r.menge_gramm, r.thc_prozent, r.cbd_prozent, r.beitrag_euro]),
+      ['Datum', 'Belegnr', 'Mitgliedsnummer', 'Produkt', 'Sorte', 'Charge', 'Menge (g)', 'THC (%)', 'CBD (%)', 'Beitrag (EUR)'],
+      ...rows.map((r) => [r.tag, r.belegnr, r.mitgliedsnummer, produktLabel(r.produkt_typ), r.sorte_name, r.charge, r.menge_gramm, r.thc_prozent, r.cbd_prozent, r.beitrag_euro]),
     ]);
   }
 
@@ -56,13 +57,17 @@ export const GET: APIRoute = async ({ params, url, cookies, redirect }) => {
       chargen: await alle('chargen'),
       ausgaben: await alle('ausgaben'),
       vernichtungen: await alle('vernichtungen'),
+      verarbeitungen: await alle('verarbeitungen'),
       mitgliederzahl: (await alle('users')).length,
     });
     return csvAntwort(`jahresmeldung-${jahr}.csv`, [
       ['Kennzahl', 'Wert'],
       ['Berichtsjahr', w.jahr],
       ['Angebaute (getrocknete) Menge (g)', w.angebaut_g],
+      ['Hergestelltes Haschisch/Rosin (g)', w.hergestellt_haschisch_g],
       ['An Mitglieder abgegebene Menge (g)', w.abgegeben_g],
+      ['davon Marihuana/Bluete (g)', w.abgegeben_marihuana_g],
+      ['davon Haschisch inkl. Rosin (g)', w.abgegeben_haschisch_g],
       ['Vernichtete Menge (g)', w.vernichtet_g],
       ['Mitgliederzahl (Stichtag Export)', w.mitgliederzahl],
       ['Zahl der Abgaben', w.anzahl_abgaben],

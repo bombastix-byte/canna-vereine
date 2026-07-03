@@ -25,8 +25,9 @@ async function ladeListe<T>(collection: string): Promise<T[]> {
 }
 
 const chargen = await ladeListe<{ ernte_datum?: string; trockengewicht_g?: number }>('chargen');
-const ausgaben = await ladeListe<{ menge_gramm?: number; monat?: string }>('ausgaben');
+const ausgaben = await ladeListe<{ menge_gramm?: number; monat?: string; produkt_typ?: string }>('ausgaben');
 const vernichtungen = await ladeListe<{ menge_gramm?: number; datum?: string }>('vernichtungen');
+const verarbeitungen = await ladeListe<{ ertrag_g?: number; datum?: string }>('verarbeitungen');
 const mitglieder = await ladeListe<{ id: string }>('users');
 
 const jetztJahr = berlinTag().slice(0, 4);
@@ -37,6 +38,7 @@ const w = aggregiereJahr(jahr, {
   chargen,
   ausgaben,
   vernichtungen,
+  verarbeitungen,
   mitgliederzahl: mitglieder.length,
 });
 ---
@@ -74,7 +76,10 @@ const w = aggregiereJahr(jahr, {
     <table class="tabelle">
       <tbody>
         <tr><td>Angebaute (getrocknete) Menge</td><td class="r"><strong>{gramm(w.angebaut_g)}</strong></td></tr>
+        <tr><td>Hergestelltes Haschisch/Rosin</td><td class="r">{gramm(w.hergestellt_haschisch_g)}</td></tr>
         <tr><td>An Mitglieder abgegebene Menge</td><td class="r"><strong>{gramm(w.abgegeben_g)}</strong></td></tr>
+        <tr><td class="einzug">davon Marihuana (Blüte)</td><td class="r">{gramm(w.abgegeben_marihuana_g)}</td></tr>
+        <tr><td class="einzug">davon Haschisch (inkl. Rosin)</td><td class="r">{gramm(w.abgegeben_haschisch_g)}</td></tr>
         <tr><td>Vernichtete Menge</td><td class="r">{gramm(w.vernichtet_g)}</td></tr>
         <tr><td>Mitgliederzahl (Stichtag)</td><td class="r"><strong>{w.mitgliederzahl}</strong></td></tr>
         <tr><td>Zahl der Abgaben</td><td class="r">{w.anzahl_abgaben}</td></tr>
@@ -102,6 +107,7 @@ const w = aggregiereJahr(jahr, {
   .tabelle { width: 100%; border-collapse: collapse; }
   .tabelle td { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
   .tabelle td.r { text-align: right; }
+  .tabelle td.einzug { padding-left: 1.2rem; color: var(--ink-soft); }
   .fuss { font-size: 0.8rem; color: var(--ink-soft); margin: 0.8rem 0 0; line-height: 1.4; }
   @media print {
     :global(body *) { visibility: hidden; }
