@@ -38,6 +38,12 @@ export interface SiteConfig {
   theme: ThemeName;
   /** Grundlayout (Default: standard) */
   layout?: LayoutName;
+  /**
+   * Duerfen Suchmaschinen die Seite aufnehmen? Default FALSE: waehrend der
+   * Entwicklung bekommt ALLES noindex/nofollow + robots.txt "Disallow: /".
+   * Erst zum Livegang mit echter Domain bewusst auf true stellen.
+   */
+  indexierbar?: boolean;
   /** vollständiger Vereinsname laut Satzung */
   vereinsname: string;
   /** kurzer Name für Kopfzeile/Titel */

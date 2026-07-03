@@ -17,6 +17,9 @@ interface Props {
 }
 
 const { titel, beschreibung, robots = 'index, follow' } = Astro.props;
+// Entwicklungs-Schutz: solange die Site nicht ausdruecklich indexierbar ist
+// (site.indexierbar), bekommt JEDE Seite noindex - unabhaengig vom Prop.
+const robotsWert = site.indexierbar ? robots : 'noindex, nofollow';
 const seitentitel = `${titel} | ${site.kurzname}`;
 const hatHero = Astro.slots.has('hero');
 const layout = site.layout ?? 'standard';
@@ -29,7 +32,7 @@ const layout = site.layout ?? 'standard';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{seitentitel}</title>
     {beschreibung && <meta name="description" content={beschreibung} />}
-    <meta name="robots" content={robots} />
+    <meta name="robots" content={robotsWert} />
     <meta name="theme-color" content="#1e3a2c" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
