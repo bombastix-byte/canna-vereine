@@ -1,6 +1,7 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
+import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../lib/rollen';
 
@@ -41,6 +42,7 @@ const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
 <Basis titel="Mitgliederverwaltung" beschreibung="Mitglieder und Rollen verwalten.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <UnterNav punkte={[{ label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' }, { label: 'Anträge', href: '/mitglieder/antraege' }, { label: 'Beiträge', href: '/mitglieder/beitraege' }, { label: 'Nachricht', href: '/mitglieder/nachricht' }]} />
   <h1 style="margin-bottom:0.4rem;">Mitglieder &amp; Rollen</h1>
   <p class="einleitung">
     Mitgliedsnummer, Geburtsdatum (für die U21-Regel) und Rollen pflegen.

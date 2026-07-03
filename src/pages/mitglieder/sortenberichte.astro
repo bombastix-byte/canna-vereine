@@ -1,6 +1,7 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
+import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 
 // Geschützt. Sachliche Sortenbeschreibungen für Mitglieder.
@@ -42,6 +43,7 @@ const datum = (iso: string) =>
 <Basis titel="Sortenberichte" beschreibung="Sachliche Sortenbeschreibungen für Mitglieder.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Mitgliederbereich</p>
+  <UnterNav punkte={[{ label: 'Anleitungen', href: '/mitglieder/anleitungen' }, { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' }]} />
   <h1 style="margin-bottom:0.4rem;">Aktuelle Sortenberichte</h1>
   <p class="einleitung">
     Sachliche Beschreibungen der im laufenden Vereinszyklus angebauten Sorten.

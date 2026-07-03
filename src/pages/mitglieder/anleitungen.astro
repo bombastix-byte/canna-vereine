@@ -1,6 +1,7 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
+import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfDienst, darfVerwalten, TEAM_LABEL } from '../../lib/rollen';
 
@@ -59,6 +60,7 @@ const stand = (iso?: string) =>
 <Basis titel="Anleitungen" beschreibung="Verfahrensbibliothek: so werden die Aufgaben im Verein gemacht.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Mitgliederbereich</p>
+  <UnterNav punkte={[{ label: 'Anleitungen', href: '/mitglieder/anleitungen' }, { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' }]} />
   <h1 style="margin-bottom:0.4rem;">Anleitungen</h1>
   <p class="einleitung">
     So werden die Aufgaben im Verein gemacht — Schritt für Schritt. Lesen darf

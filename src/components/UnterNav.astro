@@ -1,0 +1,39 @@
+---
+// Unter-Navigation (Reiter) fuer gebuendelte Bereiche im Mitgliederbereich,
+// z. B. Wissen (Anleitungen/Sortenberichte) oder Verwaltung (Mitglieder/
+// Antraege/Beitraege/Nachricht). Haelt die Haupt-Navigation schlank: ein
+// Nav-Punkt je Bereich, die Reiter wechseln innerhalb des Bereichs.
+interface Props {
+  punkte: { label: string; href: string }[];
+}
+const { punkte } = Astro.props;
+const aktiv = Astro.url.pathname.replace(/\/$/, '');
+---
+
+<nav class="unav" aria-label="Bereich">
+  {punkte.map((p) => (
+    <a href={p.href} aria-current={aktiv === p.href || aktiv.startsWith(p.href + '/') ? 'page' : undefined}>{p.label}</a>
+  ))}
+</nav>
+
+<style>
+  .unav {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin: 0 0 1.2rem;
+  }
+  .unav a {
+    text-decoration: none;
+    color: var(--ink-soft);
+    padding: 0.35rem 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.92rem;
+  }
+  .unav a[aria-current='page'] {
+    color: var(--ink);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+</style>

@@ -10,20 +10,28 @@ interface Props {
 }
 const { rollen } = Astro.props;
 
-const mitgliedPunkte = [
+// Gebuendelte Punkte fuehren mehrere Seiten unter einem Eintrag (die
+// Unterseiten wechselt man dort per UnterNav-Reitern); `auch` zaehlt fuer
+// die Hervorhebung mit.
+interface Punkt {
+  label: string;
+  href: string;
+  auch?: string[];
+}
+
+const mitgliedPunkte: Punkt[] = [
   { label: 'Aktuelles', href: '/mitglieder/bereich' },
   { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
   { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
   { label: 'Helferplan', href: '/mitglieder/helferplan' },
   { label: 'Abstimmungen', href: '/mitglieder/abstimmungen' },
-  { label: 'Anleitungen', href: '/mitglieder/anleitungen' },
-  { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' },
+  { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte'] },
   { label: 'Ausweis', href: '/mitglieder/ausweis' },
   { label: 'App', href: '/mitglieder/app' },
   { label: 'Sicherheit', href: '/mitglieder/sicherheit' },
 ];
 
-const arbeitPunkte: { label: string; href: string }[] = [];
+const arbeitPunkte: Punkt[] = [];
 if (darfAusgeben(rollen)) {
   // Tresen buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
   arbeitPunkte.push({ label: 'Tresen', href: '/mitglieder/ausgabe' });
@@ -36,20 +44,23 @@ if (darfBerichte(rollen)) {
   arbeitPunkte.push({ label: 'Jahresmeldung', href: '/mitglieder/jahresmeldung' });
 }
 if (darfVerwalten(rollen)) {
-  arbeitPunkte.push({ label: 'Mitglieder', href: '/mitglieder/verwaltung' });
-  arbeitPunkte.push({ label: 'Anträge', href: '/mitglieder/antraege' });
-  arbeitPunkte.push({ label: 'Beiträge', href: '/mitglieder/beitraege' });
-  arbeitPunkte.push({ label: 'Nachricht', href: '/mitglieder/nachricht' });
+  arbeitPunkte.push({
+    label: 'Verwaltung',
+    href: '/mitglieder/verwaltung',
+    auch: ['/mitglieder/antraege', '/mitglieder/beitraege', '/mitglieder/nachricht'],
+  });
 }
 
 const aktiv = Astro.url.pathname.replace(/\/$/, '');
+const istAktiv = (p: Punkt) =>
+  [p.href, ...(p.auch ?? [])].some((h) => aktiv === h || aktiv.startsWith(h + '/'));
 ---
 
 <nav class="mnav" aria-label="Mitgliederbereich">
   <div class="mnav-zeile">
     {
       mitgliedPunkte.map((p) => (
-        <a href={p.href} aria-current={aktiv === p.href ? 'page' : undefined}>
+        <a href={p.href} aria-current={istAktiv(p) ? 'page' : undefined}>
           {p.label}
         </a>
       ))
@@ -61,7 +72,7 @@ const aktiv = Astro.url.pathname.replace(/\/$/, '');
       <div class="mnav-zeile mnav-arbeit">
         <span class="mnav-label">Vereinsarbeit</span>
         {arbeitPunkte.map((p) => (
-          <a href={p.href} aria-current={aktiv === p.href ? 'page' : undefined}>
+          <a href={p.href} aria-current={istAktiv(p) ? 'page' : undefined}>
             {p.label}
           </a>
         ))}
