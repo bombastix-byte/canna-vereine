@@ -1,0 +1,196 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+import { berlinTag } from '../../lib/ausgabe';
+
+// Abstimmungen/Umfragen: Mitglieder stimmen ab (eine Stimme), sehen danach
+// bzw. nach dem Schliessen die Ergebnisse. Vorstand legt an und schliesst.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+const vorstand = darfVerwalten(mitglied.rollen);
+
+interface Abstimmung {
+  id: string;
+  titel: string;
+  beschreibung?: string;
+  optionen: string[];
+  status?: string;
+  ende?: string;
+  created: string;
+}
+interface Stimme { abstimmung: string; mitglied: string; option_index: number }
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const abstimmungen = await ladeListe<Abstimmung>('abstimmungen', { sort: '-created' });
+const stimmen = await ladeListe<Stimme>('stimmen', {});
+
+const heute = berlinTag();
+const istOffen = (a: Abstimmung) => a.status === 'offen' && !(a.ende && a.ende.slice(0, 10) < heute);
+const meineWahl = (id: string): number | null => {
+  const s = stimmen.find((x) => x.abstimmung === id && x.mitglied === mitglied.id);
+  return s ? s.option_index : null;
+};
+const zaehle = (id: string, optionen: string[]) => {
+  const counts = optionen.map(() => 0);
+  for (const s of stimmen) if (s.abstimmung === id && s.option_index >= 0 && s.option_index < counts.length) counts[s.option_index]++;
+  const gesamt = counts.reduce((a, b) => a + b, 0);
+  return { counts, gesamt };
+};
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  schon: 'Du hast bei dieser Abstimmung bereits abgestimmt.',
+  geschlossen: 'Diese Abstimmung ist geschlossen.',
+  optionen: 'Bitte Titel und mindestens zwei Antwortoptionen (je eine Zeile) angeben.',
+  fehlend: 'Bitte eine gültige Option wählen.',
+  fehlgeschlagen: 'Das hat nicht geklappt. Bitte erneut versuchen.',
+};
+const oktext: Record<string, string> = {
+  '1': 'Danke, deine Stimme wurde gezählt.',
+  neu: 'Abstimmung angelegt.',
+  status: 'Status geändert.',
+};
+
+const datum = (iso?: string) =>
+  iso ? new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+---
+
+<Basis titel="Abstimmungen" beschreibung="Vereinsabstimmungen und Umfragen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Abstimmungen</h1>
+  <p class="einleitung">
+    Vereinsabstimmungen und Umfragen. Jedes Mitglied hat eine Stimme. Nach dem
+    Abstimmen — oder sobald eine Abstimmung geschlossen ist — siehst du das Ergebnis.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Das hat nicht geklappt.'}</p>}
+
+  {vorstand && (
+    <details class="klappe">
+      <summary>＋ Neue Abstimmung anlegen</summary>
+      <form class="kasten" method="post" action="/mitglieder/abstimmungen/neu">
+        <div class="feld">
+          <label for="titel">Frage / Titel</label>
+          <input id="titel" name="titel" type="text" required placeholder="z. B. Termin für den nächsten Vereinsabend" />
+        </div>
+        <div class="feld">
+          <label for="beschreibung">Beschreibung (optional)</label>
+          <input id="beschreibung" name="beschreibung" type="text" />
+        </div>
+        <div class="feld">
+          <label for="optionen">Antwortoptionen — eine je Zeile</label>
+          <textarea id="optionen" name="optionen" rows="4" required placeholder={'Freitag\nSamstag\nSonntag'}></textarea>
+        </div>
+        <div class="feld">
+          <label for="ende">Ende (optional)</label>
+          <input id="ende" name="ende" type="date" />
+        </div>
+        <button class="knopf" type="submit">Abstimmung starten</button>
+      </form>
+    </details>
+  )}
+
+  {abstimmungen.length === 0 && <p style="color:var(--ink-soft);">Zurzeit gibt es keine Abstimmung.</p>}
+
+  {abstimmungen.map((a) => {
+    const offen = istOffen(a);
+    const wahl = meineWahl(a.id);
+    const { counts, gesamt } = zaehle(a.id, a.optionen);
+    const zeigeErgebnis = wahl !== null || !offen;
+    return (
+      <section class="ab" id={`a-${a.id}`}>
+        <header class="ab-kopf">
+          <div>
+            <strong class="ab-titel">{a.titel}</strong>
+            {a.beschreibung && <span class="ab-sub">{a.beschreibung}</span>}
+          </div>
+          <span class:list={['abzeichen', offen ? 'abzeichen--ok' : 'abzeichen--gefahr']}>
+            {offen ? 'offen' : 'geschlossen'}
+          </span>
+        </header>
+        <p class="ab-meta">
+          {gesamt} {gesamt === 1 ? 'Stimme' : 'Stimmen'}
+          {a.ende && ` · Ende ${datum(a.ende)}`}
+          {wahl !== null && ` · du hast „${a.optionen[wahl]}" gewählt`}
+        </p>
+
+        {offen && wahl === null ? (
+          <form method="post" action="/mitglieder/abstimmungen/stimme" class="ab-wahl">
+            <input type="hidden" name="abstimmung" value={a.id} />
+            {a.optionen.map((opt, i) => (
+              <button class="wahl-knopf" type="submit" name="option_index" value={i}>{opt}</button>
+            ))}
+          </form>
+        ) : (
+          <ul class="ergebnis">
+            {a.optionen.map((opt, i) => {
+              const n = counts[i];
+              const pct = gesamt > 0 ? Math.round((n / gesamt) * 100) : 0;
+              return (
+                <li class:list={['erg-zeile', { 'erg-meine': wahl === i }]}>
+                  <div class="erg-kopf"><span>{opt}{wahl === i ? ' ✓' : ''}</span><span>{n} · {pct}%</span></div>
+                  <div class="erg-bar"><div class="erg-fuell" style={`width:${pct}%`}></div></div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {vorstand && (
+          <form method="post" action="/mitglieder/abstimmungen/status" class="ab-admin">
+            <input type="hidden" name="abstimmung" value={a.id} />
+            <input type="hidden" name="status" value={offen ? 'geschlossen' : 'offen'} />
+            <button class="knopf-sek" type="submit">{offen ? 'Abstimmung schließen' : 'Wieder öffnen'}</button>
+          </form>
+        )}
+      </section>
+    );
+  })}
+</Basis>
+
+<style>
+  .ab {
+    max-width: var(--mass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.3rem;
+    margin: 0 0 1rem;
+    background: var(--bg-rein);
+  }
+  .ab-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+  .ab-titel { font-family: var(--font-display); font-size: 1.15rem; display: block; }
+  .ab-sub { color: var(--ink-soft); font-size: 0.92rem; }
+  .ab-meta { color: var(--ink-soft); font-size: 0.9rem; margin: 0.4rem 0 0.9rem; }
+  .ab-wahl { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .wahl-knopf {
+    font: inherit; cursor: pointer;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--bg-rein);
+    color: var(--ink);
+  }
+  .wahl-knopf:hover { background: var(--line-soft); }
+  .ergebnis { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  .erg-kopf { display: flex; justify-content: space-between; font-size: 0.93rem; margin-bottom: 0.2rem; }
+  .erg-bar { height: 0.7rem; background: var(--line-soft); border-radius: 999px; overflow: hidden; }
+  .erg-fuell { height: 100%; background: var(--accent); border-radius: 999px; }
+  .erg-meine .erg-kopf { font-weight: 600; }
+  .erg-meine .erg-fuell { background: var(--brand); }
+  .ab-admin { margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px dashed var(--line); }
+</style>

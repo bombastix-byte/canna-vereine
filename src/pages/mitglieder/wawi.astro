@@ -315,6 +315,7 @@ const statusVariante: Record<string, string> = {
               Pflanzen: {pflanzenVon(c.id).filter((p) => p.status === 'wachsend').length} wachsend
               {' / '}{pflanzenVon(c.id).length} gesamt
             </summary>
+            <p style="margin:0.5rem 0;"><a href={`/mitglieder/wawi/etiketten/${c.id}`}>→ QR-Etiketten für diese Pflanzen drucken</a></p>
             <ul class="pflanzenliste">
               {pflanzenVon(c.id).map((p) => (
                 <li class:list={['pflanze', `pf-${p.status}`]}>

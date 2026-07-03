@@ -1,0 +1,106 @@
+---
+import Basis from '../../../../layouts/Basis.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
+import { darfAnbau } from '../../../../lib/rollen';
+import QRCode from 'qrcode-svg';
+import { site } from '../../../../config';
+
+// Druckbare QR-Etiketten je Pflanze einer Charge. QR-Inhalt = Pflanzennummer
+// (scanbar). Druckt ueber den OS-Dialog auf jedes Etikettenblatt/Gerät.
+// Alternativ direkt an den Netzwerk-Etikettendrucker (Knopf unten).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const { id } = Astro.params;
+let charge;
+try {
+  charge = await pb.collection('chargen').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/wawi', 303);
+}
+
+interface Pflanze { id: string; nummer: string; status?: string }
+let pflanzen: Pflanze[] = [];
+try {
+  pflanzen = (await pb.collection('pflanzen').getFullList({ filter: `charge_ref="${id}"`, sort: 'nummer' })) as Pflanze[];
+} catch {
+  pflanzen = [];
+}
+// Vernichtete Pflanzen brauchen kein Etikett.
+const aktive = pflanzen.filter((p) => p.status !== 'vernichtet');
+
+const qr = (text: string) =>
+  new QRCode({ content: text, width: 96, height: 96, padding: 0, ecl: 'M', join: true }).svg();
+---
+
+<Basis titel={`Etiketten ${charge.charge_nr ?? ''}`} beschreibung="QR-Etiketten je Pflanze drucken.">
+  {Astro.url.searchParams.get('gedruckt') && <p class="hinweis" role="status" style="max-width:var(--mass);">An Etikettendrucker gesendet.</p>}
+  {Astro.url.searchParams.get('druckfehler') && <p class="hinweis hinweis--fehler" style="max-width:var(--mass);">Drucker nicht erreichbar. Bitte über den Druckdialog drucken.</p>}
+
+  <div class="aktionen">
+    <button class="knopf" type="button" onclick="window.print()">Etiketten drucken</button>
+    <form method="post" action={`/mitglieder/wawi/etiketten/${charge.id}/zpl`} style="display:inline;">
+      <button class="knopf-sek" type="submit">An Etikettendrucker senden</button>
+    </form>
+    <a class="knopf-sek" href="/mitglieder/wawi">Zurück</a>
+  </div>
+
+  <p class="kopf-info">
+    <strong>{charge.sorte_name}</strong> · Charge {charge.charge_nr} · {aktive.length} Pflanzen
+  </p>
+
+  {aktive.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine aktiven Pflanzen in dieser Charge.</p>
+  ) : (
+    <div class="bogen">
+      {aktive.map((p) => (
+        <div class="etikett">
+          <div class="et-qr" set:html={qr(p.nummer)} />
+          <div class="et-text">
+            <span class="et-sorte">{charge.sorte_name}</span>
+            <span class="et-nr">{p.nummer}</span>
+            <span class="et-charge">{site.kurzname}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</Basis>
+
+<style>
+  .aktionen { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin: 1rem 0 1rem; max-width: var(--mass); }
+  .kopf-info { color: var(--ink-soft); margin: 0 0 1rem; }
+  .bogen {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.5rem;
+    max-width: var(--mass);
+  }
+  .etikett {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.6rem;
+    background: #fff;
+  }
+  .et-qr { flex: none; width: 60px; height: 60px; }
+  .et-qr :global(svg) { width: 60px; height: 60px; display: block; }
+  .et-text { display: flex; flex-direction: column; min-width: 0; }
+  .et-sorte { font-size: 0.72rem; color: #333; }
+  .et-nr { font-weight: 700; font-size: 0.92rem; color: #000; }
+  .et-charge { font-size: 0.66rem; color: #666; }
+
+  @media print {
+    :global(body *) { visibility: hidden; }
+    .bogen, .bogen * { visibility: visible; }
+    .bogen { position: absolute; top: 0; left: 0; width: 100%; gap: 2mm; }
+    .aktionen, .kopf-info { display: none; }
+    .etikett { break-inside: avoid; }
+  }
+</style>

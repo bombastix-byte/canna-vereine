@@ -77,3 +77,31 @@ export function belegZpl(d: BelegDaten): string {
   const hoehe = y + 20;
   return `^XA\n^CI28\n^PW496\n^LL${hoehe}\n${zeilen.join('\n')}\n^XZ\n`;
 }
+
+export interface PflanzenEtikett {
+  verein?: string;
+  charge?: string;
+  sorte?: string;
+  nummer: string;
+}
+
+/**
+ * Kleines Pflanzen-Etikett (~50 mm) mit QR-Code (Inhalt = Pflanzennummer,
+ * scanbar) und Klartext. Ein QR pro Pflanze zur eindeutigen Zuordnung.
+ */
+export function pflanzeZpl(d: PflanzenEtikett): string {
+  const nr = z(d.nummer);
+  const zeilen = [
+    `^FO180,20^A0N,26,26^FD${z(d.sorte)}^FS`,
+    `^FO180,54^A0N,30,30^FD${nr}^FS`,
+    `^FO180,92^A0N,22,22^FDCharge ${z(d.charge)}^FS`,
+    // QR links: ^BQN,2,6 -> Modell 2, Vergroesserung 6; FDLA, = normaler Text
+    `^FO20,20^BQN,2,6^FDLA,${nr}^FS`,
+  ];
+  return `^XA\n^CI28\n^PW496\n^LL150\n${zeilen.join('\n')}\n^XZ\n`;
+}
+
+/** Alle Pflanzen-Etiketten einer Charge hintereinander (ein Druckauftrag). */
+export function pflanzenZplStapel(pflanzen: PflanzenEtikett[]): string {
+  return pflanzen.map(pflanzeZpl).join('');
+}

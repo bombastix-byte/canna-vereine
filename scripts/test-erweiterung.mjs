@@ -9,6 +9,7 @@ import { hotp, totpPruefen, zeitschritt, base32Encode, base32Decode, neuesSecret
 import { zyklustag, aktuellePhase, istFaelligAm, offeneSchritte, kommendeSchritte } from '../src/lib/anbauplan.ts';
 import { mailAufnahme, mailAntragEingang } from '../src/lib/mail-vorlagen.ts';
 import { buildPain008, normIban, sepaName, centStr, xmlEsc } from '../src/lib/sepa.ts';
+import { pflanzeZpl, pflanzenZplStapel } from '../src/lib/zpl.ts';
 
 let fehler = 0;
 function pruefe(name, ist, soll) {
@@ -174,6 +175,15 @@ pruefeWahr('pain.008 fehlende BIC -> NOTPROVIDED', sepa.xml.includes('NOTPROVIDE
 let warf = false;
 try { buildPain008({ msgId: 'x', creDtTm: 'x', glaeubiger: { name: 'a', iban: 'b', glaeubigerId: 'c' }, seqTyp: 'RCUR', ausfuehrungsdatum: '2026-07-15', verwendungszweck: 'x', mandate: [] }); } catch { warf = true; }
 pruefeWahr('pain.008 wirft bei 0 Mandaten', warf);
+
+// --- Pflanzen-Etikett (ZPL mit QR) ---
+const pz = pflanzeZpl({ verein: 'CSC', charge: '2026-0006', sorte: 'CBD Aurora', nummer: '2026-0006-P03' });
+pruefeWahr('Pflanzen-ZPL beginnt ^XA/endet ^XZ', pz.startsWith('^XA') && pz.trim().endsWith('^XZ'));
+pruefeWahr('Pflanzen-ZPL enthaelt QR-Befehl (^BQ)', pz.includes('^BQN'));
+pruefeWahr('Pflanzen-ZPL QR-Inhalt = Nummer', pz.includes('FDLA,2026-0006-P03'));
+pruefeWahr('Pflanzen-ZPL enthaelt Sorte', pz.includes('CBD Aurora'));
+const stapel = pflanzenZplStapel([{ nummer: 'P1' }, { nummer: 'P2' }, { nummer: 'P3' }]);
+pruefe('ZPL-Stapel = 3 Etiketten', (stapel.match(/\^XZ/g) ?? []).length, 3);
 
 console.log(`\n${fehler === 0 ? 'ALLE ERWEITERUNGS-TESTS BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);
 process.exit(fehler ? 1 : 0);
