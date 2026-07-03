@@ -101,7 +101,7 @@ const kontrolle = await ensureAnleitung({
   kategorie: 'anbau',
   zweck: 'Klima im Anbauraum prüfen und Frischluft sicherstellen.',
   schritte: [
-    'Thermometer/Hygrometer ablesen (Soll: 20-26 °C, 40-60 % Luftfeuchte).',
+    'Thermometer/Hygrometer ablesen (Soll: 23-29 °C, 50-60 % Luftfeuchte).',
     'Werte in die Klimaliste eintragen.',
     'Fenster/Abluft 10 Minuten öffnen bzw. laufen lassen.',
     'Sichtkontrolle: Blattunterseiten auf Schädlinge prüfen.',
@@ -145,17 +145,59 @@ const wiegen = await ensureAnleitung({
 await ensureAnleitung({
   titel: 'Ausgabe am Tresen',
   kategorie: 'ausgabe',
-  zweck: 'Abgabe an Mitglieder korrekt buchen - die gesetzlichen Grenzen prüft das System.',
+  zweck: 'Offizielle Tresen-Checkliste des Vereins - Abgabe an Mitglieder korrekt und vollstaendig abwickeln.',
   schritte: [
-    'Im Mitgliederbereich anmelden und "Ausgabe (Tresen)" öffnen.',
-    'Mitglied wählen und die Statuskarte lesen (was darf es heute noch).',
-    'Sorten und Mengen eintragen - mehrere Sorten in einem Vorgang buchen.',
-    '"Alles buchen" klicken, Beleg drucken und der Tüte beilegen.',
-    'Gesamtbeitrag an der JTL-Kasse kassieren.',
-    'Ausweis nur bei Unsicherheit über die Identität verlangen.',
+    'Mitgliedsnummer erfragen oder zeigen lassen, ggf. Ausweis pruefen.',
+    'Wie alt ist die Person? Unter 21?',
+    'Wieviel darf die Person diesen Monat noch von uns beziehen? (im System pruefen)',
+    'Fragen, was die Person gern moechte und wieviel.',
+    'In die Kasse eingeben.',
+    'Im System (Mitgliederbereich, "Ausgabe (Tresen)") eintragen.',
+    'Speichern.',
+    'Alles ordentlich abwiegen.',
+    'Mit richtigem Etikett beschriften.',
+    'Geld entgegennehmen und pruefen.',
+    'Wechselgeld und Ware aushaendigen.',
+    'Noch mal speichern.',
+    'Vorgang abgeschlossen.',
   ].join('\n'),
-  hinweise: 'NIE am System vorbei abgeben - auch nicht "auf später". Blockt das System, ist die Abgabe gesetzlich nicht erlaubt.',
+  hinweise: 'NIE am System vorbei abgeben - auch nicht "auf spaeter". Blockt das System, ist die Abgabe gesetzlich nicht erlaubt. Quelle: gedruckte Tresen-Checkliste des Cannabis-Verein Goerlitz e. V.',
   benoetigte_rolle: 'ausgabe',
+});
+
+await ensureAnleitung({
+  titel: 'Grundregeln im Labor',
+  kategorie: 'anbau',
+  zweck: 'Grundlegende Verhaltens- und Hygieneregeln fuer den Aufenthalt im Anbauraum (Labor).',
+  schritte: [
+    'Kein Essen/Trinken im Labor.',
+    'Keine Handschuhe in die gelbe Tonne.',
+    'Nur mit Haus- und Handschuhen in die Zelte.',
+    'Fenster geschlossen halten.',
+    'Labortuer geschlossen halten (wegen Klima).',
+    'Messglaeser putzen.',
+    'Entfeuchter checken!',
+    'Temperatur checken: 23-29 °C.',
+    'Luftfeuchtigkeit checken: 50-60 %.',
+    'CO2 kontrollieren.',
+    'Arbeitsflaechen am Abend reinigen.',
+    'Bluten nur mit Handschuhen beruehren.',
+    'Beim Ernten Handschuhe tragen.',
+  ].join('\n'),
+  hinweise: 'Entfeuchter-Check ist auf dem Aushang extra mit Ausrufezeichen markiert - bei Ausfall droht Schimmel, sofort pruefen und melden. Quelle: Whiteboard-Aushang im Labor.',
+  benoetigte_rolle: 'anbau',
+});
+
+await ensureAnleitung({
+  titel: 'Werkzeuge und Geraete reinigen',
+  kategorie: 'lager',
+  zweck: 'Werkzeuge und Geraete bleiben hygienisch, funktionsfaehig und auffindbar.',
+  schritte: [
+    'Werkzeug/Geraet (z. B. Schere, Schraubendreher, Ventilator, Zubehoer) nach jeder Nutzung gruendlich reinigen.',
+    'Gereinigtes Werkzeug an seinen festen Platz im Regal/Schrank zuruecklegen.',
+  ].join('\n'),
+  hinweise: 'Aushang im Lager (englisch): "Tools and equipment must be cleaned after each use - thoroughly clean and return to its original place."',
+  benoetigte_rolle: 'anbau',
 });
 
 // ---------- Dienste verknuepfen ----------
