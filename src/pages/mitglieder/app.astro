@@ -1,0 +1,80 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { site } from '../../config';
+import { stat } from 'node:fs/promises';
+import { APK_STANDARD_PFAD } from './app/apk';
+
+// Vereins-App zum Mitnehmen: Android als direkte APK (kein App-Store noetig),
+// iPhone ueber die installierbare Website (PWA). Der APK-Download selbst
+// laeuft ueber /mitglieder/app/apk - nur fuer angemeldete Mitglieder.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { mitglied } = ergebnis;
+
+// Gibt es die APK auf dem Server schon? Sonst Hinweis statt totem Link.
+let apkDa = false;
+let apkGroesse = '';
+try {
+  const s = await stat(process.env.APK_PFAD ?? APK_STANDARD_PFAD);
+  apkDa = true;
+  apkGroesse = (s.size / (1024 * 1024)).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' MB';
+} catch {
+  apkDa = false;
+}
+---
+
+<Basis titel="Vereins-App" beschreibung="Die App des Vereins auf dem eigenen Handy installieren.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Vereins-App</h1>
+  <p class="einleitung">
+    Alles aus dem Mitgliederbereich als App auf dem Handy - mit eigenem Symbol
+    auf dem Startbildschirm. Die App gibt es bewusst nicht in den App-Stores,
+    sondern nur hier für Mitglieder von {site.vereinsname}.
+  </p>
+
+  <section class="kasten" style="margin-bottom:1rem;">
+    <h2 style="margin-top:0;">Android</h2>
+    {apkDa ? (
+      <>
+        <p>
+          Datei herunterladen, antippen und der Installation zustimmen. Android
+          fragt dabei einmalig, ob Apps aus dieser Quelle installiert werden
+          dürfen - das ist normal, weil die App direkt vom Verein kommt und
+          nicht über den Play Store.
+        </p>
+        <p>
+          <a class="knopf" href="/mitglieder/app/apk">App herunterladen (APK, {apkGroesse})</a>
+        </p>
+        <ol style="margin:0.6rem 0 0; padding-left:1.2rem;">
+          <li>Download antippen (Benachrichtigung oder Ordner „Downloads").</li>
+          <li>Falls gefragt: „Aus dieser Quelle installieren" erlauben.</li>
+          <li>„Installieren" bestätigen - fertig, die App liegt auf dem Startbildschirm.</li>
+        </ol>
+      </>
+    ) : (
+      <p class="hinweis">Die App-Datei liegt noch nicht auf dem Server. Schau in Kürze wieder vorbei - bis dahin funktioniert der Mitgliederbereich wie gewohnt im Browser.</p>
+    )}
+  </section>
+
+  <section class="kasten">
+    <h2 style="margin-top:0;">iPhone / iPad</h2>
+    <p>
+      Auf dem iPhone läuft die Vereins-App als installierbare Website - ohne
+      Download, mit denselben Funktionen:
+    </p>
+    <ol style="margin:0.6rem 0 0; padding-left:1.2rem;">
+      <li>Diese Website in <strong>Safari</strong> öffnen.</li>
+      <li>Teilen-Symbol antippen (Quadrat mit Pfeil nach oben).</li>
+      <li><strong>„Zum Home-Bildschirm"</strong> wählen und bestätigen.</li>
+    </ol>
+    <p style="margin-bottom:0;">
+      Danach startet die App wie jede andere über ihr Symbol - auf Wunsch auch
+      mit Mitteilungen (unter <a href="/mitglieder/sicherheit">Sicherheit</a> aktivierbar).
+    </p>
+  </section>
+</Basis>

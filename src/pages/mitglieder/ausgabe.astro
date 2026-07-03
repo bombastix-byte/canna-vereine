@@ -151,15 +151,24 @@ const schnellMengen = [1, 2, 3, 5, 10];
 
   <section class="schritt" aria-label="Schritt 1">
     <h2 class="schritt-titel"><span class="snr">1</span> Mitglied wählen</h2>
-    <form class="kasten" method="get" action="/mitglieder/ausgabe" style="margin-bottom:0.8rem;">
+    <form class="kasten" method="get" action="/mitglieder/ausgabe" style="margin-bottom:0.8rem;" id="nr-form">
       <div class="feld">
         <label for="nr">Schnell: Mitgliedsnummer (tippen oder Ausweis scannen)</label>
         <input class="eingabe" id="nr" name="nr" type="text" inputmode="text"
           placeholder="z. B. M-101" value={nrParam} autocomplete="off" />
       </div>
       <button class="knopf" type="submit">Laden</button>
+      <button class="knopf-sek" type="button" id="qr-kamera" hidden>QR mit Kamera scannen</button>
       {nrNichtGefunden && <p style="color:var(--gefahr);font-size:0.92rem;margin:0.6rem 0 0;">Nummer „{nrParam}" nicht gefunden.</p>}
     </form>
+    <div class="scan-overlay" id="scan-overlay" hidden>
+      <div class="scan-kasten">
+        <p class="scan-hinweis">QR-Code des Mitgliedsausweises vor die Kamera halten.</p>
+        <video id="scan-video" playsinline autoplay muted></video>
+        <p class="scan-fehler" id="scan-fehler" hidden></p>
+        <button class="knopf-sek" type="button" id="scan-abbruch">Abbrechen</button>
+      </div>
+    </div>
     <form class="kasten" method="get" action="/mitglieder/ausgabe">
       <div class="feld">
         <label for="mitglied-sel">…oder aus der Liste wählen</label>
@@ -329,7 +338,120 @@ const schnellMengen = [1, 2, 3, 5, 10];
   });
 </script>
 
+<script is:inline>
+  // Kamera-QR-Scan fuer den Mitgliedsausweis (QR-Inhalt = Mitgliedsnummer).
+  // Nutzt die BarcodeDetector-API des Browsers/WebViews (Android/Chrome und
+  // die Vereins-App). Wo sie fehlt (z. B. iOS-Safari), bleibt der Knopf
+  // verborgen - Tippen und USB-Scanner funktionieren immer.
+  (() => {
+    const knopf = document.getElementById('qr-kamera');
+    const overlay = document.getElementById('scan-overlay');
+    const video = document.getElementById('scan-video');
+    const fehlerEl = document.getElementById('scan-fehler');
+    const abbruch = document.getElementById('scan-abbruch');
+    const nrFeld = document.getElementById('nr');
+    const nrForm = document.getElementById('nr-form');
+    if (!knopf || !overlay || !video || !nrFeld || !nrForm) return;
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) return;
+    knopf.hidden = false;
+
+    let stream = null;
+    let aktiv = false;
+
+    const zu = () => {
+      aktiv = false;
+      overlay.hidden = true;
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+      video.srcObject = null;
+    };
+
+    const zeigeFehler = (text) => {
+      if (!fehlerEl) return;
+      fehlerEl.textContent = text;
+      fehlerEl.hidden = false;
+    };
+
+    knopf.addEventListener('click', async () => {
+      if (fehlerEl) fehlerEl.hidden = true;
+      overlay.hidden = false;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false,
+        });
+      } catch {
+        zeigeFehler('Kamera nicht verfügbar oder Zugriff abgelehnt.');
+        return;
+      }
+      video.srcObject = stream;
+      aktiv = true;
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      const pruefe = async () => {
+        if (!aktiv) return;
+        try {
+          const codes = video.readyState >= 2 ? await detector.detect(video) : [];
+          const wert = codes[0]?.rawValue?.trim();
+          if (wert) {
+            nrFeld.value = wert;
+            zu();
+            nrForm.submit();
+            return;
+          }
+        } catch {
+          // Einzelner Frame nicht lesbar - einfach weiterprobieren.
+        }
+        setTimeout(pruefe, 150);
+      };
+      pruefe();
+    });
+
+    abbruch?.addEventListener('click', zu);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) zu(); });
+  })();
+</script>
+
 <style>
+  .scan-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .scan-overlay[hidden] {
+    display: none;
+  }
+  .scan-kasten {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 1rem;
+    max-width: 26rem;
+    width: 100%;
+    display: grid;
+    gap: 0.8rem;
+    justify-items: center;
+  }
+  .scan-hinweis {
+    margin: 0;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+  #scan-video {
+    width: 100%;
+    max-height: 60vh;
+    border-radius: var(--radius);
+    background: #000;
+  }
+  .scan-fehler {
+    margin: 0;
+    color: var(--gefahr);
+    font-size: 0.92rem;
+    text-align: center;
+  }
   .schritt {
     margin: 0 0 1.6rem;
     max-width: var(--mass);

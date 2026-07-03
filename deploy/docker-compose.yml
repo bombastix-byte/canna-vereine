@@ -34,6 +34,11 @@ services:
     environment:
       PB_URL: http://pb-goerlitz:8090
       PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ}
+      APK_PFAD: /downloads/canna-verein.apk
+    volumes:
+      # Android-APK fuer den Mitglieder-Download (Seite /mitglieder/app).
+      # Datei aus dem GitHub-Actions-Build nach deploy/downloads/ legen.
+      - ./downloads:/downloads:ro
     depends_on:
       - pb-goerlitz
   pb-goerlitz:

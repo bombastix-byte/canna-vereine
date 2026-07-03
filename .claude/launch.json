@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 4321
+    },
+    {
+      "name": "pocketbase",
+      "runtimeExecutable": "pb\\pocketbase.exe",
+      "runtimeArgs": ["serve", "--http=127.0.0.1:8090"],
+      "port": 8090
     }
   ]
 }
