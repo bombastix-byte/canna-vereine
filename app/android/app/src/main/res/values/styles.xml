@@ -13,10 +13,16 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Android 15 (SDK 35) erzwingt Edge-to-Edge, wodurch der WebView
+             hinter die Statusleiste laeuft und der Kopf verdeckt wird. Wir
+             deaktivieren die Erzwingung -> Inhalt beginnt unter der
+             Statusleiste. Auf aelteren Geraeten wird das Attribut ignoriert. -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>
 </resources>

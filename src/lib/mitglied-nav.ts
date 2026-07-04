@@ -1,7 +1,16 @@
 // Zentrale Definition der Mitglieder-Navigation. Wird von der Seitenleiste
 // (Layout "sidebar") und der klassischen MitgliedNav-Leiste (Layout
 // "standard"/"zentriert") gemeinsam genutzt - ein Ort fuer Punkte + Rechte.
-import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from './rollen';
+import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from './rollen';
+
+/**
+ * Startseite direkt nach der Anmeldung. Einfache Mitglieder landen auf dem
+ * digitalen Ausweis (am Tresen sofort vorzeigbar); Personal auf dem
+ * Dashboard „Aktuelles".
+ */
+export function startseiteFuer(rollen?: string[]): string {
+  return istPersonal(rollen) ? '/mitglieder/bereich' : '/mitglieder/ausweis';
+}
 
 export interface NavPunkt {
   label: string;

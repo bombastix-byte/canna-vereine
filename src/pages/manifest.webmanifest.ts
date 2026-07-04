@@ -15,7 +15,9 @@ export const GET: APIRoute = () => {
     short_name: anonym ? 'Mitglieder' : site.kurzname,
     description: anonym ? 'Interner Mitgliederbereich' : `Mitglieder-App der ${site.vereinsname}`,
     lang: 'de',
-    start_url: '/mitglieder/bereich',
+    // Einstieg ueber die rollengerechte Weiterleitung: /mitglieder schickt
+    // angemeldete Mitglieder auf den Ausweis, Personal aufs Dashboard.
+    start_url: '/mitglieder',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

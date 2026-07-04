@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { neuePb, AUTH_COOKIE, PENDING_COOKIE } from '../../lib/pb';
+import { alsRollen } from '../../lib/rollen';
+import { startseiteFuer } from '../../lib/mitglied-nav';
 
 // Serverseitiger Login-Endpunkt. Authentifiziert gegen PocketBase und legt
 // den Token in einem httpOnly-Cookie ab. Keine Anmeldedaten im Browser-JS.
@@ -54,5 +56,5 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     maxAge: 60 * 60 * 24 * 7, // eine Woche
   });
 
-  return redirect('/mitglieder/bereich', 303);
+  return redirect(startseiteFuer(alsRollen(record.rollen)), 303);
 };

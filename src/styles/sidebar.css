@@ -20,7 +20,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.7rem 1rem;
+  /* Safe-Area: nicht unter Statusleiste/Notch laufen (iOS-PWA + Android). */
+  padding: calc(0.7rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) 0.7rem calc(1rem + env(safe-area-inset-left, 0px));
   background: var(--bg-rein);
   border-bottom: 1px solid var(--line);
   position: sticky;
@@ -48,14 +49,16 @@
 [data-layout='sidebar'] .sb-sidebar {
   position: fixed;
   top: 0;
-  left: 0;
+  /* Schublade auf der rechten Seite (gleiche Seite wie der Burger). */
+  right: 0;
+  left: auto;
   height: 100%;
   width: 82%;
   max-width: 300px;
-  padding: 1.6rem 1.3rem;
+  padding: calc(1.6rem + env(safe-area-inset-top, 0px)) calc(1.3rem + env(safe-area-inset-right, 0px)) 1.6rem 1.3rem;
   background: var(--bg-rein);
-  border-right: 1px solid var(--line);
-  transform: translateX(-100%);
+  border-left: 1px solid var(--line);
+  transform: translateX(100%);
   transition: transform 0.22s ease;
   z-index: 50;
   overflow-y: auto;
@@ -212,11 +215,16 @@
     transition: none;
     box-shadow: none;
     padding: 2rem 1.4rem;
+    /* Seitenleiste rechts (statt links): Inhalt links, Navigation rechts. */
+    order: 2;
+    border-left: 1px solid var(--line);
+    border-right: 0;
   }
   [data-layout='sidebar'] .sb-haupt {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    order: 1;
   }
   [data-layout='sidebar'] .sb-haupt .fuss {
     margin-top: auto;

@@ -2,15 +2,17 @@
 import Basis from '../../layouts/Basis.astro';
 import { site } from '../../config';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { startseiteFuer } from '../../lib/mitglied-nav';
 
 // Serverseitig, damit Status-/Fehlermeldungen und bereits angemeldete
 // Mitglieder behandelt werden können.
 export const prerender = false;
 
-// Bereits angemeldet? Direkt in den Bereich.
+// Bereits angemeldet? Direkt zur rollengerechten Startseite (Mitglieder auf
+// den Ausweis, Personal aufs Dashboard).
 const bereits = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (bereits) {
-  return Astro.redirect('/mitglieder/bereich', 303);
+  return Astro.redirect(startseiteFuer(bereits.mitglied.rollen), 303);
 }
 
 const fehler = Astro.url.searchParams.get('fehler');

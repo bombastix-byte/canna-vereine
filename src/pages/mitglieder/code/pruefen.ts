@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { neuePb, AUTH_COOKIE, PENDING_COOKIE } from '../../../lib/pb';
 import { totpPruefen } from '../../../lib/totp';
+import { alsRollen } from '../../../lib/rollen';
+import { startseiteFuer } from '../../../lib/mitglied-nav';
 
 // Prueft den TOTP-Code (Schritt 2 der Anmeldung). Bei Erfolg wird der Token
 // aus dem Zwischen-Cookie zum echten Auth-Cookie; der genutzte Zeitschritt
@@ -17,9 +19,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const pb = neuePb();
   pb.authStore.save(pending, null);
   let userId = '';
+  let rollen: string[] = [];
   try {
     const { record } = await pb.collection('users').authRefresh();
     userId = record.id;
+    rollen = alsRollen(record.rollen);
   } catch {
     cookies.delete(PENDING_COOKIE, { path: '/' });
     return redirect('/mitglieder/code?fehler=abgelaufen', 303);
@@ -53,5 +57,5 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
   });
-  return redirect('/mitglieder/bereich', 303);
+  return redirect(startseiteFuer(rollen), 303);
 };
