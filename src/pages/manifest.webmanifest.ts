@@ -6,10 +6,14 @@ import { site } from '../config';
 export const prerender = true;
 
 export const GET: APIRoute = () => {
+  // Ohne oeffentlichen Auftritt neutraler App-Name: das Manifest ist oeffentlich
+  // abrufbar, und ein generischer Name auf dem Startbildschirm ist fuer
+  // Mitglieder ohnehin diskreter (verraet keine Vereinszugehoerigkeit).
+  const anonym = site.oeffentlich === false;
   const manifest = {
-    name: site.vereinsname,
-    short_name: site.kurzname,
-    description: `Mitglieder-App der ${site.vereinsname}`,
+    name: anonym ? 'Mitgliederbereich' : site.vereinsname,
+    short_name: anonym ? 'Mitglieder' : site.kurzname,
+    description: anonym ? 'Interner Mitgliederbereich' : `Mitglieder-App der ${site.vereinsname}`,
     lang: 'de',
     start_url: '/mitglieder/bereich',
     scope: '/',

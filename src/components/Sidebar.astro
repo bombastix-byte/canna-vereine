@@ -21,15 +21,30 @@ try {
   mitglied = null;
 }
 const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen) : [];
+
+// Anonyme Eingangs-Ansicht: nicht angemeldet UND kein oeffentlicher Auftritt.
+// Dann verraet die Startseite weder Vereinsname noch Ort; Impressum/Daten-
+// schutz bleiben unter ihrer URL erreichbar, sind aber nicht sichtbar
+// verlinkt (analog App: Impressum erst im Inneren).
+const anonym = !mitglied && site.oeffentlich === false;
 ---
 
-<a class="sb-brand sb-brand--side" href={pfad('/')}>
-  <Mark class="sb-mark" />
-  <span class="sb-brand__text">
-    <span class="sb-name">{site.kurzname}</span>
-    <span class="sb-stadt">Anbauvereinigung in {site.stadt}</span>
+{anonym ? (
+  <span class="sb-brand sb-brand--side">
+    <Mark class="sb-mark" />
+    <span class="sb-brand__text">
+      <span class="sb-name">Mitgliederbereich</span>
+    </span>
   </span>
-</a>
+) : (
+  <a class="sb-brand sb-brand--side" href={mitglied ? '/mitglieder/bereich' : pfad('/')}>
+    <Mark class="sb-mark" />
+    <span class="sb-brand__text">
+      <span class="sb-name">{site.kurzname}</span>
+      <span class="sb-stadt">Anbauvereinigung in {site.stadt}</span>
+    </span>
+  </a>
+)}
 
 {mitglied ? (
   <>
@@ -62,9 +77,10 @@ const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen) : [];
       <a href={pfad('/datenschutz')}>Datenschutz</a>
     </div>
   </>
-) : site.oeffentlich === false ? (
+) : anonym ? (
   <>
-    {/* Kein oeffentlicher Auftritt: nur Anmeldung + Pflichtseiten. */}
+    {/* Anonyme Startseite: nur Anmeldung, keine Impressums-/Vereinshinweise.
+        Impressum/Datenschutz bleiben ueber ihre URL erreichbar. */}
     <nav class="sb-nav" aria-label="Anmeldung">
       <ul>
         <li>
@@ -72,10 +88,6 @@ const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen) : [];
         </li>
       </ul>
     </nav>
-    <div class="sb-info">
-      <a href={pfad('/impressum')}>Impressum</a>
-      <a href={pfad('/datenschutz')}>Datenschutz</a>
-    </div>
   </>
 ) : (
   <>

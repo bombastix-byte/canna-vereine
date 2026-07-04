@@ -27,6 +27,7 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
 <Basis
   titel="Mitgliederbereich"
   beschreibung="Anmeldung zum internen Mitgliederbereich."
+  anonym={site.oeffentlich === false}
 >
   <div class="seitenkopf">
     <p class="eyebrow">Mitgliederbereich</p>
