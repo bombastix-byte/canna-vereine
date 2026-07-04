@@ -2,6 +2,10 @@
 import Basis from '../layouts/Basis.astro';
 import { site } from '../config';
 
+// Kein oeffentlicher Auftritt (Vereinskonzept: keine Website): alles zur
+// Anmeldung umleiten. Beim statischen Build entsteht eine Redirect-Seite.
+if (site.oeffentlich === false) return Astro.redirect('/mitglieder');
+
 // Beitrittsantrag. Bewusst nuechtern (KCanG Paragraf 6: keine Werbung) -
 // reine Sachinformation zum Aufnahmeverfahren plus Formular. Antraege landen
 // in der Warteliste des Vorstands.

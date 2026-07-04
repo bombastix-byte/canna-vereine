@@ -8,6 +8,10 @@ export const goerlitz: SiteConfig = {
   // App-Shell: feste Seitenleiste am Desktop, Hamburger-Schublade am Handy.
   // Angemeldete Mitglieder sehen dort die komplette Mitglieder-Navigation.
   layout: 'sidebar',
+  // Vereinskonzept laut Anmeldung: KEIN oeffentlicher Web-Auftritt. Nur
+  // Login, Impressum und Datenschutz sind erreichbar; alles andere leitet
+  // zur Anmeldung um. Praevention & Beratung lebt im Mitgliederbereich.
+  oeffentlich: false,
   //   = geschütztes Leerzeichen: "Görlitz e. V." bricht nie auseinander.
   vereinsname: 'Anbauvereinigung Görlitz e. V.', // TODO: exakter Name laut Satzung
   kurzname: 'Anbauvereinigung Görlitz',

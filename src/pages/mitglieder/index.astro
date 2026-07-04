@@ -1,5 +1,6 @@
 ---
 import Basis from '../../layouts/Basis.astro';
+import { site } from '../../config';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 
 // Serverseitig, damit Status-/Fehlermeldungen und bereits angemeldete
@@ -68,7 +69,11 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
   </form>
 
   <p style="color:var(--ink-soft);font-size:0.95rem;">
-    Zugangsdaten erhalten Mitglieder vom Vorstand. Bei Problemen wenden Sie sich
-    an die unter <a href="/kontakt">Kontakt</a> genannte Adresse.
+    Zugangsdaten erhalten Mitglieder vom Vorstand.
+    {site.oeffentlich === false ? (
+      <>Bei Problemen hilft der Vorstand persönlich im Vereinsraum weiter.</>
+    ) : (
+      <>Bei Problemen wenden Sie sich an die unter <a href="/kontakt">Kontakt</a> genannte Adresse.</>
+    )}
   </p>
 </Basis>

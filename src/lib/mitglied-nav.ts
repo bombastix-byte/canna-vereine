@@ -17,7 +17,7 @@ export const MITGLIED_PUNKTE: NavPunkt[] = [
   { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
   { label: 'Helferplan', href: '/mitglieder/helferplan' },
   { label: 'Abstimmungen', href: '/mitglieder/abstimmungen' },
-  { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte'] },
+  { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
   { label: 'Ausweis', href: '/mitglieder/ausweis' },
   { label: 'App', href: '/mitglieder/app' },
   { label: 'Sicherheit', href: '/mitglieder/sicherheit' },

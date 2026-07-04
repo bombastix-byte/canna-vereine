@@ -10,6 +10,9 @@ import { site } from '../../config';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, redirect }) => {
+  // Kein oeffentlicher Auftritt: Antragsannahme deaktiviert (Papierformulare).
+  if (site.oeffentlich === false) return new Response('Nicht verfuegbar.', { status: 404 });
+
   const daten = await request.formData();
 
   // Honeypot: fuellt nur ein Bot aus -> kommentarlos "ok" anzeigen.

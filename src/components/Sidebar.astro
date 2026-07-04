@@ -62,6 +62,21 @@ const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen) : [];
       <a href={pfad('/datenschutz')}>Datenschutz</a>
     </div>
   </>
+) : site.oeffentlich === false ? (
+  <>
+    {/* Kein oeffentlicher Auftritt: nur Anmeldung + Pflichtseiten. */}
+    <nav class="sb-nav" aria-label="Anmeldung">
+      <ul>
+        <li>
+          <a href="/mitglieder" aria-current={hier.startsWith('/mitglieder') ? 'page' : undefined}>Anmelden</a>
+        </li>
+      </ul>
+    </nav>
+    <div class="sb-info">
+      <a href={pfad('/impressum')}>Impressum</a>
+      <a href={pfad('/datenschutz')}>Datenschutz</a>
+    </div>
+  </>
 ) : (
   <>
     <nav class="sb-nav" aria-label="Hauptnavigation">

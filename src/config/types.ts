@@ -44,6 +44,13 @@ export interface SiteConfig {
    * Erst zum Livegang mit echter Domain bewusst auf true stellen.
    */
   indexierbar?: boolean;
+  /**
+   * Gibt es einen oeffentlichen Web-Auftritt? Default TRUE. Bei false
+   * (Vereinskonzept "keine Website") leiten alle oeffentlichen Seiten zur
+   * Anmeldung um; erreichbar bleiben nur Login, Impressum und Datenschutz
+   * (Impressumspflicht gilt auch fuer eine reine Login-Seite).
+   */
+  oeffentlich?: boolean;
   /** vollständiger Vereinsname laut Satzung */
   vereinsname: string;
   /** kurzer Name für Kopfzeile/Titel */
