@@ -1,9 +1,10 @@
 ---
 import Basis from '../layouts/Basis.astro';
 import { site } from '../config';
+import { redirectSplash } from '../lib/redirect-splash';
 // Kein oeffentlicher Auftritt (Vereinskonzept: keine Website): alles zur
 // Anmeldung umleiten. Beim statischen Build entsteht eine Redirect-Seite.
-if (site.oeffentlich === false) return Astro.redirect('/mitglieder');
+if (site.oeffentlich === false) return redirectSplash('/mitglieder', site.theme);
 
 const p = site.praeventionsbeauftragter;
 ---
