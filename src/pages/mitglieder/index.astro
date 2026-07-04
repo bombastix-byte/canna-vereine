@@ -69,12 +69,10 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
     <button class="knopf" type="submit">Anmelden</button>
   </form>
 
-  <p style="color:var(--ink-soft);font-size:0.95rem;">
-    Zugangsdaten erhalten Mitglieder vom Vorstand.
-    {site.oeffentlich === false ? (
-      <>Bei Problemen hilft der Vorstand persönlich im Vereinsraum weiter.</>
-    ) : (
-      <>Bei Problemen wenden Sie sich an die unter <a href="/kontakt">Kontakt</a> genannte Adresse.</>
-    )}
-  </p>
+  {site.oeffentlich !== false && (
+    <p style="color:var(--ink-soft);font-size:0.95rem;">
+      Zugangsdaten erhalten Mitglieder vom Vorstand. Bei Problemen wenden Sie
+      sich an die unter <a href="/kontakt">Kontakt</a> genannte Adresse.
+    </p>
+  )}
 </Basis>

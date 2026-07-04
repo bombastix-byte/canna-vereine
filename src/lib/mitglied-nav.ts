@@ -27,8 +27,8 @@ export const MITGLIED_PUNKTE: NavPunkt[] = [
 export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
   const punkte: NavPunkt[] = [];
   if (darfAusgeben(rollen)) {
-    // Tresen buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
-    punkte.push({ label: 'Tresen', href: '/mitglieder/ausgabe' });
+    // Ausgabe buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
+    punkte.push({ label: 'Ausgabe', href: '/mitglieder/ausgabe' });
   }
   if (darfAnbau(rollen)) {
     punkte.push({ label: 'Anbau heute', href: '/mitglieder/anbau' });

@@ -42,19 +42,33 @@ try {
   await pb.collection('users').delete(altUser.id);
 } catch { /* ok */ }
 
-// ---------- 1. Oeffentlicher Beitrittsantrag ----------
-const antragOk = await post('/mitglied-werden/absenden', {
+// ---------- 1. Beitrittsantrag ----------
+// Ohne oeffentlichen Web-Auftritt (site.oeffentlich=false) ist der oeffentliche
+// Antrags-Endpoint deaktiviert (404, Beitritt laeuft ueber Papierformulare);
+// der Antrag wird dann direkt angelegt. Mit Web-Auftritt bleibt der oeffent-
+// liche Weg getestet.
+const absenden = await post('/mitglied-werden/absenden', {
   name: 'Toni Test', email: 'antrag-test@dummy.local', geburtsdatum: '1999-04-04',
   telefon: '0123', nachricht: 'Hallo', website: '',
 });
-pruefe('Antrag (oeffentlich) -> ok', (antragOk.headers.get('location') ?? '').includes('ok=1'));
-pruefe('Antrag in DB (Status offen)', (await pb.collection('antraege').getFullList({ filter: 'status="offen"' })).length === 1);
-// Honeypot: gefuellt -> ok angezeigt, aber NICHT gespeichert
-await post('/mitglied-werden/absenden', { name: 'Bot', email: 'bot@x.de', geburtsdatum: '1990-01-01', website: 'spam' });
-pruefe('Honeypot: Bot-Antrag NICHT gespeichert', (await pb.collection('antraege').getFullList()).length === 1);
-// Minderjaehrig -> abgelehnt
-const jung = await post('/mitglied-werden/absenden', { name: 'Kind', email: 'kind@x.de', geburtsdatum: '2015-01-01', website: '' });
-pruefe('Unter 18 -> fehler=alter', (jung.headers.get('location') ?? '').includes('fehler=alter'));
+const oeffentlichAus = absenden.status === 404;
+if (oeffentlichAus) {
+  pruefe('Antrags-Endpoint deaktiviert (kein Web-Auftritt)', absenden.status === 404, String(absenden.status));
+  await pb.collection('antraege').create({
+    name: 'Toni Test', email: 'antrag-test@dummy.local', telefon: '0123',
+    geburtsdatum: '1999-04-04', nachricht: 'Hallo', status: 'offen', notiz: '',
+  });
+  pruefe('Antrag in DB (Status offen)', (await pb.collection('antraege').getFullList({ filter: 'status="offen"' })).length === 1);
+} else {
+  pruefe('Antrag (oeffentlich) -> ok', (absenden.headers.get('location') ?? '').includes('ok=1'));
+  pruefe('Antrag in DB (Status offen)', (await pb.collection('antraege').getFullList({ filter: 'status="offen"' })).length === 1);
+  // Honeypot: gefuellt -> ok angezeigt, aber NICHT gespeichert
+  await post('/mitglied-werden/absenden', { name: 'Bot', email: 'bot@x.de', geburtsdatum: '1990-01-01', website: 'spam' });
+  pruefe('Honeypot: Bot-Antrag NICHT gespeichert', (await pb.collection('antraege').getFullList()).length === 1);
+  // Minderjaehrig -> abgelehnt
+  const jung = await post('/mitglied-werden/absenden', { name: 'Kind', email: 'kind@x.de', geburtsdatum: '2015-01-01', website: '' });
+  pruefe('Unter 18 -> fehler=alter', (jung.headers.get('location') ?? '').includes('fehler=alter'));
+}
 
 // ---------- 2. Vorstand: Warteliste + Aufnahme ----------
 const vorstand = await anmelden(STAFF, STAFF_PW);

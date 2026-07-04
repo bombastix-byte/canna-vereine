@@ -27,7 +27,7 @@ export const GET: APIRoute = () => {
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
     ],
     shortcuts: [
-      { name: 'Ausgabe (Tresen)', url: '/mitglieder/ausgabe' },
+      { name: 'Ausgabe', url: '/mitglieder/ausgabe' },
       { name: 'Anbau heute', url: '/mitglieder/anbau' },
       { name: 'Abstimmungen', url: '/mitglieder/abstimmungen' },
     ],
