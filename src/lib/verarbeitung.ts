@@ -9,34 +9,57 @@
 // gelten Limits, U21-THC-Sperre, Bestand und Rueckverfolgung automatisch.
 
 export type ProduktTyp = 'bluete' | 'haschisch' | 'rosin';
+export type MeldeKategorie = 'marihuana' | 'haschisch';
 
-export const PRODUKT_TYPEN: ProduktTyp[] = ['bluete', 'haschisch', 'rosin'];
+export interface ProduktDef {
+  key: ProduktTyp;
+  label: string;
+  /** Kategorie fuer die Jahresmeldung (Paragraf 26 KCanG). */
+  kategorie: MeldeKategorie;
+  /** Aus Bluete im Verein herstellbar (Verarbeitung)? */
+  herstellbar: boolean;
+}
 
-/** Nur diese Typen koennen aus Bluete hergestellt werden. */
-export const VERARBEITUNG_TYPEN: ProduktTyp[] = ['haschisch', 'rosin'];
+/**
+ * Zentrale Produktliste. ERWEITERN: neuen Eintrag ergaenzen (und den Typ oben)
+ * - z. B. { key: 'kief', label: 'Kief/Pollen', kategorie: 'haschisch',
+ * herstellbar: true }. Die Kategorie steuert automatisch die Jahresmeldung;
+ * mehr braucht es nicht. Rechtlicher Rahmen: KCanG kennt nur Marihuana (Bluete)
+ * und Haschisch (abgetrenntes Harz - dazu zaehlt loesungsmittelfreies Rosin).
+ */
+export const PRODUKTE: ProduktDef[] = [
+  { key: 'bluete', label: 'Blüte', kategorie: 'marihuana', herstellbar: false },
+  { key: 'haschisch', label: 'Haschisch', kategorie: 'haschisch', herstellbar: true },
+  { key: 'rosin', label: 'Rosin', kategorie: 'haschisch', herstellbar: true },
+];
 
-export const PRODUKT_LABEL: Record<ProduktTyp, string> = {
-  bluete: 'Blüte',
-  haschisch: 'Haschisch',
-  rosin: 'Rosin',
-};
+const PRODUKT_MAP: Record<string, ProduktDef> = Object.fromEntries(PRODUKTE.map((p) => [p.key, p]));
 
-/** Leeres/unbekanntes Feld zaehlt als Bluete (Altdaten). */
+export const PRODUKT_TYPEN: ProduktTyp[] = PRODUKTE.map((p) => p.key);
+
+/** Produkte, die aus Bluete hergestellt werden koennen (Verarbeitung). */
+export const VERARBEITUNG_TYPEN: ProduktTyp[] = PRODUKTE.filter((p) => p.herstellbar).map((p) => p.key);
+
+export const PRODUKT_LABEL: Record<ProduktTyp, string> = Object.fromEntries(
+  PRODUKTE.map((p) => [p.key, p.label]),
+) as Record<ProduktTyp, string>;
+
+/** Bekannter Produkt-Key oder Bluete als Fallback (Altdaten/leer). */
 export function produktTyp(wert?: string | null): ProduktTyp {
-  return wert === 'haschisch' || wert === 'rosin' ? wert : 'bluete';
+  return wert && PRODUKT_MAP[wert] ? (wert as ProduktTyp) : 'bluete';
 }
 
 /** Anzeige-Label inkl. Altdaten-Fallback. */
 export function produktLabel(wert?: string | null): string {
-  return PRODUKT_LABEL[produktTyp(wert)];
+  return PRODUKT_MAP[produktTyp(wert)].label;
 }
 
 /**
  * Kategorie fuer die Jahresmeldung (Paragraf 26 KCanG unterscheidet
  * Marihuana und Haschisch; Rosin ist Harz und zaehlt zu Haschisch).
  */
-export function meldeKategorie(wert?: string | null): 'marihuana' | 'haschisch' {
-  return produktTyp(wert) === 'bluete' ? 'marihuana' : 'haschisch';
+export function meldeKategorie(wert?: string | null): MeldeKategorie {
+  return PRODUKT_MAP[produktTyp(wert)].kategorie;
 }
 
 export interface VerarbeitungEingabe {

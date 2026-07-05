@@ -164,7 +164,7 @@ const oktext: Record<string, string> = {
   plan: 'Anbau-Plan zugewiesen — fällige Schritte stehen unter „Anbau heute".',
   sorte: 'Sorte angelegt — steht jetzt bei „Neue Charge anlegen" zur Auswahl.',
   verarbeitet: 'Verarbeitung gebucht — das Produkt ist als neue Charge freigegeben und am Tresen abgebbar.',
-  bestand: 'Bestand angelegt — die Charge ist freigegeben und am Tresen abgebbar.',
+  bestand: 'Ware aufgenommen — die Charge ist freigegeben und am Tresen abgebbar.',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
@@ -261,20 +261,18 @@ const statusVariante: Record<string, string> = {
   </details>
 
   <details class="klappe">
-    <summary>＋ Bestand nachtragen (bereits getrocknete Ware)</summary>
+    <summary>＋ Ware aufnehmen (vorhandenes Produkt freigeben)</summary>
     <form class="kasten" method="post" action="/mitglieder/wawi/bestand-neu">
       <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
-        Für vorhandene, bereits getrocknete Ware ohne eigenen Anbauverlauf
-        (z. B. bestehender Bestand). Die Charge wird <strong>sofort freigegeben</strong>
-        und steht am Tresen zur Abgabe.
+        Beliebiges Produkt (Blüte, Haschisch, Rosin …) in beliebiger Stärke
+        aufnehmen — aus <strong>einer Sorte</strong> oder als <strong>Mix / freie
+        Herkunft</strong>. Die Charge wird <strong>sofort freigegeben</strong> und
+        steht am Tresen zur Abgabe. Auch für den Umstieg mit bestehendem Bestand.
       </p>
       <div class="feld-reihe">
         <div class="feld">
-          <label for="b-sorte">Sorte</label>
-          <select id="b-sorte" name="sorte" required>
-            <option value="">— Sorte wählen —</option>
-            {sorten.map((s) => <option value={s.id}>{s.name}</option>)}
-          </select>
+          <label for="b-bez">Bezeichnung</label>
+          <input id="b-bez" name="bezeichnung" type="text" placeholder="z. B. Haschisch Marokko 30 %, Rosin Mix" />
         </div>
         <div class="feld">
           <label for="b-produkt">Produkt</label>
@@ -283,9 +281,16 @@ const statusVariante: Record<string, string> = {
           </select>
         </div>
       </div>
+      <div class="feld">
+        <label for="b-sorte">Sorte zuordnen (optional — für Mix leer lassen)</label>
+        <select id="b-sorte" name="sorte">
+          <option value="">— Mix / mehrere / freie Herkunft —</option>
+          {sorten.map((s) => <option value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
       <div class="feld-reihe">
         <div class="feld">
-          <label for="b-menge">Trockenmenge (g)</label>
+          <label for="b-menge">Menge (g)</label>
           <input id="b-menge" name="trockengewicht_g" type="number" min="0.1" step="0.1" required placeholder="verfügbar" />
         </div>
         <div class="feld">
@@ -304,14 +309,14 @@ const statusVariante: Record<string, string> = {
         </div>
         <div class="feld">
           <label for="b-herkunft">Herkunft / Notiz</label>
-          <input id="b-herkunft" name="herkunft" type="text" placeholder="z. B. Altbestand, Übernahme" />
+          <input id="b-herkunft" name="herkunft" type="text" placeholder="z. B. Altbestand, Übernahme, Lieferant" />
         </div>
       </div>
       <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
-        Ohne THC-Wert bleibt die Abgabe an unter 21-Jährige gesperrt. Sorte fehlt?
-        Unten unter „Neue Sorte anlegen" anlegen.
+        Bezeichnung ODER Sorte angeben. Ohne THC-Wert bleibt die Abgabe an
+        unter 21-Jährige gesperrt.
       </p>
-      <button class="knopf" type="submit">Bestand freigeben</button>
+      <button class="knopf" type="submit">Ware freigeben</button>
     </form>
   </details>
 

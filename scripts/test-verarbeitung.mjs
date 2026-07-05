@@ -55,6 +55,17 @@ pruefe('Ausbeute 50 -> 8 = 16 %', ausbeuteProzent(50, 8), 16);
 pruefe('Ausbeute 30 -> 4,5 = 15 %', ausbeuteProzent(30, 4.5), 15);
 pruefe('Ausbeute ohne Einsatz = null', ausbeuteProzent(0, 5), null);
 
+// --- Erweiterbare Produktliste + Meldekategorie ---
+const { PRODUKTE, PRODUKT_TYPEN: PT } = await import('../src/lib/verarbeitung.ts');
+pruefe('Produktliste hat 3 Eintraege', PRODUKTE.length, 3);
+pruefe('PRODUKT_TYPEN aus Liste abgeleitet', PT.join(','), 'bluete,haschisch,rosin');
+pruefe('jede Produktart hat gueltige Kategorie', PRODUKTE.every((p) => ['marihuana', 'haschisch'].includes(p.kategorie)), true);
+pruefe('Bluete = Marihuana', meldeKategorie('bluete'), 'marihuana');
+pruefe('Haschisch = Haschisch', meldeKategorie('haschisch'), 'haschisch');
+pruefe('Rosin = Haschisch', meldeKategorie('rosin'), 'haschisch');
+pruefe('unbekannter Typ -> bluete/marihuana (kein Fehlsplit)', meldeKategorie('phantasie'), 'marihuana');
+pruefe('produktTyp unbekannt = bluete', produktTyp('kief'), 'bluete');
+
 // --- Gebinde-Etikett (ZPL): QR = Chargennummer, N Kopien ---
 const { gebindeZpl, gebindeZplStapel } = await import('../src/lib/zpl.ts');
 const et = { verein: 'AVG', chargeNr: '2026-0024', sorte: 'CBD Aurora', produkt: 'Haschisch', thcProzent: 32 };

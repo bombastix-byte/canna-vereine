@@ -5,9 +5,11 @@ import { chargeNr } from '../../../lib/wawi';
 import { produktTyp } from '../../../lib/verarbeitung';
 import { berlinTag } from '../../../lib/ausgabe';
 
-// Legt eine BESTANDS-Charge an: bereits getrocknete Ware ohne eigenen
-// Anbauverlauf, sofort freigegeben (z. B. Altbestand, der schon im Verkauf
-// ist). Keine Pflanzen-Ebene. Nur Anbauverantwortliche/Vorstand.
+// Warenaufnahme: vorhandene Ware (Blüte/Haschisch/Rosin) als sofort
+// freigegebene Charge anlegen - aus EINER Sorte ODER als Mix/freie Herkunft
+// (dann nur eine freie Bezeichnung, keine Sorten-Zuordnung). Keine
+// Pflanzen-Ebene. Für Bestand, der schon im Verkauf ist / Umstieg.
+// Nur Anbauverantwortliche/Vorstand.
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -18,6 +20,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const daten = await request.formData();
   const sorteId = String(daten.get('sorte') ?? '').trim();
+  const bezeichnung = String(daten.get('bezeichnung') ?? '').trim();
   const typ = produktTyp(String(daten.get('produkt_typ') ?? '').trim());
   const menge = Number(String(daten.get('trockengewicht_g') ?? '').replace(',', '.'));
   const thc = Number(String(daten.get('thc_prozent') ?? '').replace(',', '.'));
@@ -25,20 +28,32 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const ernte = String(daten.get('ernte_datum') ?? '').trim();
   const herkunft = String(daten.get('herkunft') ?? '').trim();
 
-  if (!sorteId) return redirect('/mitglieder/wawi?fehler=fehlend', 303);
+  // Anzeigename: freie Bezeichnung hat Vorrang; sonst der Sortenname. Eines
+  // von beiden muss da sein (Mix = nur Bezeichnung, Einzelsorte = Dropdown).
+  let sorteRef: string | null = null;
+  let sorteName = bezeichnung;
+  if (sorteId) {
+    try {
+      const sorte = await pb.collection('sorten').getOne(sorteId);
+      sorteRef = sorte.id;
+      if (!sorteName) sorteName = sorte.name;
+    } catch {
+      return redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
+    }
+  }
+  if (!sorteName) return redirect('/mitglieder/wawi?fehler=fehlend', 303);
   if (!Number.isFinite(menge) || menge <= 0) return redirect('/mitglieder/wawi?fehler=menge', 303);
 
   try {
-    const sorte = await pb.collection('sorten').getOne(sorteId);
     const jahr = berlinTag().slice(0, 4);
     const anzahl = (await pb.collection('chargen').getList(1, 1, { filter: `charge_nr~"${jahr}-"` })).totalItems;
     await pb.collection('chargen').create({
       charge_nr: chargeNr(jahr, anzahl),
-      sorte: sorteId,
-      sorte_name: sorte.name,
+      sorte: sorteRef,
+      sorte_name: sorteName,
       status: 'freigegeben',
       produkt_typ: typ,
-      herkunft: herkunft || 'Bestand (nachgetragen)',
+      herkunft: herkunft || 'Warenaufnahme',
       ernte_datum: ernte ? `${ernte} 00:00:00.000Z` : null,
       trockengewicht_g: menge,
       verfuegbar_g: menge,

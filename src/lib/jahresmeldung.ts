@@ -1,6 +1,7 @@
 // Aggregiert die Jahreswerte fuer die behoerdliche Mitteilung (KCanG).
 // Grundlage: die dokumentierten Chargen, Abgaben und Vernichtungen.
 // Reine Funktionen, damit die Zahlen nachvollziehbar/testbar bleiben.
+import { meldeKategorie } from './verarbeitung.ts';
 
 export interface ChargeAgg {
   ernte_datum?: string;
@@ -68,12 +69,10 @@ export function aggregiereJahr(
   const summe = (arr: Array<{ menge_gramm?: number }>, feld: 'menge_gramm') =>
     arr.reduce((s, r) => s + (Number(r[feld]) || 0), 0);
 
-  // Paragraf 26 KCanG unterscheidet Marihuana und Haschisch; Rosin ist
-  // (loesungsmittelfrei gewonnenes) Harz und zaehlt zu Haschisch. Fehlender
-  // produkt_typ (Altdaten) zaehlt als Marihuana.
-  const haschischJahr = ausgabenJahr.filter(
-    (a) => a.produkt_typ === 'haschisch' || a.produkt_typ === 'rosin',
-  );
+  // Paragraf 26 KCanG unterscheidet Marihuana und Haschisch; die Zuordnung je
+  // Produkttyp liegt zentral in verarbeitung.ts (meldeKategorie), damit neue
+  // Produkte automatisch richtig gesplittet werden. Altdaten (leer) = Marihuana.
+  const haschischJahr = ausgabenJahr.filter((a) => meldeKategorie(a.produkt_typ) === 'haschisch');
 
   return {
     jahr,
