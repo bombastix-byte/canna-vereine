@@ -90,7 +90,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   let monatsSaetze = [];
   try {
     monatsSaetze = await pb.collection('ausgaben').getFullList({
-      filter: `mitglied="${mitgliedId}" && monat="${monat}"`,
+      filter: `mitglied="${mitgliedId}" && monat="${monat}" && storniert!=true`,
     });
   } catch {
     monatsSaetze = [];

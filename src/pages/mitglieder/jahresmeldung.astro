@@ -25,7 +25,7 @@ async function ladeListe<T>(collection: string): Promise<T[]> {
 }
 
 const chargen = await ladeListe<{ ernte_datum?: string; trockengewicht_g?: number }>('chargen');
-const ausgaben = await ladeListe<{ menge_gramm?: number; monat?: string; produkt_typ?: string }>('ausgaben');
+const ausgaben = await ladeListe<{ menge_gramm?: number; monat?: string; produkt_typ?: string }>('ausgaben', { filter: 'storniert!=true' });
 const vernichtungen = await ladeListe<{ menge_gramm?: number; datum?: string }>('vernichtungen');
 const verarbeitungen = await ladeListe<{ ertrag_g?: number; datum?: string }>('verarbeitungen');
 const mitglieder = await ladeListe<{ id: string }>('users');

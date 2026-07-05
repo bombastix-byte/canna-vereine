@@ -29,10 +29,11 @@ export const GET: APIRoute = async ({ params, url, cookies, redirect }) => {
   }
 
   if (art === 'abgaben') {
+    // Alle Zeilen inkl. stornierte (transparent, mit Storniert-Spalte).
     const rows = (await alle<Record<string, any>>('ausgaben')).filter((r) => (r.monat ?? '').slice(0, 4) === jahr);
     return csvAntwort(`abgaben-${jahr}.csv`, [
-      ['Datum', 'Belegnr', 'Mitgliedsnummer', 'Produkt', 'Sorte', 'Charge', 'Menge (g)', 'THC (%)', 'CBD (%)', 'Beitrag (EUR)'],
-      ...rows.map((r) => [r.tag, r.belegnr, r.mitgliedsnummer, produktLabel(r.produkt_typ), r.sorte_name, r.charge, r.menge_gramm, r.thc_prozent, r.cbd_prozent, r.beitrag_euro]),
+      ['Datum', 'Belegnr', 'Mitgliedsnummer', 'Produkt', 'Sorte', 'Charge', 'Menge (g)', 'THC (%)', 'CBD (%)', 'Beitrag (EUR)', 'Storniert'],
+      ...rows.map((r) => [r.tag, r.belegnr, r.mitgliedsnummer, produktLabel(r.produkt_typ), r.sorte_name, r.charge, r.menge_gramm, r.thc_prozent, r.cbd_prozent, r.beitrag_euro, r.storniert ? 'ja' : '']),
     ]);
   }
 
@@ -55,7 +56,8 @@ export const GET: APIRoute = async ({ params, url, cookies, redirect }) => {
   if (art === 'jahresmeldung') {
     const w = aggregiereJahr(jahr, {
       chargen: await alle('chargen'),
-      ausgaben: await alle('ausgaben'),
+      // Stornierte Abgaben zaehlen nicht in die Meldung.
+      ausgaben: (await alle<Record<string, any>>('ausgaben')).filter((r) => r.storniert !== true),
       vernichtungen: await alle('vernichtungen'),
       verarbeitungen: await alle('verarbeitungen'),
       mitgliederzahl: (await alle('users')).length,

@@ -42,6 +42,9 @@ const gesamtEuro = positionen.reduce((s, p) => s + (Number(p.beitrag_euro) || 0)
 const neu = Astro.url.searchParams.get('neu');
 const gedruckt = Astro.url.searchParams.get('gedruckt');
 const druckfehler = Astro.url.searchParams.get('druckfehler');
+const storniertOk = Astro.url.searchParams.get('ok') === 'storniert';
+const storniertSchon = Astro.url.searchParams.get('fehler') === 'schon';
+const istStorniert = positionen.some((p) => p.storniert === true);
 const datum = (s?: string) =>
   s ? new Date(s).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 const eur = (n?: number) => (n ?? 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,8 +62,14 @@ const praev = site.praeventionsbeauftragter;
   )}
   {gedruckt && <p class="hinweis" role="status" style="max-width:var(--mass);">An Etikettendrucker gesendet.</p>}
   {druckfehler && <p class="hinweis hinweis--fehler" role="alert" style="max-width:var(--mass);">Drucker nicht erreichbar. Bitte über den Druckdialog drucken.</p>}
+  {storniertOk && <p class="hinweis" role="status" style="max-width:var(--mass);">Abgabe storniert — der Bestand wurde zurückgebucht.</p>}
+  {storniertSchon && <p class="hinweis hinweis--fehler" role="alert" style="max-width:var(--mass);">Dieser Vorgang ist bereits storniert.</p>}
 
-  <div class="aktionen">
+  {istStorniert && (
+    <p class="storno-banner no-print" style="max-width:var(--mass);"><strong>STORNIERT</strong> — dieser Vorgang zählt nicht mehr in Limits, Kasse und Jahresmeldung.</p>
+  )}
+
+  <div class="aktionen no-print">
     <button class="knopf" type="button" onclick="window.print()">Beleg drucken</button>
     {personal && (
       <form method="post" action={`/mitglieder/ausgabe/beleg/${a.id}/drucken`} style="display:inline;">
@@ -69,6 +78,22 @@ const praev = site.praeventionsbeauftragter;
     )}
     {personal && <a class="knopf-sek" href="/mitglieder/ausgabe">Zurück zur Ausgabe</a>}
   </div>
+
+  {personal && !istStorniert && (
+    <details class="klappe no-print" style="max-width:var(--mass);margin:0 0 1.2rem;">
+      <summary>Abgabe stornieren (Korrektur)</summary>
+      <form class="kasten" method="post" action="/mitglieder/ausgabe/stornieren"
+        onsubmit="return confirm('Diesen Abgabe-Vorgang wirklich stornieren? Der Bestand wird zurückgebucht.')">
+        <input type="hidden" name="beleg" value={a.id} />
+        <div class="feld">
+          <label for="storno-grund">Grund (optional)</label>
+          <input id="storno-grund" name="grund" type="text" placeholder="z. B. Fehlbuchung, falsche Menge"
+            style="width:100%;padding:0.55rem 0.65rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-rein);color:var(--ink);font:inherit;" />
+        </div>
+        <button class="knopf-gefahr" type="submit" style="margin-top:0.6rem;padding:0.6rem 1rem;border:1px solid var(--gefahr);border-radius:var(--radius);background:transparent;color:var(--gefahr);font:inherit;font-weight:600;cursor:pointer;">Vorgang stornieren</button>
+      </form>
+    </details>
+  )}
 
   <div class="beleg">
     <div class="beleg-kopf">
@@ -193,6 +218,14 @@ const praev = site.praeventionsbeauftragter;
   }
 
   /* Druck: nur den Beleg, alles andere ausblenden. */
+  .storno-banner {
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--gefahr);
+    border-radius: var(--radius);
+    background: var(--gefahr-bg);
+    color: var(--gefahr);
+  }
   @media print {
     :global(body *) {
       visibility: hidden;

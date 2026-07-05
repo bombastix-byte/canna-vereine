@@ -68,6 +68,7 @@ interface AusgabeRow {
   beitrag_euro?: number;
   tag: string;
   belegnr?: string;
+  storniert?: boolean;
 }
 
 const tag = berlinTag();
@@ -119,7 +120,7 @@ let status: null | {
 } = null;
 if (gewaehlt) {
   const saetze = await ladeListe<AusgabeRow>('ausgaben', {
-    filter: `mitglied="${gewaehlt.id}" && monat="${monat}"`,
+    filter: `mitglied="${gewaehlt.id}" && monat="${monat}" && storniert!=true`,
   });
   const monatSumme = summeGramm(saetze);
   const heute = summeGramm(saetze.filter((r) => r.tag === tag));
@@ -164,7 +165,7 @@ const chargeGesperrt = (c: ChargeRow) =>
 
 const mnr = (m: UserRow) => (m.mitgliedsnummer ? `${m.mitgliedsnummer} — ` : '') + (m.name || m.email);
 const eur = (n?: number) => (n ?? 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const heuteSumme = summeGramm(heuteAlle);
+const heuteSumme = summeGramm(heuteAlle.filter((a) => !a.storniert));
 const schnellMengen = [1, 2, 3, 5, 10];
 ---
 
@@ -357,9 +358,9 @@ const schnellMengen = [1, 2, 3, 5, 10];
         </thead>
         <tbody>
           {heuteAlle.map((a) => (
-            <tr>
+            <tr class:list={{ storniert: a.storniert }}>
               <td>{a.mitgliedsnummer || a.mitglied.slice(0, 6)}</td>
-              <td>{a.sorte_name}</td>
+              <td>{a.sorte_name}{a.storniert && ' · storniert'}</td>
               <td class="r">{a.menge_gramm} g</td>
               <td class="r">{a.thc_prozent ?? '—'} %</td>
               <td class="r">{eur(a.beitrag_euro)} €</td>
@@ -598,6 +599,7 @@ const schnellMengen = [1, 2, 3, 5, 10];
     cursor: pointer;
   }
   .knopf-mini:hover { color: var(--ink); border-color: var(--accent); }
+  tr.storniert td { color: var(--ink-soft); text-decoration: line-through; }
   .v-doppel { display: flex; gap: 1rem; flex-wrap: wrap; }
   .v-doppel .feld { flex: 1 1 12rem; }
   .v-doppel input:disabled { opacity: 0.5; }

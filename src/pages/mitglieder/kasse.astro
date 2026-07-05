@@ -24,7 +24,7 @@ async function ladeListe<T>(collection: string, opts: Record<string, unknown> = 
   }
 }
 
-const abgabenHeute = await ladeListe<{ beitrag_euro?: number; belegnr?: string }>('ausgaben', { filter: `tag="${tag}"` });
+const abgabenHeute = await ladeListe<{ beitrag_euro?: number; belegnr?: string }>('ausgaben', { filter: `tag="${tag}" && storniert!=true` });
 const beitraege = euro(abgabenHeute.reduce((s, a) => s + (Number(a.beitrag_euro) || 0), 0));
 
 const bewegungenHeute = await ladeListe<{ id: string; typ: string; betrag_euro: number; zweck?: string }>(

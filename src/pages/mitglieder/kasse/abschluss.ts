@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     }
   }
 
-  const abgaben = await liste('ausgaben', `tag="${tag}"`);
+  const abgaben = await liste('ausgaben', `tag="${tag}" && storniert!=true`);
   const beitraege = euro(abgaben.reduce((s, a) => s + (Number(a.beitrag_euro) || 0), 0));
   const bewegungen = await liste('kassenbewegung', `datum="${tag}"`);
   const einlagen = euro(bewegungen.filter((b) => b.typ === 'einlage').reduce((s, b) => s + (Number(b.betrag_euro) || 0), 0));
