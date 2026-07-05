@@ -53,6 +53,9 @@ services:
       - pb_goerlitz:/pb/pb_data
       # JS-Hooks (u. a. Erinnerungs-Cron). Nur lesend eingebunden.
       - ./pb_hooks:/pb/pb_hooks:ro
+      # Automatische PocketBase-Backups landen auf dem Host (überleben so einen
+      # Verlust des pb_data-Volumes). Off-site zusätzlich sichern.
+      - ./backups/goerlitz:/pb/pb_data/backups
 
   # ---------- Goerlitz 2 (CSC) ----------
   astro-goerlitz2:

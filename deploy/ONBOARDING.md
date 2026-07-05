@@ -89,6 +89,33 @@ Beispiel-Charge). Für einen echten Verein im Admin (`/_/`) prüfen und ggf. lö
     `http://astro-<slug>:4321/api/erinnerungen` — die URL im Hook je Verein anpassen
     (oder den Vereins-Slug aus einer Env lesen).
 
+## 5b. Backups (vor echten Daten Pflicht)
+
+PocketBase sichert sich selbst konsistent (SQLite-sicher). Aktivieren:
+
+```bash
+PB_URL=https://<domain> PB_ADMIN_EMAIL=… PB_ADMIN_PW=… \
+node scripts/backup-einrichten.mjs --jetzt   # täglich 03:00, 7 Stände + Test
+```
+
+Damit die Sicherungen einen Verlust des Datenbank-Volumes überleben, wird das
+Backup-Verzeichnis auf den Host gemountet. In `docker-compose.yml` beim
+`pb-<slug>`-Dienst analog zu Görlitz ergänzen und den Host-Ordner anlegen:
+
+```yaml
+    volumes:
+      - ./backups/<slug>:/pb/pb_data/backups
+```
+```bash
+mkdir -p /opt/canna-vereine/deploy/backups/<slug>
+docker compose up -d pb-<slug>
+```
+
+Die Backups liegen dann unter `/opt/canna-vereine/deploy/backups/<slug>/`.
+**Off-site empfohlen:** dieses Verzeichnis zusätzlich weg vom Server sichern
+(z. B. `rsync`/`borg` auf externen Speicher oder S3 in den PocketBase-
+Backup-Einstellungen hinterlegen).
+
 ## 6. Erste Personen
 
 - Vorstands-Superuser für die App: ein `users`-Konto mit Rolle `vorstand` anlegen
