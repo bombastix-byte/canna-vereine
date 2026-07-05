@@ -51,13 +51,18 @@ for (const row of rows.slice(1)) {
   const email = get('email');
   if (!email) { console.log('Zeile ohne E-Mail uebersprungen.'); fehler++; continue; }
   const mitgliedsnummer = get('mitgliedsnummer');
-  const name = get('name');
+  const vorname = get('vorname');
+  const nachname = get('nachname');
+  // name aus Spalte ODER aus Vor-/Nachname zusammengesetzt.
+  const name = get('name') || [vorname, nachname].filter(Boolean).join(' ');
   const gb = get('geburtsdatum');
   const rollen = (get('rollen').split(';').map((r) => r.trim()).filter((r) => ROLLEN.includes(r)));
   const passwort = get('passwort') || `Start-${mitgliedsnummer || email.split('@')[0]}!`;
 
   const patch = {
     name,
+    vorname,
+    nachname,
     mitgliedsnummer,
     geburtsdatum: gb ? `${gb} 00:00:00.000Z` : null,
     rollen: rollen.length ? rollen : ['mitglied'],

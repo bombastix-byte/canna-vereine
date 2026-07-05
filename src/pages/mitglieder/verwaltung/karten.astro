@@ -4,6 +4,7 @@ import AusweisKarte from '../../../components/AusweisKarte.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
 import { site } from '../../../config';
+import { namensteile } from '../../../lib/namen';
 import QRCode from 'qrcode-svg';
 
 // Stapeldruck der QR-Ausweiskarten (alle oder gefilterte Treffer). Nur Vorstand.
@@ -14,13 +15,13 @@ if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { pb, mitglied } = ergebnis;
 if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
-interface UserRow { id: string; name?: string; email: string; mitgliedsnummer?: string; geburtsdatum?: string }
+interface UserRow { id: string; name?: string; vorname?: string; nachname?: string; email: string; mitgliedsnummer?: string; geburtsdatum?: string }
 
 const q = (Astro.url.searchParams.get('q') ?? '').trim();
 let alle: UserRow[] = [];
 try {
   alle = (await pb.collection('users').getFullList({
-    fields: 'id,name,email,mitgliedsnummer,geburtsdatum',
+    fields: 'id,name,vorname,nachname,email,mitgliedsnummer,geburtsdatum',
     sort: 'mitgliedsnummer,name',
   })) as UserRow[];
 } catch {
@@ -65,7 +66,8 @@ const qr = (nr: string) => new QRCode({ content: nr, width: 300, height: 300, pa
           vereinsname={site.vereinsname}
           adresse={adresse}
           email={site.kontakt.email}
-          name={m.name || m.email}
+          vorname={namensteile(m).vorname}
+          nachname={namensteile(m).nachname || m.email}
           nummer={m.mitgliedsnummer!}
           geburtsdatum={geb(m.geburtsdatum)}
           qrSvg={qr(m.mitgliedsnummer!.trim())}

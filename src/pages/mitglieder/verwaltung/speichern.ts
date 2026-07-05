@@ -13,6 +13,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const daten = await request.formData();
   const id = String(daten.get('mitglied') ?? '').trim();
+  const vorname = String(daten.get('vorname') ?? '').trim();
+  const nachname = String(daten.get('nachname') ?? '').trim();
   const mitgliedsnummer = String(daten.get('mitgliedsnummer') ?? '').trim();
   const geburtsdatum = String(daten.get('geburtsdatum') ?? '').trim();
   const beitragBis = String(daten.get('beitrag_bis') ?? '').trim();
@@ -30,6 +32,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   try {
     await pb.collection('users').update(id, {
+      vorname,
+      nachname,
       mitgliedsnummer,
       geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
       beitrag_bis: beitragBis ? `${beitragBis} 00:00:00.000Z` : null,

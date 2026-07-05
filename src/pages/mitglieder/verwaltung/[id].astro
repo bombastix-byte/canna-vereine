@@ -45,6 +45,17 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
       <h2 class="abschnitt">Stammdaten</h2>
       <div class="feld-reihe">
         <div class="feld">
+          <label for="f-vorname">Vorname</label>
+          <input id="f-vorname" name="vorname" type="text" value={m.vorname ?? ''} placeholder="leer = aus Name" />
+        </div>
+        <div class="feld">
+          <label for="f-nachname">Nachname</label>
+          <input id="f-nachname" name="nachname" type="text" value={m.nachname ?? ''} placeholder="leer = aus Name" />
+        </div>
+      </div>
+      <p class="feld-hinweis">Bleiben Vorname/Nachname leer, werden sie für den Ausweis automatisch aus dem Namen „{m.name || m.email}" abgeleitet.</p>
+      <div class="feld-reihe">
+        <div class="feld">
           <label for="f-nr">Mitgliedsnummer</label>
           <input id="f-nr" name="mitgliedsnummer" type="text" value={m.mitgliedsnummer ?? ''} />
         </div>
@@ -117,6 +128,7 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
     width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line);
     border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit;
   }
+  .feld-hinweis { color: var(--ink-soft); font-size: 0.85rem; margin: 0 0 0.8rem; }
   .rollen-hinweis { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.6rem; }
   .rollen { display: flex; flex-direction: column; gap: 0.1rem; }
   .chk { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.98rem; min-height: 44px; }

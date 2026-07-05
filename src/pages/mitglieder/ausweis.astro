@@ -39,6 +39,9 @@ const qrSvg = nummer
       <p class="ausweis-nummer">{nummer}</p>
       <p class="ausweis-fuss">Mitgliedsausweis · nicht übertragbar</p>
     </div>
+    <p class="lichtbild-hinweis">
+      Nur zusammen mit einem gültigen amtlichen Lichtbildausweis gültig.
+    </p>
   )}
 </Basis>
 
@@ -88,6 +91,13 @@ const qrSvg = nummer
     margin: 0;
     padding-top: 0.7rem;
     border-top: 1px solid var(--line);
+  }
+  .lichtbild-hinweis {
+    max-width: 20rem;
+    margin: 0.7rem 0 0;
+    color: var(--warn-ink);
+    font-size: 0.85rem;
+    font-weight: 600;
   }
   /* Handy: der Ausweis ist die Startseite fuers Mitglied - Kopf schlank
      halten, damit die QR-Karte moeglichst ohne Scrollen sichtbar ist. */

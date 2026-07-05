@@ -10,12 +10,13 @@ interface Props {
   vereinsname: string;
   adresse: string;
   email?: string;
-  name: string;
+  vorname?: string;
+  nachname: string;
   nummer: string;
   geburtsdatum?: string;
   qrSvg: string;
 }
-const { vereinsname, adresse, email, name, nummer, geburtsdatum, qrSvg } = Astro.props;
+const { vereinsname, adresse, email, vorname, nachname, nummer, geburtsdatum, qrSvg } = Astro.props;
 ---
 
 <div class="karte">
@@ -30,7 +31,8 @@ const { vereinsname, adresse, email, name, nummer, geburtsdatum, qrSvg } = Astro
     <div class="karte-qr" set:html={qrSvg} />
     <div class="karte-daten">
       <div class="kz"><span class="kl">Mitglieds-Nr.</span><span class="kw">{nummer || '—'}</span></div>
-      <div class="kz"><span class="kl">Name</span><span class="kw">{name}</span></div>
+      {vorname && <div class="kz"><span class="kl">Vorname</span><span class="kw">{vorname}</span></div>}
+      <div class="kz"><span class="kl">Nachname</span><span class="kw">{nachname}</span></div>
       {geburtsdatum && <div class="kz"><span class="kl">Geburtsdatum</span><span class="kw">{geburtsdatum}</span></div>}
     </div>
   </div>

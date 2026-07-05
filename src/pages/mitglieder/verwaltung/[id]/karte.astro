@@ -4,6 +4,7 @@ import AusweisKarte from '../../../../components/AusweisKarte.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
 import { darfVerwalten } from '../../../../lib/rollen';
 import { site } from '../../../../config';
+import { namensteile } from '../../../../lib/namen';
 import QRCode from 'qrcode-svg';
 
 // Druckbare QR-Ausweiskarte eines Mitglieds. Nur Vorstand.
@@ -28,6 +29,7 @@ const qrSvg = nummer
   ? new QRCode({ content: nummer, width: 300, height: 300, padding: 0, ecl: 'M', join: true }).svg()
   : '';
 const adresse = `${site.kontakt.strasse}, ${site.kontakt.plz} ${site.kontakt.ort}`;
+const { vorname, nachname } = namensteile(m as { name?: string; vorname?: string; nachname?: string });
 ---
 
 <Basis titel="QR-Ausweis drucken" beschreibung="Druckbare Mitgliedsausweis-Karte mit QR-Code.">
@@ -52,7 +54,8 @@ const adresse = `${site.kontakt.strasse}, ${site.kontakt.plz} ${site.kontakt.ort
           vereinsname={site.vereinsname}
           adresse={adresse}
           email={site.kontakt.email}
-          name={(m.name as string) || (m.email as string)}
+          vorname={vorname}
+          nachname={nachname || (m.email as string)}
           nummer={nummer}
           geburtsdatum={geb}
           qrSvg={qrSvg}
