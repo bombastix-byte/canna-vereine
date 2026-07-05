@@ -1,0 +1,203 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import UnterNav from '../../../components/UnterNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten } from '../../../lib/rollen';
+import { berlinTag } from '../../../lib/ausgabe';
+import { beitragStatus, mahnstufeName, type BeitragStatus } from '../../../lib/beitrag';
+import { VERWALTUNG_TABS } from '../../../lib/mitglied-nav';
+
+// Zahlungsstatus & Mahnwesen: zeigt fuer alle Mitglieder mit Monatsbeitrag den
+// Rueckstand, erfasst Zahlungen und stoesst Mahnungen an. Nur Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface UserRow {
+  id: string;
+  name?: string;
+  email: string;
+  vorname?: string;
+  nachname?: string;
+  mitgliedsnummer?: string;
+  beitrag_monatlich?: number;
+  beitrag_bis?: string;
+  mahnstufe?: number;
+  gemahnt_am?: string;
+}
+let users: UserRow[] = [];
+try {
+  users = (await pb.collection('users').getFullList({ sort: 'mitgliedsnummer' })) as UserRow[];
+} catch {
+  users = [];
+}
+
+const heute = berlinTag();
+type Zeile = UserRow & { st: BeitragStatus };
+const mitBeitrag: Zeile[] = users
+  .map((u) => ({ ...u, st: beitragStatus(u, heute) }))
+  .filter((z) => z.st.hatBeitrag);
+
+const rueckstaende = mitBeitrag
+  .filter((z) => z.st.imRueckstand)
+  .sort((a, b) => b.st.offeneMonate - a.st.offeneMonate || b.st.offenerBetrag - a.st.offenerBetrag);
+const offeneSumme = rueckstaende.reduce((s, z) => s + z.st.offenerBetrag, 0);
+const nichtErfasst = mitBeitrag.filter((z) => !z.st.erfasst).length;
+
+const alle = Astro.url.searchParams.get('alle') === '1';
+const anzeige = alle ? mitBeitrag.slice().sort((a, b) => b.st.offeneMonate - a.st.offeneMonate) : rueckstaende;
+
+const name = (u: UserRow) =>
+  [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || u.email;
+const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const monatDe = (s?: string | null) =>
+  s ? new Date(s + '-01T00:00:00Z').toLocaleDateString('de-DE', { month: 'short', year: 'numeric' }) : '—';
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const oktext: Record<string, string> = {
+  zahlung: 'Zahlung erfasst — „bezahlt bis" wurde aktualisiert.',
+  mahnung: 'Mahnung vermerkt und (falls Push aktiv) an das Mitglied gesendet.',
+};
+const fehlertext: Record<string, string> = {
+  eingabe: 'Bitte Betrag und Monate prüfen.',
+  unbekannt: 'Mitglied nicht gefunden.',
+  nichtoffen: 'Dieses Mitglied hat keinen offenen Beitrag.',
+  fehlgeschlagen: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+};
+---
+
+<Basis titel="Zahlungsstatus" beschreibung="Beitragsrückstände, Zahlungen erfassen, Mahnungen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <UnterNav punkte={VERWALTUNG_TABS} />
+  <h1 style="margin-bottom:0.4rem;">Zahlungsstatus & Mahnwesen</h1>
+  <p class="einleitung">
+    Übersicht der Monatsbeiträge: Wer ist im Rückstand, wie viel ist offen. Hier
+    erfasst du eingegangene Zahlungen (das verschiebt „bezahlt bis") und stößt
+    bei Bedarf eine Zahlungserinnerung oder Mahnung an. Der SEPA-Einzug bleibt
+    unter <a href="/mitglieder/beitraege">Beiträge</a>.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Fehler.'}</p>}
+
+  <div class="statuskarte">
+    <div class="sk-gross">
+      <div class="sk-box"><span class="sk-box-label">Im Rückstand</span><span class="sk-box-wert">{rueckstaende.length}</span></div>
+      <div class="sk-box sk-box-soft"><span class="sk-box-label">Offene Summe</span><span class="sk-box-wert">{eur(offeneSumme)} €</span></div>
+      <div class="sk-box sk-box-soft"><span class="sk-box-label">Mit Beitrag</span><span class="sk-box-wert">{mitBeitrag.length}</span></div>
+      <div class="sk-box sk-box-soft"><span class="sk-box-label">Ohne „bis"</span><span class="sk-box-wert">{nichtErfasst}</span></div>
+    </div>
+  </div>
+
+  <div class="filterzeile">
+    <a class:list={['jahr-knopf', { aktiv: !alle }]} href="/mitglieder/beitraege/status">Nur Rückstand ({rueckstaende.length})</a>
+    <a class:list={['jahr-knopf', { aktiv: alle }]} href="/mitglieder/beitraege/status?alle=1">Alle mit Beitrag ({mitBeitrag.length})</a>
+  </div>
+
+  {anzeige.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine Rückstände — alle Beiträge sind aktuell. 🎉</p>
+  ) : (
+    <div class="liste">
+      {anzeige.map((z) => (
+        <details class="posten" open={z.st.offeneMonate >= 3}>
+          <summary>
+            <span class="p-name">{z.mitgliedsnummer ? z.mitgliedsnummer + ' · ' : ''}{name(z)}</span>
+            <span class="p-meta">
+              {z.st.imRueckstand ? (
+                <span class="p-offen">{eur(z.st.offenerBetrag)} € offen · {z.st.offeneMonate} Mon.</span>
+              ) : (
+                <span class="p-ok">bezahlt bis {monatDe(z.st.bisMonat)}</span>
+              )}
+              {Number(z.mahnstufe) > 0 && <span class="p-mahn">{mahnstufeName(z.mahnstufe)}</span>}
+            </span>
+          </summary>
+
+          <div class="p-detail">
+            <div class="p-fakten">
+              <span>Beitrag: <strong>{eur(Number(z.beitrag_monatlich) || 0)} €</strong>/Monat</span>
+              <span>Bezahlt bis: <strong>{monatDe(z.st.bisMonat)}</strong></span>
+              {z.gemahnt_am && <span>Zuletzt gemahnt: {new Date(z.gemahnt_am).toLocaleDateString('de-DE')}</span>}
+            </div>
+
+            <div class="p-formulare">
+              <form class="kasten p-form" method="post" action="/mitglieder/beitraege/zahlung">
+                <input type="hidden" name="mitglied" value={z.id} />
+                <strong>Zahlung erfassen</strong>
+                <div class="feld-reihe">
+                  <div class="feld">
+                    <label for={`b-${z.id}`}>Betrag €</label>
+                    <input id={`b-${z.id}`} name="betrag_euro" type="number" min="0.01" step="0.01"
+                      value={z.st.offenerBetrag > 0 ? z.st.offenerBetrag : Number(z.beitrag_monatlich) || 0} required />
+                  </div>
+                  <div class="feld">
+                    <label for={`m-${z.id}`}>Monate</label>
+                    <input id={`m-${z.id}`} name="monate" type="number" min="1" step="1"
+                      value={z.st.offeneMonate > 0 ? z.st.offeneMonate : 1} required />
+                  </div>
+                  <div class="feld">
+                    <label for={`me-${z.id}`}>Methode</label>
+                    <select id={`me-${z.id}`} name="methode">
+                      <option value="bar">Bar</option>
+                      <option value="ueberweisung">Überweisung</option>
+                      <option value="sepa">SEPA</option>
+                      <option value="sonstige">Sonstige</option>
+                    </select>
+                  </div>
+                </div>
+                <button class="knopf" type="submit">Zahlung buchen</button>
+              </form>
+
+              {z.st.imRueckstand && (
+                <form class="p-mahnform" method="post" action="/mitglieder/beitraege/mahnung"
+                  onsubmit="return confirm('Zahlungserinnerung/Mahnung an dieses Mitglied vermerken und – falls Push aktiv – senden?')">
+                  <input type="hidden" name="mitglied" value={z.id} />
+                  <button class="knopf-sek" type="submit">
+                    {Number(z.mahnstufe) > 0 ? 'Nächste Mahnstufe' : 'Erinnerung senden'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </details>
+      ))}
+    </div>
+  )}
+</Basis>
+
+<style>
+  .statuskarte { margin-bottom: 1.2rem; }
+  .sk-gross { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.6rem; }
+  .sk-box { border: 1px solid var(--accent); border-radius: var(--radius); padding: 0.55rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .sk-box-soft { border-color: var(--line); }
+  .sk-box-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+  .sk-box-wert { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; color: var(--brand-strong); }
+
+  .filterzeile { display: flex; gap: 0.6rem; margin: 0 0 1rem; flex-wrap: wrap; }
+  .jahr-knopf { text-decoration: none; color: var(--ink-soft); font: inherit; cursor: pointer; padding: 0.4rem 0.9rem; border: 1px solid var(--line); border-radius: 999px; }
+  .jahr-knopf.aktiv { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+
+  .liste { display: flex; flex-direction: column; gap: 0.5rem; max-width: var(--mass); }
+  .posten { border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); }
+  .posten summary { cursor: pointer; padding: 0.7rem 0.9rem; display: flex; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; align-items: baseline; }
+  .p-name { font-weight: 600; }
+  .p-meta { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; font-size: 0.92rem; }
+  .p-offen { color: var(--gefahr); font-weight: 600; }
+  .p-ok { color: var(--ink-soft); }
+  .p-mahn { font-size: 0.75rem; padding: 0.05rem 0.5rem; border: 1px solid var(--gefahr); border-radius: 999px; color: var(--gefahr); }
+  .p-detail { padding: 0 0.9rem 0.9rem; border-top: 1px solid var(--line); }
+  .p-fakten { display: flex; gap: 1.2rem; flex-wrap: wrap; color: var(--ink-soft); font-size: 0.9rem; margin: 0.7rem 0; }
+  .p-formulare { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+  .p-form { flex: 1 1 20rem; margin: 0; }
+  .p-form strong { display: block; margin-bottom: 0.5rem; }
+  .p-mahnform { margin: 0; }
+  .feld-reihe { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 6rem; min-width: 0; }
+  .feld label { display: block; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .p-form input, .p-form select { width: 100%; padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+</style>

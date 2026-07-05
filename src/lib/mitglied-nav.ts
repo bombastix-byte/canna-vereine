@@ -57,6 +57,16 @@ export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
   return punkte;
 }
 
+/** Reiter des Verwaltungs-Bereichs (Vorstand). Zentral, damit alle Seiten
+ *  denselben Satz zeigen. */
+export const VERWALTUNG_TABS: { label: string; href: string }[] = [
+  { label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' },
+  { label: 'Anträge', href: '/mitglieder/antraege' },
+  { label: 'Beiträge', href: '/mitglieder/beitraege' },
+  { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
+  { label: 'Nachricht', href: '/mitglieder/nachricht' },
+];
+
 /** Ist der Punkt fuer den aktuellen Pfad aktiv (inkl. gebuendelter Seiten)? */
 export function istAktiv(p: NavPunkt, pfadname: string): boolean {
   const aktuell = pfadname.replace(/\/$/, '');

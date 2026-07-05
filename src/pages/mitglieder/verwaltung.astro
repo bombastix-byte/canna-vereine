@@ -1,6 +1,7 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
+import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten, ROLLEN_LABEL, type Rolle } from '../../lib/rollen';
@@ -72,7 +73,7 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
 <Basis titel="Mitgliederverwaltung" beschreibung="Mitglieder suchen und verwalten.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={[{ label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' }, { label: 'Anträge', href: '/mitglieder/antraege' }, { label: 'Beiträge', href: '/mitglieder/beitraege' }, { label: 'Nachricht', href: '/mitglieder/nachricht' }]} />
+  <UnterNav punkte={VERWALTUNG_TABS} />
   <h1 style="margin-bottom:0.4rem;">Mitglieder</h1>
   <p class="einleitung">
     Nach Name, Mitgliedsnummer oder E-Mail suchen — oder den Mitgliedsausweis
