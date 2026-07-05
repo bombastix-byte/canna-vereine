@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { darfBerichte } from '../../../lib/rollen';
+import { darfBerichte, istSystemkonto } from '../../../lib/rollen';
 import { csvAntwort } from '../../../lib/csv';
 import { aggregiereJahr, jahrVon } from '../../../lib/jahresmeldung';
 import { produktLabel } from '../../../lib/verarbeitung';
@@ -60,7 +60,7 @@ export const GET: APIRoute = async ({ params, url, cookies, redirect }) => {
       ausgaben: (await alle<Record<string, any>>('ausgaben')).filter((r) => r.storniert !== true),
       vernichtungen: await alle('vernichtungen'),
       verarbeitungen: await alle('verarbeitungen'),
-      mitgliederzahl: (await alle('users')).length,
+      mitgliederzahl: (await alle<Record<string, any>>('users')).filter((u) => !istSystemkonto(u)).length,
     });
     return csvAntwort(`jahresmeldung-${jahr}.csv`, [
       ['Kennzahl', 'Wert'],

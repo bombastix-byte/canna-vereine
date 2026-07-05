@@ -41,8 +41,8 @@ async function alle<T = Record<string, any>>(pb: PocketBase, collection: string,
 }
 
 export async function vorstandsKennzahlen(pb: PocketBase, heute: string): Promise<Kennzahlen> {
-  // Mitglieder gesamt.
-  const mitglieder = await anzahl(pb, 'users', 'id != ""');
+  // Mitglieder gesamt (ohne technisches System-/Automatik-Konto).
+  const mitglieder = await anzahl(pb, 'users', 'mitgliedsnummer != "SYS"');
 
   // Beitragsrückstände (pro Mitglied rechnen).
   const beitragsUser = await alle<{ beitrag_monatlich?: number; beitrag_bis?: string }>(pb, 'users', {

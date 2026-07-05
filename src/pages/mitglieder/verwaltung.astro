@@ -4,7 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { darfVerwalten, ROLLEN_LABEL, type Rolle } from '../../lib/rollen';
+import { darfVerwalten, ROLLEN_LABEL, istSystemkonto, type Rolle } from '../../lib/rollen';
 import { effektiverStatus, STATUS_LABEL } from '../../lib/status';
 import { berlinTag } from '../../lib/ausgabe';
 
@@ -40,6 +40,8 @@ try {
 } catch {
   alle = [];
 }
+// Technisches System-/Automatik-Konto ist kein Mitglied -> ausblenden.
+alle = alle.filter((u) => !istSystemkonto(u));
 
 const norm = (s: string) => s.toLowerCase();
 const treffer = q

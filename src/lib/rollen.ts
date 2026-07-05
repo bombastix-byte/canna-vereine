@@ -10,6 +10,16 @@ export type Rolle = 'mitglied' | 'ausgabe' | 'anbau' | 'praevention' | 'vorstand
 
 export const ROLLEN: Rolle[] = ['mitglied', 'ausgabe', 'anbau', 'praevention', 'vorstand'];
 
+/**
+ * Technisches System-/Automatik-Konto (kein echtes Mitglied). Wird von der
+ * Erinnerungs-Automatik genutzt und soll in Mitgliederlisten, Zählungen und
+ * Meldungen NICHT als Mitglied erscheinen. Kennzeichen: Mitgliedsnummer "SYS"
+ * bzw. E-Mail automation@…
+ */
+export function istSystemkonto(u: { mitgliedsnummer?: string; email?: string }): boolean {
+  return u.mitgliedsnummer === 'SYS' || (u.email ?? '').startsWith('automation@');
+}
+
 export const ROLLEN_LABEL: Record<Rolle, string> = {
   mitglied: 'Mitglied',
   ausgabe: 'Ausgabekraft (Tresen)',

@@ -2,7 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { darfBerichte } from '../../lib/rollen';
+import { darfBerichte, istSystemkonto } from '../../lib/rollen';
 import { aggregiereJahr, gramm } from '../../lib/jahresmeldung';
 import { berlinTag } from '../../lib/ausgabe';
 import { site } from '../../config';
@@ -28,7 +28,9 @@ const chargen = await ladeListe<{ ernte_datum?: string; trockengewicht_g?: numbe
 const ausgaben = await ladeListe<{ menge_gramm?: number; monat?: string; produkt_typ?: string }>('ausgaben', { filter: 'storniert!=true' });
 const vernichtungen = await ladeListe<{ menge_gramm?: number; datum?: string }>('vernichtungen');
 const verarbeitungen = await ladeListe<{ ertrag_g?: number; datum?: string }>('verarbeitungen');
-const mitglieder = await ladeListe<{ id: string }>('users');
+const mitglieder = (await ladeListe<{ id: string; mitgliedsnummer?: string; email?: string }>('users')).filter(
+  (u) => !istSystemkonto(u),
+);
 
 const jetztJahr = berlinTag().slice(0, 4);
 const jahr = Astro.url.searchParams.get('jahr') ?? jetztJahr;
