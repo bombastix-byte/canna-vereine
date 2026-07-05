@@ -65,6 +65,7 @@ export const VERWALTUNG_TABS: { label: string; href: string }[] = [
   { label: 'Beiträge', href: '/mitglieder/beitraege' },
   { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
   { label: 'Nachricht', href: '/mitglieder/nachricht' },
+  { label: 'Protokoll', href: '/mitglieder/verwaltung/protokoll' },
 ];
 
 /** Ist der Punkt fuer den aktuellen Pfad aktiv (inkl. gebuendelter Seiten)? */

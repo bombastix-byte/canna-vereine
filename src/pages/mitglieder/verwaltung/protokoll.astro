@@ -1,0 +1,138 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import UnterNav from '../../../components/UnterNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten } from '../../../lib/rollen';
+import { AKTION_LABEL } from '../../../lib/audit';
+import { VERWALTUNG_TABS } from '../../../lib/mitglied-nav';
+
+// Änderungshistorie / Audit-Log: chronologisches Protokoll sicherheits- und
+// governance-relevanter Aktionen. Nur Vorstand. Append-only (nicht editierbar).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+// Filter: Bereich (Aktions-Präfix) und Freitext.
+const bereich = Astro.url.searchParams.get('bereich') ?? '';
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+
+interface LogRow {
+  id: string;
+  created: string;
+  akteur_name?: string;
+  aktion: string;
+  objekt_typ?: string;
+  objekt_id?: string;
+  objekt_label?: string;
+  details?: string;
+}
+
+const filterTeile: string[] = [];
+if (bereich) filterTeile.push(`aktion ~ "${bereich}."`);
+if (q) filterTeile.push(`(objekt_label ~ "${q}" || akteur_name ~ "${q}" || details ~ "${q}")`);
+const filter = filterTeile.join(' && ');
+
+let eintraege: LogRow[] = [];
+let gesamt = 0;
+try {
+  const res = await pb.collection('audit_log').getList(1, 200, {
+    sort: '-created',
+    ...(filter ? { filter } : {}),
+  });
+  eintraege = res.items as unknown as LogRow[];
+  gesamt = res.totalItems;
+} catch {
+  eintraege = [];
+}
+
+const bereiche = [
+  { key: '', label: 'Alles' },
+  { key: 'mitglied', label: 'Mitglieder' },
+  { key: 'rolle', label: 'Rollen' },
+  { key: 'antrag', label: 'Anträge' },
+  { key: 'charge', label: 'Chargen' },
+  { key: 'abgabe', label: 'Abgaben' },
+  { key: 'zahlung', label: 'Zahlungen' },
+  { key: 'mahnung', label: 'Mahnungen' },
+];
+
+const wann = (s: string) =>
+  s ? new Date(s).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+const istGefahr = (a: string) => a === 'mitglied.geloescht' || a === 'charge.rueckruf' || a === 'rolle.geaendert';
+---
+
+<Basis titel="Protokoll" beschreibung="Änderungshistorie sicherheits- und governance-relevanter Aktionen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <UnterNav punkte={VERWALTUNG_TABS} />
+  <h1 style="margin-bottom:0.4rem;">Protokoll (Änderungshistorie)</h1>
+  <p class="einleitung">
+    Wer hat wann welche Mitgliedsdaten, Rollen, Freigaben, Zahlungen oder
+    Rückrufe geändert. Das Protokoll ist fortlaufend und kann nicht bearbeitet
+    werden — für Nachvollziehbarkeit und Governance.
+  </p>
+
+  <form class="filter" method="get">
+    <div class="chips">
+      {bereiche.map((b) => (
+        <a class:list={['chip', { aktiv: b.key === bereich }]}
+           href={`/mitglieder/verwaltung/protokoll${b.key ? `?bereich=${b.key}` : ''}${q ? `${b.key ? '&' : '?'}q=${encodeURIComponent(q)}` : ''}`}>
+          {b.label}
+        </a>
+      ))}
+    </div>
+    <div class="suche">
+      {bereich && <input type="hidden" name="bereich" value={bereich} />}
+      <input name="q" type="search" value={q} placeholder="Suche (Mitglied, Akteur, Detail)…" />
+      <button class="knopf-sek" type="submit">Suchen</button>
+    </div>
+  </form>
+
+  {eintraege.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine Protokolleinträge{filter ? ' für diesen Filter' : ''}.</p>
+  ) : (
+    <>
+      <p style="color:var(--ink-soft);font-size:0.9rem;">{gesamt} Einträge{gesamt > 200 ? ' (neueste 200 gezeigt)' : ''}.</p>
+      <ul class="log">
+        {eintraege.map((e) => (
+          <li class:list={['log-zeile', { gefahr: istGefahr(e.aktion) }]}>
+            <span class="log-zeit">{wann(e.created)}</span>
+            <span class="log-inhalt">
+              <span class="log-aktion">{AKTION_LABEL[e.aktion] ?? e.aktion}</span>
+              {e.objekt_label && <span class="log-objekt"> · {e.objekt_label}</span>}
+              {e.details && <span class="log-details">{e.details}</span>}
+            </span>
+            <span class="log-akteur">{e.akteur_name || '—'}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+</Basis>
+
+<style>
+  .filter { margin: 0 0 1.2rem; max-width: var(--mass); }
+  .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+  .chip { text-decoration: none; color: var(--ink-soft); padding: 0.3rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; font-size: 0.88rem; }
+  .chip.aktiv { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+  .suche { display: flex; gap: 0.5rem; }
+  .suche input { flex: 1 1 auto; min-width: 0; padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+
+  .log { list-style: none; padding: 0; margin: 0; max-width: var(--mass); }
+  .log-zeile { display: grid; grid-template-columns: 6.5rem 1fr auto; gap: 0.6rem 0.9rem; align-items: baseline; padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+  .log-zeit { color: var(--ink-soft); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  .log-inhalt { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+  .log-aktion { font-weight: 600; }
+  .log-objekt { color: var(--ink); }
+  .log-details { color: var(--ink-soft); font-size: 0.88rem; }
+  .log-akteur { color: var(--ink-soft); font-size: 0.85rem; text-align: right; white-space: nowrap; }
+  .log-zeile.gefahr .log-aktion { color: var(--gefahr); }
+  @media (max-width: 560px) {
+    .log-zeile { grid-template-columns: 1fr auto; }
+    .log-zeit { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
+import { protokolliere } from '../../../lib/audit';
 
 // Entfernt ein Mitglied endgueltig (Vorstand). Das eigene Konto kann nicht
 // geloescht werden (Aussperr-Schutz).
@@ -19,11 +20,24 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect(`/mitglieder/verwaltung/${id}?fehler=selbst`, 303);
   }
 
+  // Label vor dem Löschen sichern (für das Protokoll).
+  let label = id;
+  try {
+    const u = await pb.collection('users').getOne(id);
+    label = `${u.mitgliedsnummer || ''} ${[u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || ''}`.trim() || id;
+  } catch {
+    /* egal */
+  }
+
   try {
     await pb.collection('users').delete(id);
   } catch {
     return redirect(`/mitglieder/verwaltung/${id}?fehler=loeschen`, 303);
   }
+
+  await protokolliere(pb, mitglied, 'mitglied.geloescht', {
+    objektTyp: 'mitglied', objektId: id, objektLabel: label,
+  });
 
   return redirect('/mitglieder/verwaltung?geloescht=1', 303);
 };

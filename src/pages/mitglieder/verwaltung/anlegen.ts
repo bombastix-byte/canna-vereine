@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
+import { protokolliere } from '../../../lib/audit';
 
 // Legt ein Mitglied manuell an (Vorstand). Naechste freie M-Nummer, wenn keine
 // angegeben; Startpasswort automatisch, wenn keins gesetzt. Zeigt das Passwort
@@ -70,6 +71,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     return fehler('fehlgeschlagen');
   }
+
+  await protokolliere(pb, mitglied, 'mitglied.angelegt', {
+    objektTyp: 'mitglied', objektId: neu.id, objektLabel: `${mitgliedsnummer} ${name}`.trim(),
+    details: `Rollen: ${(rollen.length ? rollen : ['mitglied']).join(', ')}`,
+  });
 
   const q = new URLSearchParams({ neu: '1', pw: passwort });
   return redirect(`/mitglieder/verwaltung/${neu.id}?${q.toString()}`, 303);

@@ -4,6 +4,7 @@ import { darfVerwalten } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { beitragStatus, mahnstufeName } from '../../../lib/beitrag';
 import { sendePush } from '../../../lib/push';
+import { protokolliere } from '../../../lib/audit';
 
 // Zahlungserinnerung / Mahnung an ein Mitglied: erhoeht die Mahnstufe, merkt
 // das Datum und schickt (falls Push eingerichtet) eine Benachrichtigung an die
@@ -68,6 +69,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     /* Push ist optional - Mahnstufe ist gesetzt, Vorstand kann zusaetzlich schriftlich mahnen */
   }
+
+  await protokolliere(pb, mitglied, 'mahnung.gesendet', {
+    objektTyp: 'mitglied', objektId: mitgliedId,
+    objektLabel: `${u.mitgliedsnummer || ''} ${[u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || ''}`.trim(),
+    details: `${mahnstufeName(neueStufe)} · offen ${st.offenerBetrag.toFixed(2)} €`,
+  });
 
   return redirect('/mitglieder/beitraege/status?ok=mahnung', 303);
 };

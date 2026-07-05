@@ -3,6 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAnbau } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { sendePush } from '../../../lib/push';
+import { protokolliere } from '../../../lib/audit';
 
 // Chargen-Rueckruf: sperrt die Charge, markiert sie als Rueckruf und
 // benachrichtigt ALLE Mitglieder, die aus dieser Charge etwas erhalten haben
@@ -100,6 +101,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     /* Journal ist Zusatz - der Rueckruf selbst ist gesetzt */
   }
+
+  await protokolliere(pb, mitglied, 'charge.rueckruf', {
+    objektTyp: 'charge', objektId: chargeId, objektLabel: charge.charge_nr ?? chargeId,
+    details: `${mitgliedIds.length} Empfänger, ${benachrichtigt} benachrichtigt${grund ? ` · Grund: ${grund}` : ''}`,
+  });
 
   return zurueck('ok=rueckruf');
 };

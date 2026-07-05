@@ -4,6 +4,7 @@ import { darfVerwalten } from '../../../lib/rollen';
 import { sendeMail } from '../../../lib/mail';
 import { mailAufnahme, mailAblehnung } from '../../../lib/mail-vorlagen';
 import { site } from '../../../config';
+import { protokolliere } from '../../../lib/audit';
 
 const vereinKopf = { vereinsname: site.vereinsname, email: site.kontakt.email, ort: site.kontakt.ort };
 
@@ -46,6 +47,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     if (aktion === 'ablehnen') {
       const v = mailAblehnung(vereinKopf, antrag.name);
       await sendeMail({ an: antrag.email, betreff: v.betreff, text: v.text });
+      await protokolliere(pb, mitglied, 'antrag.abgelehnt', {
+        objektTyp: 'antrag', objektId: antragId, objektLabel: antrag.name ?? antrag.email ?? antragId,
+      });
     }
     return redirect(`/mitglieder/antraege?ok=${status}`, 303);
   }
@@ -89,6 +93,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     } catch {
       return redirect('/mitglieder/antraege?fehler=1', 303);
     }
+
+    await protokolliere(pb, mitglied, 'antrag.aufgenommen', {
+      objektTyp: 'mitglied', objektId: antragId, objektLabel: `${mitgliedsnummer} ${antrag.name ?? ''}`.trim(),
+    });
 
     // Zugangsdaten per Mail (falls SMTP konfiguriert); sonst zeigt die Seite
     // das Startpasswort zum manuellen Weitergeben.

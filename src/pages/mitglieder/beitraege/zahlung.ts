@@ -3,6 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { beitragBisNach } from '../../../lib/beitrag';
+import { protokolliere } from '../../../lib/audit';
 
 // Zahlung eines Mitgliedsbeitrags erfassen: schreibt eine Journal-Zeile
 // (append-only) und schiebt "bezahlt bis" um die gezahlten Monate vor. Eine
@@ -54,5 +55,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     return redirect('/mitglieder/beitraege/status?fehler=fehlgeschlagen', 303);
   }
+
+  await protokolliere(pb, mitglied, 'zahlung.erfasst', {
+    objektTyp: 'mitglied', objektId: mitgliedId,
+    objektLabel: `${u.mitgliedsnummer || ''} ${[u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || ''}`.trim(),
+    details: `${betrag.toFixed(2)} € · ${monate} Monat(e) · ${methode} · bis ${neuBis.slice(0, 7)}`,
+  });
+
   return redirect('/mitglieder/beitraege/status?ok=zahlung', 303);
 };

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAusgeben } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
+import { protokolliere } from '../../../lib/audit';
 
 // Storniert einen kompletten Abgabe-Vorgang (Beleg): alle Positionen werden als
 // storniert markiert (append-only, bleiben erhalten) und der Chargenbestand
@@ -68,6 +69,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       }
     }
   }
+
+  const summe = positionen.reduce((s, p) => s + (Number(p.menge_gramm) || 0), 0);
+  await protokolliere(pb, mitglied, 'abgabe.storniert', {
+    objektTyp: 'beleg', objektId: belegId, objektLabel: anker.belegnr ?? belegId,
+    details: `${positionen.length} Position(en), ${summe} g${grund ? ` · Grund: ${grund}` : ''}`,
+  });
 
   return redirect(`/mitglieder/ausgabe/beleg/${belegId}?ok=storniert`, 303);
 };

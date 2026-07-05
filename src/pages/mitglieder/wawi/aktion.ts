@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAnbau } from '../../../lib/rollen';
 import { moeglicheAktionen } from '../../../lib/wawi';
+import { protokolliere } from '../../../lib/audit';
 
 // Fuehrt einen Lebenszyklus-Schritt einer Charge aus: Ernte erfassen, Freigeben
 // oder Sperren. Nur Anbauverantwortliche/Vorstand.
@@ -73,5 +74,14 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     return zurueck('fehler=fehlgeschlagen');
   }
+
+  // Governance-relevante Freigaben/Sperren protokollieren.
+  if (aktion === 'freigabe' || aktion === 'sperren') {
+    await protokolliere(pb, mitglied, aktion === 'freigabe' ? 'charge.freigegeben' : 'charge.gesperrt', {
+      objektTyp: 'charge', objektId: chargeId, objektLabel: charge.charge_nr ?? chargeId,
+      details: aktion === 'freigabe' ? `Trockengewicht ${patch.trockengewicht_g} g` : '',
+    });
+  }
+
   return zurueck('ok=' + aktion);
 };

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
+import { protokolliere, feldDiff } from '../../../lib/audit';
 
 // Speichert Rollen/Stammdaten eines Mitglieds. Nur Vorstand.
 export const prerender = false;
@@ -30,22 +31,58 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   if (!id) return redirect('/mitglieder/verwaltung?fehler=fehlend', 303);
 
+  // Vorzustand für das Protokoll laden (best-effort).
+  let alt: Record<string, any> | null = null;
   try {
-    await pb.collection('users').update(id, {
-      vorname,
-      nachname,
-      mitgliedsnummer,
-      geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
-      beitrag_bis: beitragBis ? `${beitragBis} 00:00:00.000Z` : null,
-      beitrag_monatlich: Number.isFinite(beitragMonatlich) && beitragMonatlich > 0 ? beitragMonatlich : null,
-      iban,
-      bic,
-      mandatsref,
-      mandatsdatum: mandatsdatum ? `${mandatsdatum} 00:00:00.000Z` : null,
-      rollen: rollen.length ? rollen : ['mitglied'],
-    });
+    alt = await pb.collection('users').getOne(id);
+  } catch {
+    alt = null;
+  }
+
+  const neueRollen = rollen.length ? rollen : ['mitglied'];
+  const neu = {
+    vorname,
+    nachname,
+    mitgliedsnummer,
+    geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
+    beitrag_bis: beitragBis ? `${beitragBis} 00:00:00.000Z` : null,
+    beitrag_monatlich: Number.isFinite(beitragMonatlich) && beitragMonatlich > 0 ? beitragMonatlich : null,
+    iban,
+    bic,
+    mandatsref,
+    mandatsdatum: mandatsdatum ? `${mandatsdatum} 00:00:00.000Z` : null,
+    rollen: neueRollen,
+  };
+
+  try {
+    await pb.collection('users').update(id, neu);
   } catch {
     return redirect(`/mitglieder/verwaltung/${id}?fehler=fehlgeschlagen`, 303);
+  }
+
+  // Protokoll: Stammdaten-Änderung und – getrennt und deutlich – Rollenwechsel.
+  const label = `${mitgliedsnummer || ''} ${vorname} ${nachname}`.trim();
+  if (alt) {
+    const rollenAlt = [...(alt.rollen ?? [])].sort().join(',');
+    const rollenNeu = [...neueRollen].sort().join(',');
+    if (rollenAlt !== rollenNeu) {
+      await protokolliere(pb, mitglied, 'rolle.geaendert', {
+        objektTyp: 'mitglied', objektId: id, objektLabel: label,
+        details: `${rollenAlt || '—'} → ${rollenNeu || '—'}`,
+      });
+    }
+    const diff = feldDiff(alt, neu, [
+      { key: 'vorname', label: 'Vorname' }, { key: 'nachname', label: 'Nachname' },
+      { key: 'mitgliedsnummer', label: 'Mitgliedsnummer' }, { key: 'geburtsdatum', label: 'Geburtsdatum' },
+      { key: 'beitrag_bis', label: 'Beitrag bis' }, { key: 'beitrag_monatlich', label: 'Monatsbeitrag' },
+      { key: 'iban', label: 'IBAN' }, { key: 'bic', label: 'BIC' },
+      { key: 'mandatsref', label: 'Mandatsref.' }, { key: 'mandatsdatum', label: 'Mandatsdatum' },
+    ]);
+    if (diff) {
+      await protokolliere(pb, mitglied, 'mitglied.aktualisiert', {
+        objektTyp: 'mitglied', objektId: id, objektLabel: label, details: diff,
+      });
+    }
   }
 
   return redirect(`/mitglieder/verwaltung/${id}?ok=1`, 303);
