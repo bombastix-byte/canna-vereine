@@ -1,0 +1,179 @@
+---
+import Basis from '../../../../layouts/Basis.astro';
+import MitgliedNav from '../../../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
+import { darfAnbau } from '../../../../lib/rollen';
+import { pushKonfiguriert } from '../../../../lib/push';
+
+// Chargen-Rueckruf: Empfaenger einer Charge sehen und benachrichtigen.
+// Funktioniert fuer jede Charge (auch aufgebraucht/gesperrt). Nur Anbau/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const { id } = Astro.params;
+let charge;
+try {
+  charge = await pb.collection('chargen').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
+}
+
+// Abgaben dieser Charge (nicht stornierte) -> je Mitglied buendeln.
+let abgaben: Array<Record<string, any>> = [];
+try {
+  abgaben = await pb.collection('ausgaben').getFullList({
+    filter: `charge_ref="${id}" && storniert!=true`,
+    sort: '-tag',
+  });
+} catch {
+  abgaben = [];
+}
+interface Empf { mitglied: string; nummer: string; gramm: number; abgaben: number; letzte?: string; name?: string }
+const proMitglied = new Map<string, Empf>();
+for (const a of abgaben) {
+  const key = a.mitglied as string;
+  if (!key) continue;
+  const e = proMitglied.get(key) ?? { mitglied: key, nummer: a.mitgliedsnummer ?? '', gramm: 0, abgaben: 0, letzte: a.tag };
+  e.gramm += Number(a.menge_gramm) || 0;
+  e.abgaben += 1;
+  if (!e.letzte || (a.tag && a.tag > e.letzte)) e.letzte = a.tag;
+  proMitglied.set(key, e);
+}
+const empfaenger = [...proMitglied.values()].sort((a, b) => b.gramm - a.gramm);
+
+// Namen der betroffenen Mitglieder nachladen (intern, fuer die Ansprache).
+if (empfaenger.length) {
+  try {
+    const orFilter = empfaenger.map((e) => `id="${e.mitglied}"`).join(' || ');
+    const users = await pb.collection('users').getFullList({ filter: orFilter, fields: 'id,name,vorname,nachname' });
+    const byId = new Map(users.map((u: any) => [u.id, u]));
+    for (const e of empfaenger) {
+      const u = byId.get(e.mitglied) as any;
+      if (u) e.name = [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name;
+    }
+  } catch {
+    /* Namen optional */
+  }
+}
+
+// Bisherige Rueckruf-Ereignisse dieser Charge.
+let journal: Array<Record<string, any>> = [];
+try {
+  journal = await pb.collection('rueckrufe').getFullList({ filter: `charge="${id}"`, sort: '-created' });
+} catch {
+  journal = [];
+}
+
+const gesamtGramm = empfaenger.reduce((s, e) => s + e.gramm, 0);
+const g = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+const datumDe = (s?: string) => (s ? new Date(s.length <= 10 ? s + 'T00:00:00Z' : s).toLocaleDateString('de-DE') : '—');
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const push = pushKonfiguriert();
+---
+
+<Basis titel={`Rückruf ${charge.charge_nr ?? ''}`} beschreibung="Charge zurückrufen und Empfänger benachrichtigen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Warenwirtschaft</p>
+  <p><a href="/mitglieder/wawi">← zurück zur Warenwirtschaft</a></p>
+  <h1 style="margin-bottom:0.3rem;">Rückruf — Charge {charge.charge_nr}</h1>
+  <p class="einleitung">{charge.sorte_name}{charge.produkt_typ && charge.produkt_typ !== 'bluete' ? ` · ${charge.produkt_typ}` : ''}</p>
+
+  {ok === 'rueckruf' && (
+    <p class="hinweis" role="status">
+      Rückruf ausgelöst — Charge gesperrt. {push ? 'Betroffene Mitglieder wurden per Push benachrichtigt.' : 'Push ist nicht eingerichtet — bitte die Empfänger unten manuell informieren.'}
+    </p>
+  )}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
+
+  {charge.rueckruf ? (
+    <div class="rueckruf-banner">
+      <strong>Diese Charge ist zurückgerufen.</strong>
+      <span>Am {datumDe(charge.rueckruf_am)}{charge.rueckruf_grund ? ` · Grund: ${charge.rueckruf_grund}` : ''}. Status: gesperrt.</span>
+    </div>
+  ) : (
+    <form class="kasten" method="post" action="/mitglieder/wawi/rueckruf"
+      onsubmit="return confirm('Charge wirklich zurückrufen? Sie wird gesperrt und alle Empfänger werden benachrichtigt.')">
+      <input type="hidden" name="charge" value={charge.id} />
+      <h2 style="margin-top:0;">Rückruf auslösen</h2>
+      <p style="color:var(--ink-soft);margin:0 0 0.8rem;">
+        Sperrt die Charge (keine weitere Abgabe) und benachrichtigt die
+        {' '}<strong>{empfaenger.length}</strong> betroffenen Mitglieder
+        {push ? ' per Push.' : '. Achtung: Push ist nicht eingerichtet — informiere die Empfänger zusätzlich manuell.'}
+      </p>
+      <div class="feld">
+        <label for="grund">Grund des Rückrufs</label>
+        <input id="grund" name="grund" type="text" required placeholder="z. B. auffälliges Laborergebnis, Schimmelverdacht"
+          style="width:100%;max-width:30rem;padding:0.55rem 0.65rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-rein);color:var(--ink);font:inherit;" />
+      </div>
+      <button class="knopf-gefahr" type="submit"
+        style="margin-top:0.8rem;padding:0.6rem 1.1rem;border:1px solid var(--gefahr);border-radius:var(--radius);background:transparent;color:var(--gefahr);font:inherit;font-weight:600;cursor:pointer;">
+        Rückruf auslösen ({empfaenger.length} Empfänger)
+      </button>
+    </form>
+  )}
+
+  {charge.rueckruf && !push && (
+    <p class="hinweis hinweis--fehler">Push ist nicht eingerichtet — bitte die unten gelisteten Empfänger manuell informieren.</p>
+  )}
+
+  <h2>Betroffene Empfänger ({empfaenger.length})</h2>
+  <p style="color:var(--ink-soft);max-width:var(--mass);">
+    Insgesamt {g(gesamtGramm)} g aus dieser Charge abgegeben. Stornierte Abgaben sind ausgenommen.
+  </p>
+
+  {empfaenger.length === 0 ? (
+    <p style="color:var(--ink-soft);">Aus dieser Charge wurde noch nichts abgegeben — es gibt keine Empfänger.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Mitglied</th><th class="r">Menge</th><th class="r">Abgaben</th><th>letzte Abgabe</th></tr></thead>
+      <tbody>
+        {empfaenger.map((e) => (
+          <tr>
+            <td>{e.nummer}{e.name ? ` · ${e.name}` : ''}</td>
+            <td class="r">{g(e.gramm)} g</td>
+            <td class="r">{e.abgaben}</td>
+            <td>{datumDe(e.letzte)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+
+  {journal.length > 0 && (
+    <>
+      <h2>Rückruf-Protokoll</h2>
+      <table class="tabelle">
+        <thead><tr><th>Datum</th><th>Grund</th><th class="r">Empfänger</th><th class="r">Benachrichtigt</th></tr></thead>
+        <tbody>
+          {journal.map((r) => (
+            <tr>
+              <td>{datumDe(r.datum)}</td>
+              <td>{r.grund || '—'}</td>
+              <td class="r">{r.empfaenger_zahl ?? 0}</td>
+              <td class="r">{r.benachrichtigt ?? 0}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+</Basis>
+
+<style>
+  .rueckruf-banner {
+    display: flex; flex-direction: column; gap: 0.2rem;
+    max-width: var(--mass); margin: 0 0 1.2rem;
+    padding: 0.7rem 0.9rem; border: 1px solid var(--gefahr); border-radius: var(--radius);
+    background: var(--gefahr-bg); color: var(--gefahr);
+  }
+  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; margin-bottom: 1.4rem; }
+  .tabelle th, .tabelle td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+  .tabelle .r { text-align: right; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+</style>

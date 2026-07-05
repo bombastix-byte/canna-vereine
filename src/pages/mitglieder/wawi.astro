@@ -38,6 +38,8 @@ interface Charge {
   testergebnis_url?: string;
   plan?: string;
   produkt_typ?: string;
+  rueckruf?: boolean;
+  rueckruf_grund?: string;
 }
 interface Verarbeitung {
   id: string;
@@ -512,7 +514,15 @@ const statusVariante: Record<string, string> = {
                 <button class="knopf-sek" type="submit">Charge sperren</button>
               </form>
             )}
+
+            <p class="aktion" style="margin:0;">
+              <strong>Rückruf</strong>
+              <a class="knopf-sek" href={`/mitglieder/wawi/rueckruf/${c.id}`} style="display:inline-block;text-decoration:none;">Empfänger & Rückruf …</a>
+            </p>
           </details>
+        )}
+        {c.rueckruf && (
+          <p style="margin:0.4rem 0 0;color:var(--gefahr);font-weight:600;font-size:0.9rem;">⚠ Zurückgerufen{c.rueckruf_grund ? ` · ${c.rueckruf_grund}` : ''}</p>
         )}
       </div>
       ))}
@@ -523,15 +533,16 @@ const statusVariante: Record<string, string> = {
     <details class="klappe">
       <summary>Archiv ({archiv.length}) — aufgebrauchte und gesperrte Chargen</summary>
       <table class="tabelle">
-        <thead><tr><th>Charge</th><th>Sorte</th><th>Status</th><th class="r">Trocken</th><th class="r">THC</th></tr></thead>
+        <thead><tr><th>Charge</th><th>Sorte</th><th>Status</th><th class="r">Trocken</th><th class="r">THC</th><th>Rückruf</th></tr></thead>
         <tbody>
           {archiv.map((c) => (
             <tr>
               <td>{c.charge_nr}</td>
               <td>{c.sorte_name}</td>
-              <td>{STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}</td>
+              <td>{c.rueckruf ? '⚠ zurückgerufen' : (STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status)}</td>
               <td class="r">{g(c.trockengewicht_g)}</td>
               <td class="r">{c.thc_prozent ?? '—'} %</td>
+              <td><a href={`/mitglieder/wawi/rueckruf/${c.id}`}>Empfänger …</a></td>
             </tr>
           ))}
         </tbody>
