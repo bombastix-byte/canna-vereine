@@ -167,6 +167,11 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
       </div>
       <button class="knopf" type="submit" style="margin-top:0.8rem;">Status setzen</button>
     </form>
+    <p class="feld-hinweis" style="margin-top:0.9rem;">
+      Präventionshinweise (§ 23): {m.hinweise_bestaetigt_am
+        ? `bestätigt am ${new Date(String(m.hinweise_bestaetigt_am).replace(' ', 'T')).toLocaleDateString('de-DE')} (Version ${m.hinweise_version})`
+        : 'noch nicht bestätigt'}.
+    </p>
   </section>
 
   {m.id !== mitglied.id && (

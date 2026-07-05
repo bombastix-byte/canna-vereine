@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import QRCode from 'qrcode-svg';
 import { site } from '../../config';
+import { mussBestaetigen } from '../../lib/einwilligung';
 
 // Digitaler Mitgliedsausweis: Name, Mitgliedsnummer und QR-Code (Inhalt =
 // Mitgliedsnummer). Am Tresen wird der QR ins Schnellfeld gescannt - das
@@ -13,6 +14,8 @@ export const prerender = false;
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { mitglied } = ergebnis;
+// Einwilligungs-Gate: erst die Präventionshinweise bestätigen.
+if (mussBestaetigen(mitglied)) return Astro.redirect('/mitglieder/hinweise', 303);
 
 const nummer = mitglied.mitgliedsnummer ?? '';
 const qrSvg = nummer

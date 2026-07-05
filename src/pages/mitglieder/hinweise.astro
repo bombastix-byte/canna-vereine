@@ -1,0 +1,72 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { HINWEIS_VERSION, mussBestaetigen } from '../../lib/einwilligung';
+import { startseiteFuer } from '../../lib/mitglied-nav';
+import { site } from '../../config';
+
+// Präventions-/Gesundheitshinweise nach § 23 KCanG mit Kenntnisnahme-Bestätigung.
+// Bewusst OHNE Navigation: Interstitial beim ersten Login, bis bestätigt wurde.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { mitglied } = ergebnis;
+
+// Schon bestätigt (aktuelle Version)? Dann zurück in den Bereich.
+if (!mussBestaetigen(mitglied)) return Astro.redirect(startseiteFuer(mitglied.rollen), 303);
+
+const fehler = Astro.url.searchParams.get('fehler');
+const praev = site.praeventionsbeauftragter;
+---
+
+<Basis titel="Wichtige Hinweise" beschreibung="Präventions- und Gesundheitshinweise zur Kenntnis nehmen.">
+  <p class="eyebrow">Vor der ersten Nutzung</p>
+  <h1 style="margin-bottom:0.4rem;">Präventions- und Gesundheitshinweise</h1>
+  <p class="einleitung">
+    Bitte lies die folgenden Hinweise nach § 23 Konsumcannabisgesetz aufmerksam
+    und bestätige die Kenntnisnahme. Erst danach steht dir der Mitgliederbereich
+    offen.
+  </p>
+
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Bitte setze das Häkchen zur Bestätigung.</p>}
+
+  <section class="kasten hinweistext">
+    <h2>Gesundheit &amp; Jugendschutz</h2>
+    <ul>
+      <li>Der Konsum von Cannabis kann die Gesundheit beeinträchtigen, insbesondere bei jungen Menschen, in der Schwangerschaft und Stillzeit.</li>
+      <li>Konsum vor dem 18. Lebensjahr ist verboten. Für unter 21-Jährige gelten strengere THC-Grenzen bei der Abgabe.</li>
+      <li>Bewahre Cannabis unzugänglich für Kinder und Jugendliche auf.</li>
+      <li>Kein Konsum vor dem Führen von Fahrzeugen oder dem Bedienen von Maschinen.</li>
+      <li>Mischkonsum mit Alkohol oder anderen Substanzen erhöht die Risiken erheblich.</li>
+    </ul>
+    <h2>Verantwortungsvoller Umgang</h2>
+    <ul>
+      <li>Die Abgabe erfolgt ausschließlich an Mitglieder zum Eigenkonsum. Eine Weitergabe an Dritte ist verboten.</li>
+      <li>Bei Fragen, Sorgen oder Anzeichen eines problematischen Konsums wende dich an unsere Präventionsbeauftragte/​unseren Präventionsbeauftragten:
+        <strong>{praev.name}</strong>{praev.email ? <> · <a href={`mailto:${praev.email}`}>{praev.email}</a></> : null}.
+      </li>
+      <li>Weitere Beratung und Hilfe findest du unter <a href="/praevention-beratung">Prävention und Beratung</a>.</li>
+    </ul>
+  </section>
+
+  <form method="post" action="/mitglieder/hinweise/bestaetigen" class="bestaetigung">
+    <label class="check">
+      <input type="checkbox" name="bestaetigt" required />
+      <span>Ich habe die Präventions- und Gesundheitshinweise gelesen und zur Kenntnis genommen.</span>
+    </label>
+    <button class="knopf" type="submit">Bestätigen &amp; fortfahren</button>
+    <p class="fuss">Version {HINWEIS_VERSION}. Deine Bestätigung wird mit Zeitstempel dokumentiert.</p>
+  </form>
+</Basis>
+
+<style>
+  .hinweistext h2 { font-size: 1.05rem; margin: 1rem 0 0.5rem; }
+  .hinweistext h2:first-child { margin-top: 0; }
+  .hinweistext ul { margin: 0 0 0.5rem; padding-left: 1.2rem; }
+  .hinweistext li { margin: 0.3rem 0; line-height: 1.5; }
+  .bestaetigung { max-width: var(--mass); margin-top: 1.4rem; }
+  .check { display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 1rem; font-size: 1rem; }
+  .check input { margin-top: 0.25rem; width: 1.2rem; height: 1.2rem; flex: none; }
+  .fuss { color: var(--ink-soft); font-size: 0.85rem; margin: 0.7rem 0 0; }
+</style>

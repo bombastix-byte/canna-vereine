@@ -6,6 +6,7 @@ import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } fro
 import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../lib/helfer';
 import { vorstandsKennzahlen } from '../../lib/cockpit';
 import { berlinTag } from '../../lib/ausgabe';
+import { mussBestaetigen } from '../../lib/einwilligung';
 
 // Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
 export const prerender = false;
@@ -15,6 +16,8 @@ if (!ergebnis) {
   return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 }
 const { pb, mitglied } = ergebnis;
+// Einwilligungs-Gate: erst die Präventionshinweise bestätigen.
+if (mussBestaetigen(mitglied)) return Astro.redirect('/mitglieder/hinweise', 303);
 
 // Inhalte laden. Fehlt eine Collection noch (frische Installation), bleibt der
 // Bereich leer statt zu scheitern.

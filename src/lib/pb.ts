@@ -49,6 +49,10 @@ export interface Mitglied {
   mitgliedsnummer?: string;
   /** ISO-Geburtsdatum (fuer die U21-Regel bei der Ausgabe). */
   geburtsdatum?: string;
+  /** Bestaetigte Version der Praeventions-/Gesundheitshinweise (§ 23). */
+  hinweise_version?: string;
+  /** Zeitpunkt der Bestaetigung. */
+  hinweise_bestaetigt_am?: string;
 }
 
 /**
@@ -73,6 +77,8 @@ export async function mitgliedAusToken(
         rollen: alsRollen(record.rollen).length ? alsRollen(record.rollen) : ['mitglied'],
         mitgliedsnummer: (record.mitgliedsnummer as string) || undefined,
         geburtsdatum: (record.geburtsdatum as string) || undefined,
+        hinweise_version: (record.hinweise_version as string) || undefined,
+        hinweise_bestaetigt_am: (record.hinweise_bestaetigt_am as string) || undefined,
       },
     };
   } catch {
