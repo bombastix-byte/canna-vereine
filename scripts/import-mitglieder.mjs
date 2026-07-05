@@ -1,22 +1,43 @@
-// Importiert Mitglieder aus einer CSV in PocketBase (idempotent, upsert per
-// E-Mail). Spalten (Kopfzeile): mitgliedsnummer,name,email,geburtsdatum,rollen,passwort
-//  - geburtsdatum: YYYY-MM-DD (leer erlaubt, aber fuer die U21-Regel noetig)
-//  - rollen: mehrere mit ; getrennt, z. B. "anbau;ausgabe" (leer -> mitglied)
-//  - passwort: leer -> Startpasswort "Start-<mitgliedsnummer>!" (dann aendern lassen)
-// Aufruf:  node --env-file=.env scripts/import-mitglieder.mjs [pfad.csv]
-import { readFileSync } from 'node:fs';
+// Mitglieder aus einer CSV importieren. Legt je Zeile ein Konto an
+// (Mitgliedsnummer + zufälliges Startpasswort) und schreibt einen Report mit
+// den Startpasswörtern zum Weitergeben. Idempotent über die E-Mail: bereits
+// vorhandene Konten werden ÜBERSPRUNGEN (nie überschrieben — schützt echte Daten).
+//
+//   node --env-file=.env scripts/import-mitglieder.mjs mitglieder.csv [--dry-run] [--report out.csv]
+//
+// Spalten (Kopfzeile, Reihenfolge egal, deutsche/englische Namen erkannt):
+//   email (Pflicht) | vorname | nachname | name (voll, alternativ) |
+//   geburtsdatum (YYYY-MM-DD oder TT.MM.JJJJ) | mitgliedsnummer (optional) |
+//   rollen (mit ; getrennt, z. B. "anbau;ausgabe"; leer -> mitglied)
+// Trennzeichen ; oder , wird automatisch erkannt.
 import PocketBase from 'pocketbase';
-import { ROLLEN } from '../src/lib/rollen.ts';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 
 const URL = process.env.PB_URL ?? 'http://127.0.0.1:8090';
 const ADMIN = process.env.PB_ADMIN_EMAIL ?? 'admin@example.local';
 const ADMIN_PW = process.env.PB_ADMIN_PW ?? 'change-me-admin';
-const CSV = process.argv[2] ?? process.env.MITGLIEDER_CSV ?? 'data/mitglieder.csv';
+const ROLLEN = ['mitglied', 'ausgabe', 'anbau', 'praevention', 'vorstand'];
 
-// Kleiner CSV-Parser mit Anfuehrungszeichen-Unterstuetzung.
+const args = process.argv.slice(2);
+const dryRun = args.includes('--dry-run');
+const reportIdx = args.indexOf('--report');
+const reportPfad = reportIdx >= 0 ? args[reportIdx + 1] : 'import-report.csv';
+const csvPfad = args.find((a) => !a.startsWith('--') && a !== reportPfad);
+if (!csvPfad) {
+  console.error('Aufruf: node --env-file=.env scripts/import-mitglieder.mjs <datei.csv> [--dry-run] [--report out.csv]');
+  process.exit(1);
+}
+
+// --- winziger CSV-Parser (Anführungszeichen, Zeilenumbrüche in Feldern) ---
 function parseCsv(text) {
+  text = text.replace(/^﻿/, ''); // BOM
+  const kopfzeile = text.split('\n')[0] ?? '';
+  const trenn = (kopfzeile.match(/;/g) || []).length >= (kopfzeile.match(/,/g) || []).length ? ';' : ',';
   const rows = [];
   let feld = '', zeile = [], inQ = false;
+  const push = () => { zeile.push(feld); feld = ''; };
+  const pushZ = () => { push(); rows.push(zeile); zeile = []; };
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (inQ) {
@@ -24,64 +45,100 @@ function parseCsv(text) {
       else if (c === '"') inQ = false;
       else feld += c;
     } else if (c === '"') inQ = true;
-    else if (c === ',') { zeile.push(feld); feld = ''; }
-    else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      if (feld !== '' || zeile.length) { zeile.push(feld); rows.push(zeile); zeile = []; feld = ''; }
-    } else feld += c;
+    else if (c === trenn) push();
+    else if (c === '\r') { /* ignorieren */ }
+    else if (c === '\n') pushZ();
+    else feld += c;
   }
-  if (feld !== '' || zeile.length) { zeile.push(feld); rows.push(zeile); }
-  return rows;
+  if (feld !== '' || zeile.length) pushZ();
+  return rows.filter((r) => r.some((f) => f.trim() !== ''));
 }
 
-const text = readFileSync(CSV, 'utf8');
-const rows = parseCsv(text).filter((r) => r.some((z) => z.trim() !== ''));
-if (rows.length < 2) { console.log('Keine Datenzeilen in', CSV); process.exit(1); }
-const kopf = rows[0].map((h) => h.trim().toLowerCase());
-const idx = (name) => kopf.indexOf(name);
+const alias = {
+  vorname: ['vorname', 'first', 'firstname', 'first_name'],
+  nachname: ['nachname', 'last', 'lastname', 'last_name'],
+  name: ['name', 'fullname', 'vollername'],
+  email: ['email', 'e-mail', 'mail'],
+  geburtsdatum: ['geburtsdatum', 'geburt', 'geb', 'birthdate', 'dob'],
+  mitgliedsnummer: ['mitgliedsnummer', 'mitgliedsnr', 'nummer', 'nr', 'member', 'memberid'],
+  rollen: ['rollen', 'rolle', 'roles'],
+};
+function findeSpalten(kopf) {
+  const norm = kopf.map((h) => h.trim().toLowerCase());
+  const map = {};
+  for (const [feld, aliase] of Object.entries(alias)) {
+    const idx = norm.findIndex((h) => aliase.includes(h));
+    if (idx >= 0) map[feld] = idx;
+  }
+  return map;
+}
+function normDatum(s) {
+  s = (s || '').trim();
+  let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]} 00:00:00.000Z`;
+  m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(s);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')} 00:00:00.000Z`;
+  return null;
+}
+function startpasswort() {
+  const teil = () => randomBytes(3).toString('base64url').slice(0, 4);
+  return `Start-${teil()}-${teil()}`;
+}
+
+const rows = parseCsv(readFileSync(csvPfad, 'utf8'));
+if (rows.length < 2) { console.error('CSV enthält keine Datenzeilen.'); process.exit(1); }
+const sp = findeSpalten(rows[0]);
+if (sp.email === undefined) { console.error('Spalte "email" nicht gefunden. Kopfzeile prüfen.'); process.exit(1); }
+const daten = rows.slice(1);
+const wert = (r, feld) => (sp[feld] !== undefined ? (r[sp[feld]] ?? '').trim() : '');
 
 const pb = new PocketBase(URL);
 pb.autoCancellation(false);
 await pb.collection('_superusers').authWithPassword(ADMIN, ADMIN_PW);
-console.log('Admin authentifiziert. Quelle:', CSV);
+console.log(`Admin ok. ${daten.length} Zeilen in ${csvPfad}${dryRun ? ' (DRY-RUN)' : ''}.`);
 
-let neu = 0, aktualisiert = 0, fehler = 0;
-for (const row of rows.slice(1)) {
-  const get = (name) => (idx(name) >= 0 ? String(row[idx(name)] ?? '').trim() : '');
-  const email = get('email');
-  if (!email) { console.log('Zeile ohne E-Mail uebersprungen.'); fehler++; continue; }
-  const mitgliedsnummer = get('mitgliedsnummer');
-  const vorname = get('vorname');
-  const nachname = get('nachname');
-  // name aus Spalte ODER aus Vor-/Nachname zusammengesetzt.
-  const name = get('name') || [vorname, nachname].filter(Boolean).join(' ');
-  const gb = get('geburtsdatum');
-  const rollen = (get('rollen').split(';').map((r) => r.trim()).filter((r) => ROLLEN.includes(r)));
-  const passwort = get('passwort') || `Start-${mitgliedsnummer || email.split('@')[0]}!`;
+let maxNr = 0;
+for (const u of await pb.collection('users').getFullList({ fields: 'mitgliedsnummer' })) {
+  const m = /^M-(\d+)$/.exec(String(u.mitgliedsnummer ?? ''));
+  if (m) maxNr = Math.max(maxNr, Number(m[1]));
+}
 
-  const patch = {
-    name,
-    vorname,
-    nachname,
-    mitgliedsnummer,
-    geburtsdatum: gb ? `${gb} 00:00:00.000Z` : null,
-    rollen: rollen.length ? rollen : ['mitglied'],
-  };
+const report = [['mitgliedsnummer', 'name', 'email', 'startpasswort', 'status']];
+let angelegt = 0, uebersprungen = 0, fehler = 0;
 
+for (const r of daten) {
+  const email = wert(r, 'email').toLowerCase();
+  if (!email || !email.includes('@')) { fehler++; report.push(['', '', email, '', 'ungültige E-Mail']); continue; }
   try {
-    const u = await pb.collection('users').getFirstListItem(`email="${email}"`);
-    await pb.collection('users').update(u.id, patch);
-    aktualisiert++;
-  } catch {
-    try {
-      await pb.collection('users').create({ email, password: passwort, passwordConfirm: passwort, verified: true, ...patch });
-      neu++;
-    } catch (e) {
-      console.log('Fehler bei', email, '-', e?.message ?? e);
-      fehler++;
-    }
+    await pb.collection('users').getFirstListItem(`email="${email}"`);
+    uebersprungen++; report.push(['', '', email, '', 'existiert bereits']); continue;
+  } catch { /* frei */ }
+
+  const vorname = wert(r, 'vorname');
+  const nachname = wert(r, 'nachname');
+  const name = wert(r, 'name') || [vorname, nachname].filter(Boolean).join(' ') || email;
+  let nummer = wert(r, 'mitgliedsnummer');
+  if (!nummer) nummer = 'M-' + String(++maxNr).padStart(3, '0');
+  const rollen = wert(r, 'rollen').split(';').map((x) => x.trim()).filter((x) => ROLLEN.includes(x));
+  const pw = startpasswort();
+
+  if (dryRun) { angelegt++; report.push([nummer, name, email, pw, 'würde angelegt']); continue; }
+  try {
+    await pb.collection('users').create({
+      email, password: pw, passwordConfirm: pw,
+      name, vorname, nachname, mitgliedsnummer: nummer,
+      geburtsdatum: normDatum(wert(r, 'geburtsdatum')),
+      rollen: rollen.length ? rollen : ['mitglied'],
+      mitglied_status: 'aktiv',
+    });
+    angelegt++; report.push([nummer, name, email, pw, 'angelegt']);
+  } catch (e) {
+    fehler++; report.push([nummer, name, email, '', 'FEHLER: ' + (e?.message ?? e)]);
   }
 }
 
-console.log(`\nFertig. Neu: ${neu}, aktualisiert: ${aktualisiert}, Fehler: ${fehler}.`);
-console.log('Hinweis: Neue Mitglieder ohne passwort-Spalte haben ein Startpasswort "Start-<Nr>!" - bitte aendern lassen.');
+const csvOut = report.map((z) => z.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(';')).join('\n');
+writeFileSync(reportPfad, '﻿' + csvOut, 'utf8');
+console.log(`\nAngelegt: ${angelegt} · Übersprungen (schon da): ${uebersprungen} · Fehler: ${fehler}`);
+console.log(`Report mit Startpasswörtern: ${reportPfad}  (vertraulich behandeln!)`);
+if (dryRun) console.log('DRY-RUN — nichts geschrieben. Ohne --dry-run erneut ausführen.');
