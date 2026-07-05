@@ -76,6 +76,23 @@ pruefe('Gebinde-ZPL THC-Zeile', zpl.includes('THC 32 %'), true);
 pruefe('Gebinde-Stapel = 5 Etiketten', (gebindeZplStapel(et, 5).match(/\^XA/g) ?? []).length, 5);
 pruefe('Gebinde-Stapel mindestens 1', (gebindeZplStapel(et, 0).match(/\^XA/g) ?? []).length, 1);
 
+// --- Mehrquellen-Verarbeitung (In-Haus-Mix) ---
+const { pruefeVerarbeitungMulti, verteileErtrag } = await import('../src/lib/verarbeitung.ts');
+const q = (einsatzG, verfuegbarG = 100) => ({ einsatzG, verfuegbarG, typ: 'bluete', status: 'freigegeben' });
+pruefe('Multi: zwei Quellen ok', pruefeVerarbeitungMulti({ typ: 'haschisch', quellen: [q(50), q(30)], ertragG: 12 }).ok, true);
+pruefe('Multi: keine Quelle gesperrt', pruefeVerarbeitungMulti({ typ: 'haschisch', quellen: [], ertragG: 12 }).ok, false);
+pruefe('Multi: Ertrag > Gesamteinsatz gesperrt', pruefeVerarbeitungMulti({ typ: 'rosin', quellen: [q(20), q(10)], ertragG: 31 }).ok, false);
+pruefe('Multi: Ertrag = Gesamteinsatz ok', pruefeVerarbeitungMulti({ typ: 'rosin', quellen: [q(20), q(10)], ertragG: 30 }).ok, true);
+pruefe('Multi: eine Quelle zu wenig Bestand', pruefeVerarbeitungMulti({ typ: 'haschisch', quellen: [q(50), q(30, 20)], ertragG: 10 }).ok, false);
+pruefe('Multi: Haschisch-Quelle gesperrt', pruefeVerarbeitungMulti({ typ: 'haschisch', quellen: [{ einsatzG: 10, verfuegbarG: 100, typ: 'haschisch', status: 'freigegeben' }], ertragG: 5 }).ok, false);
+pruefe('Multi: nicht freigegebene Quelle gesperrt', pruefeVerarbeitungMulti({ typ: 'haschisch', quellen: [{ einsatzG: 10, verfuegbarG: 100, typ: 'bluete', status: 'geerntet' }], ertragG: 5 }).ok, false);
+// Ertrag proportional verteilen, Summe exakt
+const v = verteileErtrag([50, 30, 20], 10);
+pruefe('Verteilung Summe = Ertrag', Math.round(v.reduce((s, x) => s + x, 0) * 100) / 100, 10);
+pruefe('Verteilung proportional (50g -> 5g)', v[0], 5);
+const v2 = verteileErtrag([1, 1, 1], 10); // 3.33/3.33/3.34
+pruefe('Verteilung Rundung Summe = 10', Math.round(v2.reduce((s, x) => s + x, 0) * 100) / 100, 10);
+
 // --- Jahresmeldung: Split Marihuana / Haschisch (Paragraf 26) ---
 const { aggregiereJahr } = await import('../src/lib/jahresmeldung.ts');
 const w = aggregiereJahr('2026', {

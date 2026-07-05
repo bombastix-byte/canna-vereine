@@ -116,3 +116,72 @@ export function ausbeuteProzent(einsatzG: number, ertragG: number): number | nul
   if (!einsatzG || einsatzG <= 0 || !Number.isFinite(ertragG)) return null;
   return Math.round((ertragG / einsatzG) * 1000) / 10;
 }
+
+export interface QuelleEingabe {
+  /** Eingesetzte Bluete dieser Quelle in Gramm. */
+  einsatzG: number;
+  /** Verfuegbarer Bestand der Quelle in Gramm (null = unbekannt). */
+  verfuegbarG: number | null;
+  /** produkt_typ der Quelle (nur Bluete verarbeitbar). */
+  typ?: string | null;
+  /** Status der Quelle (muss freigegeben sein). */
+  status?: string;
+}
+
+/**
+ * Plausibilitaet einer Mehrquellen-Verarbeitung (In-Haus-Mix aus mehreren
+ * Blueten-Chargen). Jede Quelle muss freigegebene Bluete mit genug Bestand
+ * sein; der Ertrag darf den Gesamteinsatz nicht uebersteigen.
+ */
+export function pruefeVerarbeitungMulti(e: {
+  typ: string;
+  quellen: QuelleEingabe[];
+  ertragG: number;
+}): VerarbeitungErgebnis {
+  if (!VERARBEITUNG_TYPEN.includes(e.typ as ProduktTyp)) {
+    return { ok: false, meldung: 'Unbekanntes Produkt - moeglich sind Haschisch und Rosin.' };
+  }
+  if (!e.quellen.length) {
+    return { ok: false, meldung: 'Bitte mindestens eine Blueten-Charge als Quelle waehlen.' };
+  }
+  let summe = 0;
+  for (const q of e.quellen) {
+    if (produktTyp(q.typ) !== 'bluete') {
+      return { ok: false, meldung: 'Nur Blueten-Chargen koennen verarbeitet werden.' };
+    }
+    if (q.status !== 'freigegeben') {
+      return { ok: false, meldung: 'Eine Quell-Charge ist nicht freigegeben.' };
+    }
+    if (!Number.isFinite(q.einsatzG) || q.einsatzG <= 0) {
+      return { ok: false, meldung: 'Bitte fuer jede Quelle den Einsatz in Gramm angeben.' };
+    }
+    if (q.verfuegbarG == null || q.einsatzG > q.verfuegbarG) {
+      return {
+        ok: false,
+        meldung: `Nicht genug Bestand in einer Quell-Charge (verfuegbar: ${q.verfuegbarG ?? 'unbekannt'} g).`,
+      };
+    }
+    summe += q.einsatzG;
+  }
+  if (!Number.isFinite(e.ertragG) || e.ertragG <= 0) {
+    return { ok: false, meldung: 'Bitte den Ertrag in Gramm angeben.' };
+  }
+  if (e.ertragG > summe) {
+    return { ok: false, meldung: 'Der Ertrag kann nicht groesser als der Gesamteinsatz sein.' };
+  }
+  return { ok: true };
+}
+
+/**
+ * Verteilt den Gesamtertrag proportional zum Einsatz je Quelle, damit die
+ * Summe der Protokoll-Eintraege exakt dem Ertrag entspricht (Jahresmeldung).
+ * Rundungsdifferenz kommt auf die letzte Quelle.
+ */
+export function verteileErtrag(einsaetze: number[], ertragG: number): number[] {
+  const summe = einsaetze.reduce((s, x) => s + x, 0);
+  if (summe <= 0 || !einsaetze.length) return einsaetze.map(() => 0);
+  const anteile = einsaetze.map((e) => Math.round(((ertragG * e) / summe) * 100) / 100);
+  const diff = Math.round((ertragG - anteile.reduce((s, x) => s + x, 0)) * 100) / 100;
+  anteile[anteile.length - 1] = Math.round((anteile[anteile.length - 1] + diff) * 100) / 100;
+  return anteile;
+}

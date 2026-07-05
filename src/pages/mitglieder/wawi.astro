@@ -541,10 +541,11 @@ const statusVariante: Record<string, string> = {
 
   <h2>Weiterverarbeitung (Haschisch / Rosin)</h2>
   <p class="ablauf">
-    Aus einer freigegebenen Blüten-Charge wird ein Konzentrat: Einsatzmenge und
-    Ertrag wiegen, THC/CBD des Produkts eintragen. Das Produkt entsteht als
-    <strong>neue, freigegebene Charge</strong> und steht sofort am Tresen zur
-    Abgabe — Limits und die U21-THC-Sperre gelten automatisch. Nur
+    Aus einer <strong>oder mehreren</strong> freigegebenen Blüten-Chargen wird
+    ein Konzentrat: je Quelle die Einsatzmenge wiegen, Gesamtertrag und THC/CBD
+    des Produkts eintragen. Das Produkt entsteht als <strong>neue, freigegebene
+    Charge</strong> (bei mehreren Quellen ein Mix) und steht sofort am Tresen zur
+    Abgabe. Der Bestand wird je Quelle abgezogen und bleibt rückverfolgbar. Nur
     lösungsmittelfreie Verfahren (Trockensieb, Presse).
   </p>
 
@@ -554,28 +555,45 @@ const statusVariante: Record<string, string> = {
       <p style="color:var(--ink-soft);padding:0.6rem 0;">Keine freigegebene Blüten-Charge mit Bestand vorhanden.</p>
     ) : (
       <form class="kasten" method="post" action="/mitglieder/wawi/verarbeiten">
-        <div class="feld">
-          <label for="v-quelle">Blüten-Charge (Quelle)</label>
-          <select id="v-quelle" name="quelle" required>
+        <p class="feld-gruppe-titel">Quellen (Blüte)</p>
+        <div class="quelle-zeile">
+          <select name="quelle_1" aria-label="Blüten-Charge 1" required>
             <option value="">— Charge wählen —</option>
             {verarbeitbar.map((c) => (
-              <option value={c.id}>{c.charge_nr} · {c.sorte_name} (verfügbar {c.verfuegbar_g} g)</option>
+              <option value={c.id}>{c.charge_nr} · {c.sorte_name} ({c.verfuegbar_g} g)</option>
             ))}
           </select>
+          <input name="einsatz_1" type="number" min="0.1" step="0.1" required placeholder="Einsatz g" aria-label="Einsatz 1 in Gramm" />
         </div>
+        <details class="klappe klappe--innen">
+          <summary>＋ weitere Blüten-Charge (Mix)</summary>
+          {[2, 3, 4, 5].map((i) => (
+            <div class="quelle-zeile">
+              <select name={`quelle_${i}`} aria-label={`Blüten-Charge ${i} (optional)`}>
+                <option value="">— optional —</option>
+                {verarbeitbar.map((c) => (
+                  <option value={c.id}>{c.charge_nr} · {c.sorte_name} ({c.verfuegbar_g} g)</option>
+                ))}
+              </select>
+              <input name={`einsatz_${i}`} type="number" min="0.1" step="0.1" placeholder="Einsatz g" aria-label={`Einsatz ${i} in Gramm`} />
+            </div>
+          ))}
+        </details>
+
+        <p class="feld-gruppe-titel">Produkt</p>
         <div class="feld-reihe">
           <div class="feld">
-            <label for="v-typ">Produkt</label>
+            <label for="v-typ">Art</label>
             <select id="v-typ" name="produkt_typ">
               {VERARBEITUNG_TYPEN.map((t) => <option value={t}>{PRODUKT_LABEL[t]}</option>)}
             </select>
           </div>
           <div class="feld">
-            <label for="v-einsatz">Einsatz Blüte (g)</label>
-            <input id="v-einsatz" name="einsatz_g" type="number" min="0.1" step="0.1" required />
+            <label for="v-bez">Bezeichnung (optional)</label>
+            <input id="v-bez" name="bezeichnung" type="text" placeholder="z. B. Sommer-Mix, Trockensieb" />
           </div>
           <div class="feld">
-            <label for="v-ertrag">Ertrag Produkt (g)</label>
+            <label for="v-ertrag">Gesamtertrag (g)</label>
             <input id="v-ertrag" name="ertrag_g" type="number" min="0.1" step="0.1" required />
           </div>
         </div>
@@ -590,13 +608,12 @@ const statusVariante: Record<string, string> = {
           </div>
           <div class="feld">
             <label for="v-notiz">Verfahren/Notiz</label>
-            <input id="v-notiz" name="notiz" type="text" placeholder="z. B. Trockensieb 160 µm, Rosin-Presse 90 °C" />
+            <input id="v-notiz" name="notiz" type="text" placeholder="z. B. Trockensieb 160 µm" />
           </div>
         </div>
         <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
-          Ohne THC-Wert ist die Abgabe an unter 21-Jährige gesperrt; über 10 %
-          THC (bei Konzentraten der Regelfall) ebenfalls — das prüft der Tresen
-          automatisch.
+          Bei mehreren Quellen wird der Ertrag anteilig auf die Chargen verbucht
+          (Rückverfolgung). Ohne THC-Wert bleibt die Abgabe an unter 21-Jährige gesperrt.
         </p>
         <button class="knopf" type="submit">Verarbeitung buchen</button>
       </form>
@@ -691,6 +708,11 @@ const statusVariante: Record<string, string> = {
   .charge-daten { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.3rem 1rem; font-size: 0.92rem; color: var(--ink-soft); }
   .charge-daten strong { color: var(--ink); }
   .aktionen-det { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
+  .feld-gruppe-titel { font-size: 0.85rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.9rem 0 0.5rem; }
+  .quelle-zeile { display: flex; gap: 0.6rem; margin: 0 0 0.5rem; }
+  .quelle-zeile select { flex: 1 1 auto; min-width: 0; padding: 0.55rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .quelle-zeile input { flex: 0 0 7rem; min-width: 0; padding: 0.55rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .klappe--innen { margin: 0 0 0.6rem; }
   .gebinde-link { margin: 0.7rem 0 0; font-size: 0.92rem; }
   .pflanzen-det { margin-top: 0.7rem; font-size: 0.92rem; }
   .pflanzen-det summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; padding: 0.45rem 0; }
