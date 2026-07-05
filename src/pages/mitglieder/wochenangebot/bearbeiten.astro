@@ -1,0 +1,145 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfAusgeben } from '../../../lib/rollen';
+import { produktTyp, produktLabel } from '../../../lib/verarbeitung';
+import { berlinTag } from '../../../lib/ausgabe';
+
+// Editor fuer das "Angebot der Woche". Nur Ausgabe/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAusgeben(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface SorteZeile { name: string; typ: string; thc: string; cbd: string }
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const fehler = Astro.url.searchParams.get('fehler');
+const ausBestand = Astro.url.searchParams.get('ausBestand') === '1';
+
+// Vorhandenes Angebot laden (zum Vorbefuellen).
+let angebot: { titel?: string; inhalt?: string; sorten?: SorteZeile[]; gueltig_von?: string; gueltig_bis?: string } | null = null;
+try {
+  angebot = await pb.collection('wochenangebot').getFirstListItem('', { sort: '-gueltig_von' });
+} catch {
+  angebot = null;
+}
+
+const prozent = (n: unknown) =>
+  n == null || n === '' ? '' : `${Number(n).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+
+// Zeilen: aus Bestand ODER aus vorhandenem Angebot ODER leer.
+let zeilen: SorteZeile[] = [];
+if (ausBestand) {
+  const chargen = await ladeListe<Record<string, any>>('chargen', { filter: 'status="freigegeben"', sort: 'sorte_name' });
+  const sorten = await ladeListe<Record<string, any>>('sorten', {});
+  const typVon = new Map(sorten.map((s) => [s.name, s.typ as string]));
+  // Nur mit Restbestand, je Sorten-/Produktname einmal.
+  const gesehen = new Set<string>();
+  for (const c of chargen) {
+    if ((c.verfuegbar_g ?? 0) <= 0) continue;
+    const pt = produktTyp(c.produkt_typ);
+    const label = pt === 'bluete' ? (c.sorte_name || '') : `${produktLabel(pt)} · ${c.sorte_name || ''}`;
+    if (!label || gesehen.has(label)) continue;
+    gesehen.add(label);
+    zeilen.push({ name: label, typ: typVon.get(c.sorte_name) ?? '', thc: prozent(c.thc_prozent), cbd: prozent(c.cbd_prozent) });
+  }
+} else if (angebot?.sorten?.length) {
+  zeilen = angebot.sorten.map((s) => ({ name: s.name ?? '', typ: s.typ ?? '', thc: s.thc ?? '', cbd: s.cbd ?? '' }));
+}
+// Auf mindestens ein paar Zeilen auffuellen (leere zum Ergaenzen).
+const ANZ = Math.max(8, zeilen.length + 3);
+while (zeilen.length < ANZ) zeilen.push({ name: '', typ: '', thc: '', cbd: '' });
+
+const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
+const heute = berlinTag();
+const TYPEN = ['', 'Indica', 'Sativa', 'Hybrid'];
+---
+
+<Basis titel="Angebot der Woche bearbeiten" beschreibung="Aktuelles Abgabe-Angebot pflegen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit</p>
+  <p class="zurueck"><a href="/mitglieder/wochenangebot">‹ Zurück zur Ansicht</a></p>
+  <h1 style="margin-bottom:0.4rem;">Angebot der Woche</h1>
+  <p class="einleitung">
+    Was diese Woche zur Abgabe steht. Zeig es Mitgliedern an — rein interne
+    Information, keine Werbung (§ 6 KCanG).
+  </p>
+
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Speichern fehlgeschlagen. Bitte erneut versuchen.</p>}
+
+  <p class="bestand-hinweis">
+    <a class="knopf-sek" href="/mitglieder/wochenangebot/bearbeiten?ausBestand=1">Aus aktuellem Bestand füllen</a>
+    <span>übernimmt alle freigegebenen Sorten/Produkte mit THC/CBD — danach anpassen und speichern.</span>
+  </p>
+
+  <form method="post" action="/mitglieder/wochenangebot/speichern">
+    <div class="feld">
+      <label for="titel">Titel</label>
+      <input class="eingabe" id="titel" name="titel" type="text" value={angebot?.titel ?? 'Aktuelle Abgabe diese Woche'} />
+    </div>
+    <div class="feld">
+      <label for="inhalt">Hinweistext</label>
+      <textarea class="eingabe" id="inhalt" name="inhalt" rows="3">{angebot?.inhalt ?? 'Die Abgabe erfolgt zum Selbstkostenbeitrag im Rahmen der Satzung, Abholung zu den ausgehängten Vereinszeiten. Alle THC- und CBD-Werte stammen aus eigener Messung der Vereinigung.'}</textarea>
+    </div>
+    <div class="feld-reihe">
+      <div class="feld">
+        <label for="von">Gültig von</label>
+        <input class="eingabe" id="von" name="gueltig_von" type="date" value={isoTag(angebot?.gueltig_von) || heute} />
+      </div>
+      <div class="feld">
+        <label for="bis">Gültig bis</label>
+        <input class="eingabe" id="bis" name="gueltig_bis" type="date" value={isoTag(angebot?.gueltig_bis)} />
+      </div>
+    </div>
+
+    <h2>Sorten & Produkte</h2>
+    <p style="color:var(--ink-soft);font-size:0.9rem;margin:0 0 0.6rem;">Leere Zeilen werden ignoriert.</p>
+    <div class="sorten-kopf">
+      <span>Name</span><span>Typ</span><span>THC</span><span>CBD</span>
+    </div>
+    {zeilen.map((z, i) => (
+      <div class="sorten-zeile">
+        <input class="eingabe" name={`name_${i + 1}`} type="text" value={z.name} placeholder="Sorte / Produkt" aria-label={`Name ${i + 1}`} />
+        <select class="eingabe" name={`typ_${i + 1}`} aria-label={`Typ ${i + 1}`}>
+          {TYPEN.map((t) => <option value={t} selected={t === z.typ}>{t || '—'}</option>)}
+        </select>
+        <input class="eingabe" name={`thc_${i + 1}`} type="text" value={z.thc} placeholder="z. B. 26,0 %" aria-label={`THC ${i + 1}`} />
+        <input class="eingabe" name={`cbd_${i + 1}`} type="text" value={z.cbd} placeholder="z. B. 2,0 %" aria-label={`CBD ${i + 1}`} />
+      </div>
+    ))}
+
+    <button class="knopf" type="submit" style="margin-top:1rem;">Angebot speichern</button>
+  </form>
+</Basis>
+
+<style>
+  .zurueck { margin: 0 0 0.4rem; }
+  .zurueck a { color: var(--ink-soft); text-decoration: none; }
+  .bestand-hinweis { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; margin: 0 0 1.2rem; }
+  .bestand-hinweis span { color: var(--ink-soft); font-size: 0.9rem; }
+  .eingabe { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  textarea.eingabe { resize: vertical; }
+  .feld { margin: 0 0 0.8rem; max-width: var(--mass); }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; max-width: var(--mass); }
+  .feld-reihe .feld { flex: 1 1 8rem; }
+  .sorten-kopf, .sorten-zeile { display: grid; grid-template-columns: 2fr 1.1fr 1fr 1fr; gap: 0.5rem; max-width: var(--mass); }
+  .sorten-kopf { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin: 0 0 0.3rem; padding: 0 0.2rem; }
+  .sorten-zeile { margin: 0 0 0.4rem; }
+  @media (max-width: 560px) {
+    .sorten-kopf { display: none; }
+    .sorten-zeile { grid-template-columns: 1fr 1fr; }
+    .sorten-zeile input:first-child, .sorten-zeile select { grid-column: 1 / -1; }
+  }
+</style>

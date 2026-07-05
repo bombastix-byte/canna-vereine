@@ -2,6 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfAusgeben } from '../../lib/rollen';
 
 // Geschützt. Sachliche Info zur aktuellen Abgabe an Mitglieder (KCanG Paragraf 6:
 // kein öffentliches Marketing, rein interne Vereinsinformation).
@@ -12,6 +13,8 @@ if (!ergebnis) {
   return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 }
 const { pb, mitglied } = ergebnis;
+const kannPflegen = darfAusgeben(mitglied.rollen);
+const gespeichert = Astro.url.searchParams.get('ok') === '1';
 
 interface Sorte {
   name: string;
@@ -70,6 +73,11 @@ const sortiere = (sorten: Sorte[]) =>
     Aktuelle Abgabe an Mitglieder zum Selbstkostenbeitrag. Diese Angaben sind rein
     interne Vereinsinformation und nicht öffentlich einsehbar.
   </p>
+
+  {gespeichert && <p class="hinweis" role="status">Angebot gespeichert.</p>}
+  {kannPflegen && (
+    <p style="margin:0 0 1rem;"><a class="knopf-sek" href="/mitglieder/wochenangebot/bearbeiten">Angebot bearbeiten</a></p>
+  )}
 
   {
     angebote.length === 0 ? (
