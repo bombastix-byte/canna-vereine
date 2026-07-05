@@ -19,3 +19,6 @@ npm-debug.log*
 # os
 .DS_Store
 Thumbs.db
+
+# Lokale/Server-Backups nie ins Repo
+deploy/backups/
