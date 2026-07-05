@@ -21,8 +21,8 @@ export const GET: APIRoute = () => {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#f7f5ef',
-    theme_color: '#1e3a2c',
+    background_color: '#232d22',
+    theme_color: '#2c3629',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

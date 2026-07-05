@@ -192,35 +192,39 @@
   --display-weight: 600;
   --display-letter: 0;
 
-  --bg: #151a18;
-  --bg-rein: #1d2421;
-  --ink: #e9ebe6;
-  --ink-soft: #9ba49d;
+  /* Waermeres, helleres Dunkelgruen. Der fruehere Grund (#151a18) lag bei
+     Farbton ~156 Grad (Blaugruen/Teal) und wirkte auf kuehlen Monitoren blau
+     und fast schwarz. Neu: klarer Gruen-Farbton (~110 Grad, warm), deutlich
+     hoehere Helligkeit -> freundlicher, ruhiger, nie blau. */
+  --bg: #232d22;
+  --bg-rein: #2c3629;
+  --ink: #ebefe6;
+  --ink-soft: #a6b0a2;
   --brand: #a7c8b2;
-  --brand-strong: #eef3ee; /* fast weiss: klare Ueberschriften statt Gruen auf Gruen */
-  --accent: #c2a06a;
-  --accent-soft: #8a7448;
-  --line: #2c3531;
-  --line-soft: #222a27;
+  --brand-strong: #f1f5ee; /* fast weiss: klare Ueberschriften statt Gruen auf Gruen */
+  --accent: #c8a56d;
+  --accent-soft: #927a4c;
+  --line: #3c473a;
+  --line-soft: #333d31;
 
-  --hero-bg: #0f1513;
-  --hero-ink: #ecefe9;
-  --hero-sub: #b9c2bb;
-  --hero-eyebrow: #c2a06a;
-  --hero-rule: #c2a06a;
+  --hero-bg: #1c251b;
+  --hero-ink: #eef2eb;
+  --hero-sub: #becbc0;
+  --hero-eyebrow: #c8a56d;
+  --hero-rule: #c8a56d;
 
-  --footer-bg: #0f1513;
-  --footer-ink: #9ba49d;
-  --footer-strong: #ecefe9;
-  --footer-accent: #c2a06a;
+  --footer-bg: #1c251b;
+  --footer-ink: #a6b0a2;
+  --footer-strong: #eef2eb;
+  --footer-accent: #c8a56d;
 
-  --hinweis-bg: #232a20;
-  --hinweis-line: #3a4030;
-  --kasten-bg: #1d2421;
+  --hinweis-bg: #2d3524;
+  --hinweis-line: #444d33;
+  --kasten-bg: #2c3629;
   --kasten-accent: #a7c8b2;
-  --nav-active: #ecefe9;
-  --eyebrow-color: #c2a06a;
-  --on-brand: #14201a;
+  --nav-active: #eef2eb;
+  --eyebrow-color: #c8a56d;
+  --on-brand: #182219;
 
   --radius: 3px;
   --nav-transform: uppercase;

@@ -4,7 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
 import { darfAnbau } from '../../lib/rollen';
 import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } from '../../lib/wawi';
-import { VERARBEITUNG_TYPEN, PRODUKT_LABEL, produktTyp, produktLabel, ausbeuteProzent } from '../../lib/verarbeitung';
+import { VERARBEITUNG_TYPEN, PRODUKT_TYPEN, PRODUKT_LABEL, produktTyp, produktLabel, ausbeuteProzent } from '../../lib/verarbeitung';
 import { berlinTag } from '../../lib/ausgabe';
 import { type PlanSchritt, zyklustag, aktuellePhase } from '../../lib/anbauplan';
 
@@ -164,6 +164,7 @@ const oktext: Record<string, string> = {
   plan: 'Anbau-Plan zugewiesen — fällige Schritte stehen unter „Anbau heute".',
   sorte: 'Sorte angelegt — steht jetzt bei „Neue Charge anlegen" zur Auswahl.',
   verarbeitet: 'Verarbeitung gebucht — das Produkt ist als neue Charge freigegeben und am Tresen abgebbar.',
+  bestand: 'Bestand angelegt — die Charge ist freigegeben und am Tresen abgebbar.',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 const omeldung = ok ? oktext[ok] ?? 'Erledigt.' : null;
@@ -256,6 +257,61 @@ const statusVariante: Record<string, string> = {
       </select>
     </div>
       <button class="knopf" type="submit">Charge anlegen</button>
+    </form>
+  </details>
+
+  <details class="klappe">
+    <summary>＋ Bestand nachtragen (bereits getrocknete Ware)</summary>
+    <form class="kasten" method="post" action="/mitglieder/wawi/bestand-neu">
+      <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
+        Für vorhandene, bereits getrocknete Ware ohne eigenen Anbauverlauf
+        (z. B. bestehender Bestand). Die Charge wird <strong>sofort freigegeben</strong>
+        und steht am Tresen zur Abgabe.
+      </p>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="b-sorte">Sorte</label>
+          <select id="b-sorte" name="sorte" required>
+            <option value="">— Sorte wählen —</option>
+            {sorten.map((s) => <option value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div class="feld">
+          <label for="b-produkt">Produkt</label>
+          <select id="b-produkt" name="produkt_typ">
+            {PRODUKT_TYPEN.map((t) => <option value={t}>{PRODUKT_LABEL[t]}</option>)}
+          </select>
+        </div>
+      </div>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="b-menge">Trockenmenge (g)</label>
+          <input id="b-menge" name="trockengewicht_g" type="number" min="0.1" step="0.1" required placeholder="verfügbar" />
+        </div>
+        <div class="feld">
+          <label for="b-thc">THC %</label>
+          <input id="b-thc" name="thc_prozent" type="number" min="0" step="0.1" required />
+        </div>
+        <div class="feld">
+          <label for="b-cbd">CBD %</label>
+          <input id="b-cbd" name="cbd_prozent" type="number" min="0" step="0.1" />
+        </div>
+      </div>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="b-ernte">Erntedatum (für Jahresmeldung)</label>
+          <input id="b-ernte" name="ernte_datum" type="date" value={heute} />
+        </div>
+        <div class="feld">
+          <label for="b-herkunft">Herkunft / Notiz</label>
+          <input id="b-herkunft" name="herkunft" type="text" placeholder="z. B. Altbestand, Übernahme" />
+        </div>
+      </div>
+      <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
+        Ohne THC-Wert bleibt die Abgabe an unter 21-Jährige gesperrt. Sorte fehlt?
+        Unten unter „Neue Sorte anlegen" anlegen.
+      </p>
+      <button class="knopf" type="submit">Bestand freigeben</button>
     </form>
   </details>
 

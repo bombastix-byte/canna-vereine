@@ -1,0 +1,122 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
+
+// Detail-/Bearbeitungsseite eines Mitglieds (aus der Suche geöffnet).
+// Nur Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const { id } = Astro.params;
+let m;
+try {
+  m = await pb.collection('users').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/verwaltung?fehler=nichtgefunden', 303);
+}
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
+const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
+---
+
+<Basis titel={`${m.name || m.email}`} beschreibung="Mitglied bearbeiten.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <p class="zurueck"><a href="/mitglieder/verwaltung">‹ Zurück zur Suche</a></p>
+  <h1 style="margin-bottom:0.2rem;">{m.name || m.email}</h1>
+  <p class="einleitung" style="margin-top:0.2rem;">{m.email}</p>
+
+  {ok && <p class="hinweis" role="status">Gespeichert.</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Speichern fehlgeschlagen.</p>}
+
+  <form method="post" action="/mitglieder/verwaltung/speichern">
+    <input type="hidden" name="mitglied" value={m.id} />
+
+    <section class="kasten">
+      <h2 class="abschnitt">Stammdaten</h2>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="f-nr">Mitgliedsnummer</label>
+          <input id="f-nr" name="mitgliedsnummer" type="text" value={m.mitgliedsnummer ?? ''} />
+        </div>
+        <div class="feld">
+          <label for="f-geb">Geburtsdatum</label>
+          <input id="f-geb" name="geburtsdatum" type="date" value={isoTag(m.geburtsdatum)} />
+        </div>
+        <div class="feld">
+          <label for="f-bis">Beitrag bezahlt bis</label>
+          <input id="f-bis" name="beitrag_bis" type="date" value={isoTag(m.beitrag_bis)} />
+        </div>
+      </div>
+    </section>
+
+    <section class="kasten">
+      <h2 class="abschnitt">Beitrag &amp; SEPA-Mandat</h2>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="f-monat">Monatsbeitrag €</label>
+          <input id="f-monat" name="beitrag_monatlich" type="number" min="0" step="0.01" value={m.beitrag_monatlich ?? ''} />
+        </div>
+        <div class="feld">
+          <label for="f-iban">IBAN</label>
+          <input id="f-iban" name="iban" type="text" value={m.iban ?? ''} placeholder="DE…" />
+        </div>
+        <div class="feld">
+          <label for="f-bic">BIC (optional)</label>
+          <input id="f-bic" name="bic" type="text" value={m.bic ?? ''} />
+        </div>
+      </div>
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="f-ref">Mandatsreferenz</label>
+          <input id="f-ref" name="mandatsref" type="text" value={m.mandatsref ?? ''} />
+        </div>
+        <div class="feld">
+          <label for="f-mdat">Mandatsdatum</label>
+          <input id="f-mdat" name="mandatsdatum" type="date" value={isoTag(m.mandatsdatum)} />
+        </div>
+      </div>
+    </section>
+
+    <section class="kasten">
+      <h2 class="abschnitt">Rollen</h2>
+      <p class="rollen-hinweis">Bestimmen, welche Vereinsarbeit dieses Mitglied sieht.</p>
+      <div class="rollen">
+        {ROLLEN.map((r) => (
+          <label class="chk">
+            <input type="checkbox" name="rollen" value={r} checked={rollen.includes(r)} />
+            {ROLLEN_LABEL[r]}
+          </label>
+        ))}
+      </div>
+    </section>
+
+    <button class="knopf" type="submit">Änderungen speichern</button>
+  </form>
+</Basis>
+
+<style>
+  .zurueck { margin: 0 0 0.4rem; }
+  .zurueck a { color: var(--ink-soft); text-decoration: none; }
+  .zurueck a:hover { color: var(--ink); }
+  .abschnitt { font-size: 1.05rem; margin: 0 0 0.8rem; }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 9rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .feld input {
+    width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line);
+    border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit;
+  }
+  .rollen-hinweis { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.6rem; }
+  .rollen { display: flex; flex-direction: column; gap: 0.1rem; }
+  .chk { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.98rem; min-height: 44px; }
+  .chk input { width: 1.2rem; height: 1.2rem; flex: none; }
+</style>

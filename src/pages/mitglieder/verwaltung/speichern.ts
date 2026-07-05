@@ -41,8 +41,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       rollen: rollen.length ? rollen : ['mitglied'],
     });
   } catch {
-    return redirect(`/mitglieder/verwaltung?fehler=fehlgeschlagen#m-${id}`, 303);
+    return redirect(`/mitglieder/verwaltung/${id}?fehler=fehlgeschlagen`, 303);
   }
 
-  return redirect(`/mitglieder/verwaltung?ok=1#m-${id}`, 303);
+  return redirect(`/mitglieder/verwaltung/${id}?ok=1`, 303);
 };

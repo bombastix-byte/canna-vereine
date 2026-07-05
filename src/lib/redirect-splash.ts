@@ -5,7 +5,7 @@
 // Hintergrundfarbe je Theme, damit die (sehr kurze) Weiterleitungsseite
 // nahtlos in die Zielseite uebergeht - kein weisses Aufblitzen.
 const THEME_BG: Record<string, string> = {
-  nacht: '#151a18',
+  nacht: '#232d22',
   botanik: '#f6f7f3',
   klar: '#ffffff',
   warm: '#faf6ef',
