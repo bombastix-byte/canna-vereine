@@ -16,6 +16,10 @@ const platzhalter = join(root, 'src', 'pages', 'mitglieder.astro');
 // Pages-Build beiseitelegen (sonst NoAdapterInstalled).
 const antrag = join(root, 'src', 'pages', 'mitglied-werden');
 const antragBackup = join(root, 'src', 'pages', '_mitglied-werden_backup');
+// Maschinen-Endpunkte (z. B. /api/erinnerungen) sind serverseitig und haben im
+// rein statischen Pages-Build nichts zu suchen -> ebenfalls beiseitelegen.
+const api = join(root, 'src', 'pages', 'api');
+const apiBackup = join(root, 'src', 'pages', '_api_backup');
 const dist = join(root, 'dist');
 
 // Welche Vereine, in welcher Reihenfolge, mit welchem Theme (nur fuer Anzeige).
@@ -107,6 +111,7 @@ async function main() {
 
   if (existsSync(mitglieder)) await rename(mitglieder, backup);
   if (existsSync(antrag)) await rename(antrag, antragBackup);
+  if (existsSync(api)) await rename(api, apiBackup);
   await writeFile(platzhalter, PLATZHALTER);
   try {
     for (const s of SITES) {
@@ -126,6 +131,7 @@ async function main() {
     await rm(platzhalter, { force: true });
     if (existsSync(backup)) await rename(backup, mitglieder);
     if (existsSync(antragBackup)) await rename(antragBackup, antrag);
+    if (existsSync(apiBackup)) await rename(apiBackup, api);
   }
 
   await writeFile(join(dist, 'index.html'), landing());
