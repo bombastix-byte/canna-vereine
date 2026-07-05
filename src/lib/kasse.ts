@@ -8,9 +8,17 @@ export function euroText(n: number): string {
   return euro(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
 
-/** Erwartete Bareinnahme des Tages: Beitraege + Einlagen - Entnahmen. */
-export function erwarteteEinnahme(beitraege: number, einlagen: number, entnahmen: number): number {
-  return euro(euro(beitraege) + euro(einlagen) - euro(entnahmen));
+/**
+ * Erwartete Bareinnahme des Tages: Abgabe-Beitraege + Aufnahmebeitraege +
+ * Einlagen - Entnahmen. `aufnahmen` ist optional (Vereine ohne Aufnahmebeitrag).
+ */
+export function erwarteteEinnahme(
+  beitraege: number,
+  einlagen: number,
+  entnahmen: number,
+  aufnahmen = 0,
+): number {
+  return euro(euro(beitraege) + euro(aufnahmen) + euro(einlagen) - euro(entnahmen));
 }
 
 /** Differenz gezaehlt - erwartet (positiv = Ueberschuss, negativ = Fehlbetrag). */

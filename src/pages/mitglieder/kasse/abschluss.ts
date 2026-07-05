@@ -41,7 +41,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const bewegungen = await liste('kassenbewegung', `datum="${tag}"`);
   const einlagen = euro(bewegungen.filter((b) => b.typ === 'einlage').reduce((s, b) => s + (Number(b.betrag_euro) || 0), 0));
   const entnahmen = euro(bewegungen.filter((b) => b.typ === 'entnahme').reduce((s, b) => s + (Number(b.betrag_euro) || 0), 0));
-  const erwartet = erwarteteEinnahme(beitraege, einlagen, entnahmen);
+  const aufnahmen = euro(bewegungen.filter((b) => b.typ === 'aufnahme').reduce((s, b) => s + (Number(b.betrag_euro) || 0), 0));
+  const erwartet = erwarteteEinnahme(beitraege, einlagen, entnahmen, aufnahmen);
 
   try {
     await pb.collection('kassenabschluss').create({

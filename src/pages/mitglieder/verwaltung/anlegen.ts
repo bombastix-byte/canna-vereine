@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
 import { protokolliere } from '../../../lib/audit';
+import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
+import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../../lib/funktionen';
 
 // Legt ein Mitglied manuell an (Vorstand). Naechste freie M-Nummer, wenn keine
 // angegeben; Startpasswort automatisch, wenn keins gesetzt. Zeigt das Passwort
@@ -76,6 +78,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     objektTyp: 'mitglied', objektId: neu.id, objektLabel: `${mitgliedsnummer} ${name}`.trim(),
     details: `Rollen: ${(rollen.length ? rollen : ['mitglied']).join(', ')}`,
   });
+
+  // Aufnahmebeitrag (falls konfiguriert und bar kassiert) in die Kasse buchen.
+  if (hatAufnahmebeitrag && daten.get('aufnahme_kassiert')) {
+    await bucheAufnahmebeitrag(pb, aufnahmebeitragEuro, neu.id, mitglied.id);
+  }
 
   const q = new URLSearchParams({ neu: '1', pw: passwort });
   return redirect(`/mitglieder/verwaltung/${neu.id}?${q.toString()}`, 303);

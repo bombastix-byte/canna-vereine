@@ -5,6 +5,7 @@ import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten } from '../../lib/rollen';
+import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../lib/funktionen';
 
 // Beitrittsantraege und Warteliste. Nur Vorstand. "Aufnehmen" legt direkt
 // das Mitgliedskonto an (Startpasswort, Rolle mitglied).
@@ -102,6 +103,12 @@ const datum = (iso?: string) =>
                 <form method="post" action="/mitglieder/antraege/aktion">
                   <input type="hidden" name="antrag" value={a.id} />
                   <input type="hidden" name="aktion" value="aufnehmen" />
+                  {hatAufnahmebeitrag && (
+                    <label class="aufnahme-chk">
+                      <input type="checkbox" name="aufnahme_kassiert" checked />
+                      Aufnahmebeitrag ({aufnahmebeitragEuro.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}) bar kassiert
+                    </label>
+                  )}
                   <button class="knopf" type="submit">Aufnehmen</button>
                 </form>
                 {g.key === 'offen' && (

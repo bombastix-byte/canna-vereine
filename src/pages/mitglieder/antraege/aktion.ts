@@ -5,6 +5,8 @@ import { sendeMail } from '../../../lib/mail';
 import { mailAufnahme, mailAblehnung } from '../../../lib/mail-vorlagen';
 import { site } from '../../../config';
 import { protokolliere } from '../../../lib/audit';
+import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
+import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../../lib/funktionen';
 
 const vereinKopf = { vereinsname: site.vereinsname, email: site.kontakt.email, ort: site.kontakt.ort };
 
@@ -77,10 +79,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const mitgliedsnummer = 'M-' + String(nr).padStart(3, '0');
     const passwort = startpasswort();
 
+    let neuerNutzer;
     try {
       // Hinweis: `verified` darf nur ein Superuser setzen - fuer den Login
       // ist es nicht noetig, daher bewusst weggelassen.
-      await pb.collection('users').create({
+      neuerNutzer = await pb.collection('users').create({
         email: antrag.email,
         password: passwort,
         passwordConfirm: passwort,
@@ -97,6 +100,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     await protokolliere(pb, mitglied, 'antrag.aufgenommen', {
       objektTyp: 'mitglied', objektId: antragId, objektLabel: `${mitgliedsnummer} ${antrag.name ?? ''}`.trim(),
     });
+
+    // Aufnahmebeitrag (falls konfiguriert und bar kassiert) in die Kasse buchen.
+    if (hatAufnahmebeitrag && daten.get('aufnahme_kassiert')) {
+      await bucheAufnahmebeitrag(pb, aufnahmebeitragEuro, neuerNutzer.id, mitglied.id);
+    }
 
     // Zugangsdaten per Mail (falls SMTP konfiguriert); sonst zeigt die Seite
     // das Startpasswort zum manuellen Weitergeben.

@@ -26,6 +26,7 @@ const SEEDS = [
   'seed-sorten.mjs',
   'seed-mitglieder-rechte.mjs',
   'seed-kasse.mjs',            // Feature 1
+  'seed-aufnahmebeitrag.mjs',  // Kasse: Aufnahmebeitrag
   'seed-storno.mjs',           // Feature 2
   'seed-mahnwesen.mjs',        // Feature 3
   'seed-rueckruf.mjs',         // Feature 4
