@@ -28,6 +28,7 @@ export const MITGLIED_PUNKTE: NavPunkt[] = [
   { label: 'Abstimmungen', href: '/mitglieder/abstimmungen' },
   { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
   { label: 'Ausweis', href: '/mitglieder/ausweis' },
+  { label: 'Mein Konto', href: '/mitglieder/profil' },
   { label: 'App', href: '/mitglieder/app' },
   { label: 'Sicherheit', href: '/mitglieder/sicherheit' },
 ];

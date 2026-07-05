@@ -1,0 +1,96 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+
+// Mein Konto: das Mitglied pflegt eigene Kontakt- und SEPA-Daten selbst.
+// Identitäts-, Rollen- und Beitragsfelder bleiben schreibgeschützt (nur Vorstand).
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+
+let u: Record<string, any> = {};
+try {
+  u = await pb.collection('users').getOne(mitglied.id);
+} catch {
+  u = {};
+}
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const name = [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || '';
+const gebDe = u.geburtsdatum ? new Date(u.geburtsdatum).toLocaleDateString('de-DE') : '—';
+const mandatDatumDe = u.mandatsdatum ? new Date(u.mandatsdatum).toLocaleDateString('de-DE') : '';
+const hatMandat = !!(u.mandatsref && u.mandatsdatum);
+---
+
+<Basis titel="Mein Konto" beschreibung="Eigene Kontakt- und SEPA-Daten pflegen.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Mein Konto</h1>
+  <p class="einleitung">
+    Hier pflegst du deine Kontaktdaten und dein SEPA-Lastschriftmandat selbst.
+    Name, Mitgliedsnummer und Beitragsangaben verwaltet der Vorstand — melde dich
+    bei Änderungen dort.
+  </p>
+
+  {ok && <p class="hinweis" role="status">Gespeichert. Danke!</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
+
+  <section class="kasten identitaet">
+    <h2 style="margin-top:0;">Meine Daten</h2>
+    <div class="zeile"><span>Mitgliedsnummer</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
+    <div class="zeile"><span>Name</span><strong>{name || '—'}</strong></div>
+    <div class="zeile"><span>Geburtsdatum</span><strong>{gebDe}</strong></div>
+    <div class="zeile"><span>E-Mail (Login)</span><strong>{u.email}</strong></div>
+    <p class="fuss">Diese Angaben ändert nur der Vorstand.</p>
+  </section>
+
+  <form class="kasten" method="post" action="/mitglieder/profil/speichern">
+    <h2 style="margin-top:0;">Kontakt</h2>
+    <div class="feld">
+      <label for="telefon">Telefon</label>
+      <input class="eingabe" id="telefon" name="telefon" type="tel" value={u.telefon ?? ''} placeholder="z. B. 0170 1234567" />
+    </div>
+
+    <h2>SEPA-Lastschriftmandat</h2>
+    <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
+      Mit dem Mandat ermächtigst du den Verein, deinen Mitgliedsbeitrag von
+      deinem Konto einzuziehen. Du kannst es hier jederzeit ändern oder widerrufen.
+    </p>
+    <div class="feld-reihe">
+      <div class="feld" style="flex:2 1 16rem;">
+        <label for="iban">IBAN</label>
+        <input class="eingabe" id="iban" name="iban" type="text" value={u.iban ?? ''} placeholder="DE00 0000 0000 0000 0000 00" autocomplete="off" />
+      </div>
+      <div class="feld" style="flex:1 1 8rem;">
+        <label for="bic">BIC (optional)</label>
+        <input class="eingabe" id="bic" name="bic" type="text" value={u.bic ?? ''} placeholder="GENODEF1XXX" autocomplete="off" />
+      </div>
+    </div>
+    <label class="mandat-check">
+      <input type="checkbox" name="mandat" checked={hatMandat} />
+      <span>Ich erteile dem Verein ein SEPA-Lastschriftmandat für den Mitgliedsbeitrag.</span>
+    </label>
+    {hatMandat && (
+      <p class="fuss">Aktuelles Mandat: <strong>{u.mandatsref}</strong>, erteilt am {mandatDatumDe}. Änderst du die IBAN, wird ein neues Mandat mit heutigem Datum erzeugt.</p>
+    )}
+
+    <button class="knopf" type="submit" style="margin-top:1rem;">Speichern</button>
+  </form>
+</Basis>
+
+<style>
+  .identitaet .zeile { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border-top: 1px solid var(--line); }
+  .identitaet .zeile:first-of-type { border-top: 0; }
+  .identitaet .zeile span { color: var(--ink-soft); }
+  .fuss { color: var(--ink-soft); font-size: 0.85rem; margin: 0.8rem 0 0; }
+  .eingabe { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .feld { margin-bottom: 0.9rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .mandat-check { display: flex; gap: 0.55rem; align-items: flex-start; margin-top: 0.6rem; font-size: 0.95rem; }
+  .mandat-check input { margin-top: 0.2rem; flex: none; }
+</style>

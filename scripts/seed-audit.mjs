@@ -14,10 +14,12 @@ console.log('Admin authentifiziert.');
 
 const usersId = (await pb.collections.getOne('users')).id;
 
-// Lesen nur Vorstand; Anlegen jedes Personal (die Endpoints schreiben mit dem
-// Akteur-Client). Kein Update/Delete -> manipulationssicher.
-const personal = '@request.auth.rollen ~ "ausgabe" || @request.auth.rollen ~ "anbau" || @request.auth.rollen ~ "vorstand"';
+// Lesen nur Vorstand; Anlegen jedes angemeldete Mitglied, ABER nur für sich
+// selbst (akteur = eigene id) -> keine gefälschten Fremd-Einträge. Das erlaubt
+// auch die Selbstverwaltung, ihre eigenen Änderungen zu protokollieren.
+// Kein Update/Delete -> manipulationssicher (append-only).
 const vorstand = '@request.auth.rollen ~ "vorstand"';
+const eigenerAkteur = '@request.auth.id != "" && akteur = @request.auth.id';
 
 let col;
 try {
@@ -29,7 +31,7 @@ try {
     type: 'base',
     listRule: vorstand,
     viewRule: vorstand,
-    createRule: personal,
+    createRule: eigenerAkteur,
     updateRule: null,
     deleteRule: null,
     fields: [
@@ -43,6 +45,12 @@ try {
     ],
   });
   console.log('audit_log: angelegt.');
+}
+
+// createRule idempotent aktualisieren (frühere Version erlaubte nur Personal).
+if (col.createRule !== eigenerAkteur) {
+  await pb.collections.update('audit_log', { createRule: eigenerAkteur });
+  console.log('audit_log: createRule auf „eigener Akteur" gesetzt.');
 }
 
 // Zeitstempel (autodate) sicherstellen — für Sortierung/Anzeige nötig.
