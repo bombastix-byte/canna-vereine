@@ -6,7 +6,7 @@ import Kopf from '../components/Kopf.astro';
 import Fuss from '../components/Fuss.astro';
 import Sidebar from '../components/Sidebar.astro';
 import Mark from '../components/Mark.astro';
-import { site } from '../config';
+import { site, produkt } from '../config';
 import { pfad } from '../lib/url';
 
 interface Props {
@@ -27,8 +27,9 @@ const { titel, beschreibung, robots = 'index, follow', anonym = false } = Astro.
 // Entwicklungs-Schutz: solange die Site nicht ausdruecklich indexierbar ist
 // (site.indexierbar), bekommt JEDE Seite noindex - unabhaengig vom Prop.
 const robotsWert = site.indexierbar ? robots : 'noindex, nofollow';
-// Anonym: neutraler Dokumenttitel ohne Vereinsname.
-const seitentitel = anonym ? titel : `${titel} | ${site.kurzname}`;
+// Anonym: neutraler Dokumenttitel. Sonst Produktmarke (CVMS) im Tab, nicht
+// der Vereinsname (Diskretion + Produkt-Identitaet).
+const seitentitel = anonym ? titel : `${titel} | ${produkt.name}`;
 const hatHero = Astro.slots.has('hero');
 const layout = site.layout ?? 'standard';
 ---
@@ -46,7 +47,7 @@ const layout = site.layout ?? 'standard';
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content={anonym ? 'Mitgliederbereich' : site.kurzname} />
+    <meta name="apple-mobile-web-app-title" content={anonym ? 'Mitgliederbereich' : produkt.name} />
     <script is:inline>
       // Service Worker registrieren (PWA: installierbar, Offline-Grundgeruest,
       // Push). Nur in sicheren Kontexten (https/localhost).
@@ -76,7 +77,7 @@ const layout = site.layout ?? 'standard';
             <header class="sb-topbar">
               <a class="sb-brand sb-brand--top" href={anonym ? '/mitglieder' : pfad('/')}>
                 <Mark class="sb-mark" />
-                <span class="sb-name">{anonym ? 'Mitgliederbereich' : site.kurzname}</span>
+                <span class="sb-name">{anonym ? 'Mitgliederbereich' : produkt.name}</span>
               </a>
               <label class="sb-burger" for="nav-toggle" aria-label="Menü öffnen oder schließen">
                 <span /> <span /> <span />

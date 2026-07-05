@@ -55,6 +55,8 @@ export interface SiteConfig {
   vereinsname: string;
   /** kurzer Name für Kopfzeile/Titel */
   kurzname: string;
+  /** Kürzel des Vereins (z. B. "CVG"), als Untertitel im App-Kopf. */
+  kuerzel?: string;
   stadt: string;
   /** Vereinsregister, z. B. "VR 12345, Amtsgericht Dresden" */
   registereintrag?: string;

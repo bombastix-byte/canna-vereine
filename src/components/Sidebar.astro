@@ -1,5 +1,5 @@
 ---
-import { site, navigation } from '../config';
+import { site, navigation, produkt } from '../config';
 import { pfad } from '../lib/url';
 import Mark from './Mark.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../lib/pb';
@@ -36,8 +36,16 @@ const anonym = !mitglied && site.oeffentlich === false;
       <span class="sb-name">Mitgliederbereich</span>
     </span>
   </span>
+) : mitglied ? (
+  <a class="sb-brand sb-brand--side" href="/mitglieder/bereich">
+    <Mark class="sb-mark" />
+    <span class="sb-brand__text">
+      <span class="sb-name">{produkt.name}</span>
+      <span class="sb-stadt">{site.kuerzel ? `${site.kuerzel} · ` : ''}{site.kurzname}</span>
+    </span>
+  </a>
 ) : (
-  <a class="sb-brand sb-brand--side" href={mitglied ? '/mitglieder/bereich' : pfad('/')}>
+  <a class="sb-brand sb-brand--side" href={pfad('/')}>
     <Mark class="sb-mark" />
     <span class="sb-brand__text">
       <span class="sb-name">{site.kurzname}</span>

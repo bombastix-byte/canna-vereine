@@ -13,8 +13,9 @@ export const goerlitz: SiteConfig = {
   // zur Anmeldung um. Praevention & Beratung lebt im Mitgliederbereich.
   oeffentlich: false,
   //   = geschütztes Leerzeichen: "Görlitz e. V." bricht nie auseinander.
-  vereinsname: 'Anbauvereinigung Görlitz e. V.', // TODO: exakter Name laut Satzung
-  kurzname: 'Anbauvereinigung Görlitz',
+  vereinsname: 'Cannabis-Verein Görlitz e. V.',
+  kurzname: 'Cannabis-Verein Görlitz',
+  kuerzel: 'CVG',
   stadt: 'Görlitz',
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',
   erlaubnisHinweis:

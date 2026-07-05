@@ -1,19 +1,19 @@
 import type { APIRoute } from 'astro';
-import { site } from '../config';
+import { site, produkt } from '../config';
 
-// Web-App-Manifest (PWA). Baut den Vereinsnamen aus der SiteConfig ein, damit
-// die installierte App je Verein korrekt heisst. Wird beim Build erzeugt.
+// Web-App-Manifest (PWA). Wird beim Build erzeugt und ist oeffentlich abrufbar.
 export const prerender = true;
 
 export const GET: APIRoute = () => {
-  // Ohne oeffentlichen Auftritt neutraler App-Name: das Manifest ist oeffentlich
-  // abrufbar, und ein generischer Name auf dem Startbildschirm ist fuer
-  // Mitglieder ohnehin diskreter (verraet keine Vereinszugehoerigkeit).
-  const anonym = site.oeffentlich === false;
+  // Interner App-Betrieb (kein oeffentlicher Auftritt): das Manifest zeigt die
+  // PRODUKTmarke (CVMS), NICHT den konkreten Verein - so bleibt auf dem
+  // Startbildschirm und im oeffentlich abrufbaren Manifest die Vereins-
+  // zugehoerigkeit diskret. Oeffentliche Vereinsseiten nennen den Verein.
+  const appModus = site.oeffentlich === false;
   const manifest = {
-    name: anonym ? 'Mitgliederbereich' : site.vereinsname,
-    short_name: anonym ? 'Mitglieder' : site.kurzname,
-    description: anonym ? 'Interner Mitgliederbereich' : `Mitglieder-App der ${site.vereinsname}`,
+    name: appModus ? produkt.name : site.vereinsname,
+    short_name: appModus ? produkt.name : site.kurzname,
+    description: appModus ? produkt.lang : `Mitglieder-App der ${site.vereinsname}`,
     lang: 'de',
     // Einstieg ueber die rollengerechte Weiterleitung: /mitglieder schickt
     // angemeldete Mitglieder auf den Ausweis, Personal aufs Dashboard.
