@@ -38,6 +38,7 @@ export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
   if (darfAusgeben(rollen)) {
     // Ausgabe buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
     punkte.push({ label: 'Ausgabe', href: '/mitglieder/ausgabe' });
+    punkte.push({ label: 'Kasse', href: '/mitglieder/kasse' });
   }
   if (darfAnbau(rollen)) {
     punkte.push({ label: 'Anbau heute', href: '/mitglieder/anbau' });

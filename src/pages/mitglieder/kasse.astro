@@ -1,0 +1,190 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfAusgeben } from '../../lib/rollen';
+import { berlinTag } from '../../lib/ausgabe';
+import { euro, euroText, erwarteteEinnahme } from '../../lib/kasse';
+
+// Kassenbuch & Tagesabschluss. Nur Ausgabe/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAusgeben(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const tag = berlinTag();
+
+async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    return (await pb.collection(collection).getFullList(opts)) as T[];
+  } catch {
+    return [];
+  }
+}
+
+const abgabenHeute = await ladeListe<{ beitrag_euro?: number; belegnr?: string }>('ausgaben', { filter: `tag="${tag}"` });
+const beitraege = euro(abgabenHeute.reduce((s, a) => s + (Number(a.beitrag_euro) || 0), 0));
+
+const bewegungenHeute = await ladeListe<{ id: string; typ: string; betrag_euro: number; zweck?: string }>(
+  'kassenbewegung',
+  { filter: `datum="${tag}"`, sort: '-created' },
+);
+const einlagen = euro(bewegungenHeute.filter((b) => b.typ === 'einlage').reduce((s, b) => s + (Number(b.betrag_euro) || 0), 0));
+const entnahmen = euro(bewegungenHeute.filter((b) => b.typ === 'entnahme').reduce((s, b) => s + (Number(b.betrag_euro) || 0), 0));
+const erwartet = erwarteteEinnahme(beitraege, einlagen, entnahmen);
+
+let abschlussHeute: { gezaehlt_euro?: number; differenz_euro?: number } | null = null;
+try {
+  abschlussHeute = await pb.collection('kassenabschluss').getFirstListItem(`datum="${tag}"`);
+} catch {
+  abschlussHeute = null;
+}
+
+const historie = await ladeListe<{
+  id: string; datum: string; erwartet_euro?: number; gezaehlt_euro?: number; differenz_euro?: number;
+}>('kassenabschluss', { sort: '-datum', perPage: 30 });
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  typ: 'Bitte Einlage oder Entnahme wählen.',
+  betrag: 'Bitte einen gültigen Betrag angeben.',
+  schon: 'Für heute ist bereits ein Tagesabschluss gebucht.',
+  fehlgeschlagen: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+};
+const oktext: Record<string, string> = {
+  bewegung: 'Bar-Bewegung gebucht.',
+  abschluss: 'Tagesabschluss gebucht.',
+};
+const datumDe = (s?: string) => (s ? new Date(s).toLocaleDateString('de-DE') : '');
+---
+
+<Basis titel="Kasse" beschreibung="Kassenbuch und Tagesabschluss.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit</p>
+  <h1 style="margin-bottom:0.4rem;">Kasse</h1>
+  <p class="einleitung">
+    Bareinnahmen des Tages und Tagesabschluss. Die erwartete Summe rechnet das
+    System aus den kassierten Beiträgen plus Einlagen minus Entnahmen.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Fehler.'}</p>}
+
+  <section class="kasten uebersicht">
+    <h2 style="margin-top:0;">Heute · {datumDe(tag)}</h2>
+    <div class="zeile"><span>Beiträge (Abgaben)</span><strong>{euroText(beitraege)}</strong></div>
+    <div class="zeile"><span>+ Einlagen</span><strong>{euroText(einlagen)}</strong></div>
+    <div class="zeile"><span>− Entnahmen</span><strong>{euroText(entnahmen)}</strong></div>
+    <div class="zeile summe"><span>Erwartete Bareinnahme</span><strong>{euroText(erwartet)}</strong></div>
+    {abschlussHeute && (
+      <div class="zeile abgeschlossen">
+        <span>Abgeschlossen · gezählt {euroText(abschlussHeute.gezaehlt_euro ?? 0)}</span>
+        <strong class:list={['diff', { minus: (abschlussHeute.differenz_euro ?? 0) < 0, plus: (abschlussHeute.differenz_euro ?? 0) > 0 }]}>
+          {(abschlussHeute.differenz_euro ?? 0) >= 0 ? '+' : ''}{euroText(abschlussHeute.differenz_euro ?? 0)}
+        </strong>
+      </div>
+    )}
+  </section>
+
+  <details class="klappe">
+    <summary>＋ Bar-Bewegung erfassen (Einlage / Entnahme)</summary>
+    <form class="kasten" method="post" action="/mitglieder/kasse/bewegung">
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="k-typ">Art</label>
+          <select class="eingabe" id="k-typ" name="typ">
+            <option value="einlage">Einlage (z. B. Wechselgeld)</option>
+            <option value="entnahme">Entnahme (z. B. Einkauf)</option>
+          </select>
+        </div>
+        <div class="feld">
+          <label for="k-betrag">Betrag €</label>
+          <input class="eingabe" id="k-betrag" name="betrag_euro" type="number" min="0.01" step="0.01" required />
+        </div>
+        <div class="feld">
+          <label for="k-zweck">Zweck</label>
+          <input class="eingabe" id="k-zweck" name="zweck" type="text" placeholder="kurz notieren" />
+        </div>
+      </div>
+      <button class="knopf" type="submit">Buchen</button>
+    </form>
+  </details>
+
+  {bewegungenHeute.length > 0 && (
+    <table class="tabelle">
+      <thead><tr><th>Art</th><th>Zweck</th><th class="r">Betrag</th></tr></thead>
+      <tbody>
+        {bewegungenHeute.map((b) => (
+          <tr>
+            <td>{b.typ === 'einlage' ? 'Einlage' : 'Entnahme'}</td>
+            <td>{b.zweck || '—'}</td>
+            <td class="r">{b.typ === 'entnahme' ? '−' : ''}{euroText(b.betrag_euro)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+
+  {!abschlussHeute ? (
+    <details class="klappe" open>
+      <summary>Tagesabschluss buchen</summary>
+      <form class="kasten" method="post" action="/mitglieder/kasse/abschluss">
+        <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
+          Kasse zählen und die tatsächlich eingenommene Bar-Summe eintragen. Das
+          System vergleicht sie mit der erwarteten Bareinnahme ({euroText(erwartet)}).
+        </p>
+        <div class="feld-reihe">
+          <div class="feld">
+            <label for="k-gezaehlt">Gezählte Bareinnahme €</label>
+            <input class="eingabe" id="k-gezaehlt" name="gezaehlt_euro" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="feld">
+            <label for="k-notiz">Notiz (optional)</label>
+            <input class="eingabe" id="k-notiz" name="notiz" type="text" placeholder="z. B. Kassendifferenz erklärt" />
+          </div>
+        </div>
+        <button class="knopf" type="submit">Tag abschließen</button>
+      </form>
+    </details>
+  ) : (
+    <p class="hinweis" role="status">Der heutige Tag ist bereits abgeschlossen.</p>
+  )}
+
+  <h2>Kassenbuch (letzte Abschlüsse)</h2>
+  {historie.length === 0 ? (
+    <p style="color:var(--ink-soft);">Noch keine Tagesabschlüsse.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Datum</th><th class="r">Erwartet</th><th class="r">Gezählt</th><th class="r">Differenz</th></tr></thead>
+      <tbody>
+        {historie.map((a) => (
+          <tr>
+            <td>{datumDe(a.datum)}</td>
+            <td class="r">{euroText(a.erwartet_euro ?? 0)}</td>
+            <td class="r">{euroText(a.gezaehlt_euro ?? 0)}</td>
+            <td class="r" class:list={['diff', { minus: (a.differenz_euro ?? 0) < 0, plus: (a.differenz_euro ?? 0) > 0 }]}>
+              {(a.differenz_euro ?? 0) >= 0 ? '+' : ''}{euroText(a.differenz_euro ?? 0)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Basis>
+
+<style>
+  .uebersicht .zeile { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border-top: 1px solid var(--line); }
+  .uebersicht .zeile:first-of-type { border-top: 0; }
+  .uebersicht .summe { border-top: 2px solid var(--accent); font-size: 1.05rem; margin-top: 0.2rem; padding-top: 0.5rem; }
+  .uebersicht .abgeschlossen { color: var(--ink-soft); }
+  .eingabe { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; max-width: var(--mass); }
+  .feld-reihe .feld { flex: 1 1 8rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .tabelle .r { text-align: right; }
+  .diff.minus { color: var(--gefahr); }
+  .diff.plus { color: var(--ok); }
+</style>
