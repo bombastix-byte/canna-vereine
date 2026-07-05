@@ -33,6 +33,7 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
   <p class="zurueck"><a href="/mitglieder/verwaltung">‹ Zurück zur Suche</a></p>
   <h1 style="margin-bottom:0.2rem;">{m.name || m.email}</h1>
   <p class="einleitung" style="margin-top:0.2rem;">{m.email}</p>
+  <p class="karte-link"><a href={`/mitglieder/verwaltung/${m.id}/karte`}>→ QR-Ausweis (Karte) drucken</a></p>
 
   {ok && <p class="hinweis" role="status">Gespeichert.</p>}
   {fehler && <p class="hinweis hinweis--fehler" role="alert">Speichern fehlgeschlagen.</p>}
@@ -107,6 +108,7 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
   .zurueck { margin: 0 0 0.4rem; }
   .zurueck a { color: var(--ink-soft); text-decoration: none; }
   .zurueck a:hover { color: var(--ink); }
+  .karte-link { margin: 0.2rem 0 0.6rem; font-size: 0.95rem; }
   .abschnitt { font-size: 1.05rem; margin: 0 0 0.8rem; }
   .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
   .feld-reihe .feld { flex: 1 1 9rem; }

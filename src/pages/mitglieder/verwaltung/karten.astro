@@ -1,0 +1,90 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import AusweisKarte from '../../../components/AusweisKarte.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten } from '../../../lib/rollen';
+import { site } from '../../../config';
+import QRCode from 'qrcode-svg';
+
+// Stapeldruck der QR-Ausweiskarten (alle oder gefilterte Treffer). Nur Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface UserRow { id: string; name?: string; email: string; mitgliedsnummer?: string; geburtsdatum?: string }
+
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+let alle: UserRow[] = [];
+try {
+  alle = (await pb.collection('users').getFullList({
+    fields: 'id,name,email,mitgliedsnummer,geburtsdatum',
+    sort: 'mitgliedsnummer,name',
+  })) as UserRow[];
+} catch {
+  alle = [];
+}
+
+const norm = (s: string) => s.toLowerCase();
+const gefiltert = q
+  ? alle.filter((m) => {
+      const nq = norm(q);
+      return norm(m.mitgliedsnummer ?? '').includes(nq) || norm(m.name ?? '').includes(nq) || norm(m.email ?? '').includes(nq);
+    })
+  : alle;
+
+// Nur Mitglieder mit Nummer bekommen eine Karte (der QR braucht sie).
+const mitNummer = gefiltert.filter((m) => (m.mitgliedsnummer ?? '').trim());
+const ohneNummer = gefiltert.length - mitNummer.length;
+const adresse = `${site.kontakt.strasse}, ${site.kontakt.plz} ${site.kontakt.ort}`;
+const geb = (s?: string) => (s ? new Date(s).toLocaleDateString('de-DE') : '');
+const qr = (nr: string) => new QRCode({ content: nr, width: 300, height: 300, padding: 0, ecl: 'M', join: true }).svg();
+---
+
+<Basis titel="QR-Ausweise drucken" beschreibung="Stapeldruck der Mitgliedsausweis-Karten.">
+  <p class="eyebrow no-print">Vereinsarbeit · nur Vorstand</p>
+  <p class="zurueck no-print"><a href="/mitglieder/verwaltung">‹ Zurück zur Verwaltung</a></p>
+  <h1 class="no-print" style="margin-bottom:0.4rem;">QR-Ausweise drucken</h1>
+  <p class="einleitung no-print">
+    {mitNummer.length} Karte{mitNummer.length === 1 ? '' : 'n'}{q ? ` für „${q}"` : ' (alle Mitglieder)'}.
+    {ohneNummer > 0 && ` ${ohneNummer} ohne Mitgliedsnummer werden übersprungen.`}
+  </p>
+  <div class="aktionen no-print">
+    <button class="knopf" type="button" onclick="window.print()">Drucken</button>
+    <a class="knopf-sek" href="/mitglieder/verwaltung">Auswahl in der Suche eingrenzen</a>
+  </div>
+
+  {mitNummer.length === 0 ? (
+    <p class="hinweis no-print">Keine Mitglieder mit Nummer im aktuellen Filter.</p>
+  ) : (
+    <div class="karten-bogen">
+      {mitNummer.map((m) => (
+        <AusweisKarte
+          vereinsname={site.vereinsname}
+          adresse={adresse}
+          email={site.kontakt.email}
+          name={m.name || m.email}
+          nummer={m.mitgliedsnummer!}
+          geburtsdatum={geb(m.geburtsdatum)}
+          qrSvg={qr(m.mitgliedsnummer!.trim())}
+        />
+      ))}
+    </div>
+  )}
+</Basis>
+
+<style>
+  .zurueck { margin: 0 0 0.4rem; }
+  .zurueck a { color: var(--ink-soft); text-decoration: none; }
+  .aktionen { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 0 0 1.2rem; }
+  .karten-bogen { display: flex; flex-wrap: wrap; gap: 5mm; }
+
+  @media print {
+    :global(body *) { visibility: hidden; }
+    .karten-bogen, .karten-bogen * { visibility: visible; }
+    .karten-bogen { position: absolute; top: 0; left: 0; gap: 4mm; }
+    .no-print { display: none !important; }
+  }
+</style>

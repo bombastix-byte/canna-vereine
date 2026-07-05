@@ -1,0 +1,77 @@
+---
+import Basis from '../../../../layouts/Basis.astro';
+import AusweisKarte from '../../../../components/AusweisKarte.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
+import { darfVerwalten } from '../../../../lib/rollen';
+import { site } from '../../../../config';
+import QRCode from 'qrcode-svg';
+
+// Druckbare QR-Ausweiskarte eines Mitglieds. Nur Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const { id } = Astro.params;
+let m;
+try {
+  m = await pb.collection('users').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/verwaltung?fehler=nichtgefunden', 303);
+}
+
+const nummer = (m.mitgliedsnummer as string) || '';
+const geb = m.geburtsdatum ? new Date(m.geburtsdatum).toLocaleDateString('de-DE') : '';
+const qrSvg = nummer
+  ? new QRCode({ content: nummer, width: 300, height: 300, padding: 0, ecl: 'M', join: true }).svg()
+  : '';
+const adresse = `${site.kontakt.strasse}, ${site.kontakt.plz} ${site.kontakt.ort}`;
+---
+
+<Basis titel="QR-Ausweis drucken" beschreibung="Druckbare Mitgliedsausweis-Karte mit QR-Code.">
+  <p class="eyebrow no-print">Vereinsarbeit · nur Vorstand</p>
+  <p class="zurueck no-print"><a href={`/mitglieder/verwaltung/${m.id}`}>‹ Zurück zum Mitglied</a></p>
+  <h1 class="no-print" style="margin-bottom:0.4rem;">QR-Ausweis</h1>
+
+  {!nummer ? (
+    <p class="hinweis hinweis--fehler no-print">Für dieses Mitglied ist keine Mitgliedsnummer hinterlegt — bitte zuerst eintragen.</p>
+  ) : (
+    <>
+      <p class="einleitung no-print">
+        Auf Kartenrohling drucken oder als Etikett auf die Vereinskarte aufbringen.
+        Der QR enthält die Mitgliedsnummer und wird am Tresen erkannt.
+      </p>
+      <div class="aktionen no-print">
+        <button class="knopf" type="button" onclick="window.print()">Drucken</button>
+        <a class="knopf-sek" href="/mitglieder/verwaltung/karten">Mehrere drucken (Stapel)</a>
+      </div>
+      <div class="karte-buehne">
+        <AusweisKarte
+          vereinsname={site.vereinsname}
+          adresse={adresse}
+          email={site.kontakt.email}
+          name={(m.name as string) || (m.email as string)}
+          nummer={nummer}
+          geburtsdatum={geb}
+          qrSvg={qrSvg}
+        />
+      </div>
+    </>
+  )}
+</Basis>
+
+<style>
+  .zurueck { margin: 0 0 0.4rem; }
+  .zurueck a { color: var(--ink-soft); text-decoration: none; }
+  .aktionen { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 0 0 1.2rem; }
+  .karte-buehne { display: inline-block; padding: 6mm; background: #eef1ec; border-radius: var(--radius); }
+
+  @media print {
+    :global(body *) { visibility: hidden; }
+    .karte-buehne, .karte-buehne * { visibility: visible; }
+    .karte-buehne { position: absolute; top: 0; left: 0; padding: 0; background: none; }
+    .no-print { display: none !important; }
+  }
+</style>

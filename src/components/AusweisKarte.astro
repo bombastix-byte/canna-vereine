@@ -1,0 +1,78 @@
+---
+import Mark from './Mark.astro';
+
+// Druckbare Mitgliedsausweis-Karte im Scheckkartenformat (85,6 × 54 mm).
+// QR-Inhalt = Mitgliedsnummer (identisch zum digitalen Ausweis, damit der
+// Tresen-Scanner sie erkennt). Bewusst hell mit QR auf Weiss -> hoher
+// Kontrast, zuverlaessig scanbar. Zum Aufbringen auf die Vereinskarte oder
+// zum Bedrucken von Kartenrohlingen.
+interface Props {
+  vereinsname: string;
+  adresse: string;
+  email?: string;
+  name: string;
+  nummer: string;
+  geburtsdatum?: string;
+  qrSvg: string;
+}
+const { vereinsname, adresse, email, name, nummer, geburtsdatum, qrSvg } = Astro.props;
+---
+
+<div class="karte">
+  <div class="karte-kopf">
+    <Mark class="karte-mark" />
+    <div class="karte-kopf-text">
+      <span class="karte-verein">{vereinsname}</span>
+      <span class="karte-adresse">{adresse}</span>
+    </div>
+  </div>
+  <div class="karte-body">
+    <div class="karte-qr" set:html={qrSvg} />
+    <div class="karte-daten">
+      <div class="kz"><span class="kl">Mitglieds-Nr.</span><span class="kw">{nummer || '—'}</span></div>
+      <div class="kz"><span class="kl">Name</span><span class="kw">{name}</span></div>
+      {geburtsdatum && <div class="kz"><span class="kl">Geburtsdatum</span><span class="kw">{geburtsdatum}</span></div>}
+    </div>
+  </div>
+  <p class="karte-fuss">
+    Nur zusammen mit amtlichem Lichtbildausweis gültig. Ausweis verbleibt im
+    Eigentum des Vereins; bei Beendigung der Mitgliedschaft zurückzugeben.
+    {email && <> · {email}</>}
+  </p>
+</div>
+
+<style>
+  .karte {
+    box-sizing: border-box;
+    width: 85.6mm;
+    height: 54mm;
+    padding: 3.2mm 3.6mm;
+    border: 1px solid #cdd5cc;
+    border-left: 3mm solid #3f7d52;
+    border-radius: 3mm;
+    background: #ffffff;
+    color: #16221a;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6mm;
+    font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+    overflow: hidden;
+  }
+  .karte-kopf { display: flex; align-items: center; gap: 2mm; }
+  .karte-mark { width: 8mm; height: 8mm; color: #3f7d52; flex: none; }
+  .karte-kopf-text { display: flex; flex-direction: column; min-width: 0; }
+  .karte-verein { font-weight: 700; font-size: 3.1mm; line-height: 1.1; }
+  .karte-adresse { font-size: 2.3mm; color: #55605a; }
+  .karte-body { display: flex; gap: 3mm; align-items: center; flex: 1 1 auto; min-height: 0; }
+  .karte-qr { flex: none; width: 26mm; height: 26mm; }
+  .karte-qr :global(svg) { width: 26mm; height: 26mm; display: block; }
+  .karte-daten { display: flex; flex-direction: column; gap: 1.2mm; min-width: 0; }
+  .kz { display: flex; flex-direction: column; }
+  .kl { font-size: 2.2mm; color: #55605a; text-transform: uppercase; letter-spacing: 0.03em; }
+  .kw { font-size: 3.2mm; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .karte-fuss { margin: 0; font-size: 1.9mm; line-height: 1.25; color: #55605a; }
+
+  @media print {
+    .karte { border: 1px solid #cdd5cc; border-left: 3mm solid #3f7d52; break-inside: avoid; }
+  }
+</style>

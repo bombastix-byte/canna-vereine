@@ -93,7 +93,12 @@ const geloescht = Astro.url.searchParams.get('geloescht');
     </div>
   </div>
 
-  <p class="anzahl">{treffer.length} von {alle.length} Mitgliedern{q ? ` für „${q}"` : ''}.</p>
+  <p class="anzahl">
+    {treffer.length} von {alle.length} Mitgliedern{q ? ` für „${q}"` : ''}.
+    {treffer.length > 0 && (
+      <> · <a href={`/mitglieder/verwaltung/karten${q ? `?q=${encodeURIComponent(q)}` : ''}`}>QR-Ausweise drucken</a></>
+    )}
+  </p>
 
   {treffer.length === 0 ? (
     <p style="color:var(--ink-soft);">Keine Treffer. Anderen Suchbegriff versuchen.</p>

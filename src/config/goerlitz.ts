@@ -21,10 +21,10 @@ export const goerlitz: SiteConfig = {
     'Erlaubnis zum gemeinschaftlichen Eigenanbau nach Paragraf 11 KCanG: TODO Aktenzeichen / Status',
 
   kontakt: {
-    strasse: 'TODO Straße und Hausnummer',
+    strasse: 'Blumenstr. 10',
     plz: '02826',
     ort: 'Görlitz',
-    email: 'kontakt@TODO-domain.de',
+    email: 'cannabisverein.goerlitz@gmail.com',
     telefon: undefined,
     erreichbarkeit: 'Schriftliche Anfragen werden innerhalb weniger Werktage beantwortet.',
     besuchszeiten: 'Werktags 14 bis 18 Uhr',
