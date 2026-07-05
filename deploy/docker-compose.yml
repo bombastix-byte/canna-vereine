@@ -46,8 +46,13 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.pocketbase
     restart: unless-stopped
+    # CRON_TOKEN fuer den taeglichen Erinnerungs-Hook (pb_hooks/erinnerungen.pb.js).
+    environment:
+      CRON_TOKEN: ${CRON_TOKEN}
     volumes:
       - pb_goerlitz:/pb/pb_data
+      # JS-Hooks (u. a. Erinnerungs-Cron). Nur lesend eingebunden.
+      - ./pb_hooks:/pb/pb_hooks:ro
 
   # ---------- Goerlitz 2 (CSC) ----------
   astro-goerlitz2:
