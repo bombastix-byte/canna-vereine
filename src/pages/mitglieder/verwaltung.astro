@@ -5,6 +5,8 @@ import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten, ROLLEN_LABEL, type Rolle } from '../../lib/rollen';
+import { effektiverStatus, STATUS_LABEL } from '../../lib/status';
+import { berlinTag } from '../../lib/ausgabe';
 
 // Mitgliederverwaltung: Suche + Liste. Bearbeitet wird auf der Detailseite
 // (/mitglieder/verwaltung/[id]). Skaliert auf mehrere hundert Mitglieder.
@@ -22,6 +24,8 @@ interface UserRow {
   email: string;
   mitgliedsnummer?: string;
   rollen?: string[];
+  mitglied_status?: string;
+  austritt_zum?: string;
 }
 
 // Suchbegriff: freier Text ODER exakte Mitgliedsnummer (vom Ausweis-Scan).
@@ -30,7 +34,7 @@ const q = (Astro.url.searchParams.get('q') ?? '').trim();
 let alle: UserRow[] = [];
 try {
   alle = (await pb.collection('users').getFullList({
-    fields: 'id,name,email,mitgliedsnummer,rollen',
+    fields: 'id,name,email,mitgliedsnummer,rollen,mitglied_status,austritt_zum',
     sort: 'mitgliedsnummer,name',
   })) as UserRow[];
 } catch {
@@ -145,7 +149,12 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
           <a class="zeile" href={`/mitglieder/verwaltung/${m.id}`}>
             <span class="zeile-nr">{m.mitgliedsnummer || '—'}</span>
             <span class="zeile-mitte">
-              <span class="zeile-name">{m.name || m.email}</span>
+              <span class="zeile-name">
+                {m.name || m.email}
+                {effektiverStatus(m, berlinTag()) !== 'aktiv' && (
+                  <span class:list={['zeile-status', `st-${effektiverStatus(m, berlinTag())}`]}>{STATUS_LABEL[effektiverStatus(m, berlinTag())]}</span>
+                )}
+              </span>
               {rollenKurz(m.rollen).length > 0 && (
                 <span class="zeile-rollen">{rollenKurz(m.rollen).join(' · ')}</span>
               )}
@@ -238,6 +247,9 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
   .zeile-mitte { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1 1 auto; }
   .zeile-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .zeile-rollen { font-size: 0.8rem; color: var(--accent); }
+  .zeile-status { margin-left: 0.5rem; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.1rem 0.45rem; border-radius: 999px; border: 1px solid currentColor; color: var(--ink-soft); vertical-align: middle; }
+  .zeile-status.st-ruhend, .zeile-status.st-gekuendigt { color: var(--accent); }
+  .zeile-status.st-ausgetreten { color: var(--gefahr); }
   .zeile-pfeil { flex: none; color: var(--ink-soft); font-size: 1.4rem; }
 
   .scan-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 1rem; }

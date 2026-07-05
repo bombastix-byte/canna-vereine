@@ -10,6 +10,7 @@ import {
   summeGramm,
 } from '../../../lib/ausgabe';
 import { produktTyp } from '../../../lib/verarbeitung';
+import { abgabeErlaubt, abgabeSperrGrund } from '../../../lib/status';
 
 // Bucht eine Abgabe am Tresen - EIN Vorgang mit einer oder MEHREREN Positionen
 // (Mitglied nimmt mehrere Sorten mit). Alle Positionen teilen sich eine
@@ -68,6 +69,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     empfaenger = await pb.collection('users').getOne(mitgliedId);
   } catch {
     return zurueck(redirect, mitgliedId, 'Mitglied nicht gefunden.');
+  }
+
+  // Lebenszyklus: ruhende/ausgetretene Mitglieder erhalten keine Abgabe.
+  if (!abgabeErlaubt(empfaenger, berlinTag())) {
+    const grund = abgabeSperrGrund(empfaenger, berlinTag());
+    return zurueck(redirect, mitgliedId, `Abgabe nicht möglich: ${grund}. Bitte an den Vorstand wenden.`);
   }
 
   const chargen: Array<{ charge: Record<string, any>; menge: number }> = [];

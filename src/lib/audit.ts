@@ -79,6 +79,7 @@ export const AKTION_LABEL: Record<string, string> = {
   'mitglied.angelegt': 'Mitglied angelegt',
   'mitglied.aktualisiert': 'Mitglied bearbeitet',
   'mitglied.geloescht': 'Mitglied gelöscht',
+  'mitglied.status': 'Status geändert',
   'rolle.geaendert': 'Rollen geändert',
   'antrag.aufgenommen': 'Antrag aufgenommen',
   'antrag.abgelehnt': 'Antrag abgelehnt',

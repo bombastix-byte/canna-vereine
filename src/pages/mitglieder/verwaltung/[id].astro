@@ -3,6 +3,8 @@ import Basis from '../../../layouts/Basis.astro';
 import MitgliedNav from '../../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
+import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus } from '../../../lib/status';
+import { berlinTag } from '../../../lib/ausgabe';
 
 // Detail-/Bearbeitungsseite eines Mitglieds (aus der Suche geöffnet).
 // Nur Vorstand.
@@ -28,17 +30,24 @@ const fehler = Astro.url.searchParams.get('fehler');
 const fehlertext: Record<string, string> = {
   selbst: 'Das eigene Konto kann nicht gelöscht werden.',
   loeschen: 'Löschen fehlgeschlagen. Bitte erneut versuchen.',
+  status: 'Status konnte nicht gesetzt werden.',
 };
 const fmeldung = fehler ? (fehlertext[fehler] ?? 'Speichern fehlgeschlagen.') : null;
 const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
 const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
+const heute = berlinTag();
+const statusJetzt = effektiverStatus(m, heute);
+const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
 ---
 
 <Basis titel={`${m.name || m.email}`} beschreibung="Mitglied bearbeiten.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
   <p class="zurueck"><a href="/mitglieder/verwaltung">‹ Zurück zur Suche</a></p>
-  <h1 style="margin-bottom:0.2rem;">{m.name || m.email}</h1>
+  <h1 style="margin-bottom:0.2rem;">
+    {m.name || m.email}
+    <span class:list={['status-marke', `status-${statusJetzt}`]}>{STATUS_LABEL[statusJetzt]}</span>
+  </h1>
   <p class="einleitung" style="margin-top:0.2rem;">{m.email}</p>
   <p class="karte-link"><a href={`/mitglieder/verwaltung/${m.id}/karte`}>→ QR-Ausweis (Karte) drucken</a></p>
 
@@ -128,12 +137,45 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
     <button class="knopf" type="submit">Änderungen speichern</button>
   </form>
 
+  <section class="kasten">
+    <h2 class="abschnitt">Mitgliedschaft (Status)</h2>
+    <p class="rollen-hinweis">
+      Schonender Weg statt Löschen: „Ruhend" und „Ausgetreten" sperren die Abgabe
+      am Tresen, alle Daten bleiben erhalten. „Gekündigt" bleibt bis zum
+      Austrittsdatum abgabeberechtigt und wird danach automatisch als ausgetreten
+      geführt.
+    </p>
+    <form method="post" action="/mitglieder/verwaltung/status">
+      <input type="hidden" name="mitglied" value={m.id} />
+      <div class="feld-reihe">
+        <div class="feld">
+          <label for="f-status">Status</label>
+          <select id="f-status" name="mitglied_status">
+            {MITGLIED_STATUS.map((s) => (
+              <option value={s} selected={s === statusGesetzt}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+        </div>
+        <div class="feld">
+          <label for="f-austritt">Austritt zum (nur bei „Gekündigt")</label>
+          <input id="f-austritt" name="austritt_zum" type="date" value={isoTag(m.austritt_zum)} />
+        </div>
+      </div>
+      <div class="feld">
+        <label for="f-snotiz">Notiz (optional)</label>
+        <input id="f-snotiz" name="status_notiz" type="text" value={m.status_notiz ?? ''} placeholder="z. B. Kündigung eingegangen am …" />
+      </div>
+      <button class="knopf" type="submit" style="margin-top:0.8rem;">Status setzen</button>
+    </form>
+  </section>
+
   {m.id !== mitglied.id && (
     <section class="entfernen">
       <h2 class="abschnitt">Mitglied entfernen</h2>
       <p class="entfernen-hinweis">
-        Löscht das Konto endgültig. Abgaben-, Anbau- und Jahresmeldungsdaten
-        bleiben erhalten (pseudonymisiert über die Mitgliedsnummer).
+        <strong>Nur in Ausnahmefällen</strong> (z. B. Doppelanlage). Für reguläre
+        Austritte den Status „Ausgetreten" verwenden — das bewahrt die Historie.
+        Löscht das Konto endgültig; Abgaben-/Anbaudaten bleiben pseudonym erhalten.
       </p>
       <form method="post" action="/mitglieder/verwaltung/loeschen"
         onsubmit={`return confirm('Mitglied „${(m.name || m.email).replace(/'/g, '')}" wirklich endgültig entfernen?')`}>
@@ -153,10 +195,19 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
   .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
   .feld-reihe .feld { flex: 1 1 9rem; }
   .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
-  .feld input {
+  .feld input, .feld select {
     width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line);
     border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit;
   }
+  .status-marke {
+    display: inline-block; vertical-align: middle; margin-left: 0.5rem;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft);
+  }
+  .status-marke.status-aktiv { border-color: var(--ok); color: var(--ok); }
+  .status-marke.status-ruhend { border-color: var(--accent); color: var(--accent); }
+  .status-marke.status-gekuendigt { border-color: var(--accent); color: var(--accent); }
+  .status-marke.status-ausgetreten { border-color: var(--gefahr); color: var(--gefahr); }
   .feld-hinweis { color: var(--ink-soft); font-size: 0.85rem; margin: 0 0 0.8rem; }
   .rollen-hinweis { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.6rem; }
   .rollen { display: flex; flex-direction: column; gap: 0.1rem; }
