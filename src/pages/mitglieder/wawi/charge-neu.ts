@@ -3,6 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAnbau } from '../../../lib/rollen';
 import { chargeNr } from '../../../lib/wawi';
 import { berlinTag } from '../../../lib/ausgabe';
+import { protokolliere } from '../../../lib/audit';
 
 // Legt eine neue Charge (Anbaulos) an. Nur Anbauverantwortliche/Vorstand.
 export const prerender = false;
@@ -49,6 +50,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         status: 'wachsend',
       });
     }
+    await protokolliere(pb, mitglied, 'charge.angelegt', {
+      objektTyp: 'charge', objektId: neu.id, objektLabel: nr,
+      details: `${sorte.name}${n ? ` · ${n} Pflanzen` : ''}${herkunft ? ` · ${herkunft}` : ''}`,
+    });
   } catch {
     return redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
   }

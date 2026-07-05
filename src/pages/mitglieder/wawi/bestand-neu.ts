@@ -4,6 +4,7 @@ import { darfAnbau } from '../../../lib/rollen';
 import { chargeNr } from '../../../lib/wawi';
 import { produktTyp } from '../../../lib/verarbeitung';
 import { berlinTag } from '../../../lib/ausgabe';
+import { protokolliere } from '../../../lib/audit';
 
 // Warenaufnahme: vorhandene Ware (Blüte/Haschisch/Rosin) als sofort
 // freigegebene Charge anlegen - aus EINER Sorte ODER als Mix/freie Herkunft
@@ -47,7 +48,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   try {
     const jahr = berlinTag().slice(0, 4);
     const anzahl = (await pb.collection('chargen').getList(1, 1, { filter: `charge_nr~"${jahr}-"` })).totalItems;
-    await pb.collection('chargen').create({
+    const neu = await pb.collection('chargen').create({
       charge_nr: chargeNr(jahr, anzahl),
       sorte: sorteRef,
       sorte_name: sorteName,
@@ -60,6 +61,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       thc_prozent: Number.isFinite(thc) && thc > 0 ? thc : null,
       cbd_prozent: Number.isFinite(cbd) && cbd >= 0 ? cbd : null,
       notiz: '',
+    });
+    await protokolliere(pb, mitglied, 'charge.angelegt', {
+      objektTyp: 'charge', objektId: neu.id, objektLabel: neu.charge_nr,
+      details: `Warenaufnahme · ${sorteName} · ${menge} g`,
     });
   } catch {
     return redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);

@@ -517,6 +517,11 @@ const statusVariante: Record<string, string> = {
             )}
 
             <p class="aktion" style="margin:0;">
+              <strong>Stammdaten</strong>
+              <a class="knopf-sek" href={`/mitglieder/wawi/charge/${c.id}`} style="display:inline-block;text-decoration:none;">Bearbeiten / löschen …</a>
+            </p>
+
+            <p class="aktion" style="margin:0;">
               <strong>Rückruf</strong>
               <a class="knopf-sek" href={`/mitglieder/wawi/rueckruf/${c.id}`} style="display:inline-block;text-decoration:none;">Empfänger & Rückruf …</a>
             </p>
@@ -543,7 +548,7 @@ const statusVariante: Record<string, string> = {
               <td>{c.rueckruf ? '⚠ zurückgerufen' : (STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status)}</td>
               <td class="r">{g(c.trockengewicht_g)}</td>
               <td class="r">{c.thc_prozent ?? '—'} %</td>
-              <td><a href={`/mitglieder/wawi/rueckruf/${c.id}`}>Empfänger …</a></td>
+              <td><a href={`/mitglieder/wawi/charge/${c.id}`}>Bearbeiten</a> · <a href={`/mitglieder/wawi/rueckruf/${c.id}`}>Empfänger</a></td>
             </tr>
           ))}
         </tbody>

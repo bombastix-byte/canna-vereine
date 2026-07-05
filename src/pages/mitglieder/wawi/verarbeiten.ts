@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { hatVerarbeitung } from '../../../lib/funktionen';
 import { darfAnbau } from '../../../lib/rollen';
+import { protokolliere } from '../../../lib/audit';
 import { chargeNr } from '../../../lib/wawi';
 import { pruefeVerarbeitungMulti, verteileErtrag, produktTyp, produktLabel } from '../../../lib/verarbeitung';
 import { berlinTag } from '../../../lib/ausgabe';
@@ -125,6 +126,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       if (rest === 0) patch.status = 'aufgebraucht';
       await pb.collection('chargen').update(charge.id, patch);
     }
+    await protokolliere(pb, mitglied, 'verarbeitung.gebucht', {
+      objektTyp: 'charge', objektId: produkt.id, objektLabel: produkt.charge_nr,
+      details: `${produktName} · ${ertrag} g aus ${quellNummern}`,
+    });
   } catch {
     return redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
   }

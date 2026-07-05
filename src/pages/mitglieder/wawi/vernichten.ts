@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAnbau } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
+import { protokolliere } from '../../../lib/audit';
 
 // Dokumentiert eine Vernichtung (dokumentationspflichtig). Legt einen
 // Vernichtungssatz an und schreibt bei freigegebener Charge den Bestand fort.
@@ -59,6 +60,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       /* Vernichtungssatz bleibt gueltig; Bestand ggf. manuell korrigieren. */
     }
   }
+
+  await protokolliere(pb, mitglied, 'vernichtung.erfasst', {
+    objektTyp: 'charge', objektId: chargeId, objektLabel: charge.charge_nr || chargeId,
+    details: `${menge} g${grund ? ` · ${grund}` : ''}${zeuge ? ` · Zeuge: ${zeuge}` : ''}`,
+  });
 
   return zurueck('ok=vernichtet');
 };

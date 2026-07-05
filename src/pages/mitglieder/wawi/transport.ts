@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAnbau } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
+import { protokolliere } from '../../../lib/audit';
 
 // Dokumentiert einen Transport (Paragraf 22 KCanG: mitzufuehrende Bescheinigung
 // beim Befoerdern zwischen Anbaustaette/Ausgabestelle). Reines Begleitdokument -
@@ -51,6 +52,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     return zurueck('fehler=fehlgeschlagen');
   }
+
+  await protokolliere(pb, mitglied, 'transport.erfasst', {
+    objektTyp: 'charge', objektId: chargeId, objektLabel: charge.charge_nr || chargeId,
+    details: `${menge} g · ${von} → ${nach}${zweck ? ` · ${zweck}` : ''}`,
+  });
 
   return redirect(`/mitglieder/wawi/transport/${neu.id}?neu=1`, 303);
 };

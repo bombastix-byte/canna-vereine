@@ -1,0 +1,150 @@
+---
+import Basis from '../../../../layouts/Basis.astro';
+import MitgliedNav from '../../../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../../lib/pb';
+import { darfAnbau } from '../../../../lib/rollen';
+import { STATUS_LABEL } from '../../../../lib/wawi';
+
+// Charge-Stammdaten bearbeiten / löschen. Nur Anbau/Vorstand.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfAnbau(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const { id } = Astro.params;
+let c: Record<string, any>;
+try {
+  c = await pb.collection('chargen').getOne(id!);
+} catch {
+  return Astro.redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
+}
+
+async function zaehle(collection: string, filter: string): Promise<number> {
+  try {
+    return (await pb.collection(collection).getList(1, 1, { filter })).totalItems;
+  } catch {
+    return 0;
+  }
+}
+const abgaben = await zaehle('ausgaben', `charge_ref="${id}"`);
+const pflanzen = await zaehle('pflanzen', `charge_ref="${id}"`);
+const vernicht = await zaehle('vernichtungen', `charge_nr="${c.charge_nr}"`);
+const transporte = await zaehle('transporte', `charge_nr="${c.charge_nr}"`);
+const verknuepfungen = abgaben + pflanzen + vernicht + transporte;
+const inBenutzung = abgaben > 0 || ['freigegeben', 'aufgebraucht', 'gesperrt'].includes(String(c.status));
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  grund: 'Diese Charge ist in Benutzung — für Änderungen an Charge-Nr., THC/CBD oder Bestand bitte einen Korrektur-Grund angeben.',
+  verknuepft: 'Charge nicht löschbar: es hängen Abgaben, Pflanzen, Vernichtungen oder Transporte daran. Bitte stattdessen sperren.',
+  fehlgeschlagen: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+};
+const wert = (v: unknown) => (v == null ? '' : String(v));
+---
+
+<Basis titel={`Charge ${c.charge_nr ?? ''} bearbeiten`} beschreibung="Charge-Stammdaten korrigieren.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Warenwirtschaft</p>
+  <p><a href="/mitglieder/wawi">← zurück zur Warenwirtschaft</a></p>
+  <h1 style="margin-bottom:0.3rem;">Charge {c.charge_nr} bearbeiten</h1>
+  <p class="einleitung">Status: {STATUS_LABEL[c.status as keyof typeof STATUS_LABEL] ?? c.status}{inBenutzung ? ' · in Benutzung' : ''}.</p>
+
+  {ok && <p class="hinweis" role="status">Gespeichert.</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Fehler.'}</p>}
+
+  {inBenutzung && (
+    <p class="hinweis" role="note" style="max-width:var(--mass);">
+      Diese Charge ist bereits in Benutzung. Änderungen an <strong>Charge-Nr., THC/CBD oder Bestand</strong>
+      sind nur mit Korrektur-Grund möglich und werden im Protokoll festgehalten.
+    </p>
+  )}
+
+  <form class="kasten" method="post" action="/mitglieder/wawi/charge-bearbeiten">
+    <input type="hidden" name="charge" value={c.id} />
+    <div class="feld-reihe">
+      <div class="feld">
+        <label for="f-nr">Charge-Nr. <span class="sens">sensibel</span></label>
+        <input id="f-nr" name="charge_nr" type="text" value={wert(c.charge_nr)} />
+      </div>
+      <div class="feld">
+        <label for="f-sorte">Sorte</label>
+        <input id="f-sorte" name="sorte_name" type="text" value={wert(c.sorte_name)} />
+      </div>
+    </div>
+    <div class="feld-reihe">
+      <div class="feld">
+        <label for="f-thc">THC % <span class="sens">sensibel</span></label>
+        <input id="f-thc" name="thc_prozent" type="number" step="0.1" min="0" value={wert(c.thc_prozent)} />
+      </div>
+      <div class="feld">
+        <label for="f-cbd">CBD % <span class="sens">sensibel</span></label>
+        <input id="f-cbd" name="cbd_prozent" type="number" step="0.1" min="0" value={wert(c.cbd_prozent)} />
+      </div>
+      <div class="feld">
+        <label for="f-best">Verfügbar (g) <span class="sens">sensibel</span></label>
+        <input id="f-best" name="verfuegbar_g" type="number" step="0.1" min="0" value={wert(c.verfuegbar_g)} />
+      </div>
+    </div>
+    <div class="feld-reihe">
+      <div class="feld">
+        <label for="f-herk">Herkunft</label>
+        <input id="f-herk" name="herkunft" type="text" value={wert(c.herkunft)} />
+      </div>
+      <div class="feld">
+        <label for="f-standort">Standort</label>
+        <input id="f-standort" name="standort" type="text" value={wert(c.standort)} />
+      </div>
+    </div>
+    <div class="feld">
+      <label for="f-notiz">Notiz</label>
+      <input id="f-notiz" name="notiz" type="text" value={wert(c.notiz)} />
+    </div>
+    {inBenutzung && (
+      <div class="feld">
+        <label for="f-grund">Korrektur-Grund (bei Änderung sensibler Felder)</label>
+        <input id="f-grund" name="grund" type="text" placeholder="z. B. Tippfehler THC, Nachwiegung Bestand" />
+      </div>
+    )}
+    <button class="knopf" type="submit" style="margin-top:0.6rem;">Änderungen speichern</button>
+  </form>
+
+  <section class="entfernen">
+    <h2 class="abschnitt">Charge löschen</h2>
+    {verknuepfungen > 0 ? (
+      <p class="entfernen-hinweis">
+        Diese Charge hat verknüpfte Datensätze
+        ({[abgaben && `${abgaben} Abgaben`, pflanzen && `${pflanzen} Pflanzen`, vernicht && `${vernicht} Vernichtungen`, transporte && `${transporte} Transporte`].filter(Boolean).join(', ')})
+        und kann <strong>nicht gelöscht</strong> werden — das würde Nachweise verwaisen lassen. Nutze stattdessen „sperren" in der Warenwirtschaft.
+      </p>
+    ) : (
+      <>
+        <p class="entfernen-hinweis">
+          Diese Charge hat keine verknüpften Datensätze und kann endgültig gelöscht werden
+          (z. B. Fehl-Anlage). Die Löschung wird protokolliert.
+        </p>
+        <form method="post" action="/mitglieder/wawi/charge-loeschen"
+          onsubmit={`return confirm('Charge ${(c.charge_nr ?? '').replace(/'/g, '')} wirklich endgültig löschen?')`}>
+          <input type="hidden" name="charge" value={c.id} />
+          <button class="knopf-gefahr" type="submit">Charge endgültig löschen</button>
+        </form>
+      </>
+    )}
+  </section>
+</Basis>
+
+<style>
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 8rem; }
+  .feld { margin-bottom: 0.8rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .feld input { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .sens { font-size: 0.7rem; color: var(--gefahr); border: 1px solid var(--gefahr); border-radius: 999px; padding: 0 0.4rem; vertical-align: middle; }
+  .entfernen { max-width: var(--mass); margin: 2rem 0 0; padding: 1rem 1.1rem; border: 1px solid var(--gefahr); border-radius: var(--radius); background: var(--gefahr-bg); }
+  .entfernen .abschnitt { color: var(--gefahr); margin: 0 0 0.6rem; font-size: 1.05rem; }
+  .entfernen-hinweis { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.8rem; }
+  .knopf-gefahr { display: inline-block; padding: 0.6rem 1rem; border: 1px solid var(--gefahr); border-radius: var(--radius); background: transparent; color: var(--gefahr); font: inherit; font-weight: 600; cursor: pointer; }
+  .knopf-gefahr:hover { background: var(--gefahr); color: var(--bg-rein); }
+</style>

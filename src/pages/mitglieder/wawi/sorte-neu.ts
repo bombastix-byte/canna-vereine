@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAnbau } from '../../../lib/rollen';
+import { protokolliere } from '../../../lib/audit';
 
 // Legt eine neue Sorte an (Stammdaten-Katalog). Nur Anbau/Vorstand.
 // THC/CBD sind die erwarteten Richtwerte der Sorte; die massgeblichen Werte
@@ -32,8 +33,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     /* gut - noch nicht vorhanden */
   }
 
+  let neu;
   try {
-    await pb.collection('sorten').create({
+    neu = await pb.collection('sorten').create({
       name,
       typ: TYPEN.includes(typ) ? typ : 'Hybrid',
       thc_prozent: Number.isFinite(thc) && thc >= 0 ? thc : null,
@@ -44,6 +46,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch {
     return redirect('/mitglieder/wawi?fehler=fehlgeschlagen', 303);
   }
+
+  await protokolliere(pb, mitglied, 'sorte.angelegt', {
+    objektTyp: 'sorte', objektId: neu.id, objektLabel: name,
+    details: `${TYPEN.includes(typ) ? typ : 'Hybrid'}`,
+  });
 
   return redirect('/mitglieder/wawi?ok=sorte', 303);
 };
