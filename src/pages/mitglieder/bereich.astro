@@ -4,6 +4,8 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE, dateiUrl } from '../../lib/pb';
 import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from '../../lib/rollen';
 import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../lib/helfer';
+import { vorstandsKennzahlen } from '../../lib/cockpit';
+import { berlinTag } from '../../lib/ausgabe';
 
 // Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
 export const prerender = false;
@@ -86,6 +88,11 @@ const datum = (iso: string) =>
 
 const downloadUrl = (d: Dokument) =>
   d.datei ? dateiUrl(d as unknown as { collectionId: string; id: string }, d.datei) : '#';
+
+// Vorstands-Cockpit: Kennzahlen nur für Verwaltende laden.
+const kennzahlen = darfVerwalten(mitglied.rollen) ? await vorstandsKennzahlen(pb, berlinTag()) : null;
+const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 ---
 
 <Basis titel="Mitgliederbereich" beschreibung="Interner Bereich für Mitglieder.">
@@ -158,6 +165,44 @@ const downloadUrl = (d: Dokument) =>
       </span>
     </a>
   </section>
+
+  {kennzahlen && (
+    <>
+      <p class="eyebrow" style="margin:1.6rem 0 0.6rem;">Vorstand · auf einen Blick</p>
+      <section class="cockpit" aria-label="Kennzahlen">
+        <a class="kpi" href="/mitglieder/verwaltung">
+          <span class="kpi__wert">{kennzahlen.mitglieder}</span>
+          <span class="kpi__label">Mitglieder</span>
+        </a>
+        <a class:list={['kpi', { 'kpi--warn': kennzahlen.rueckstandZahl > 0 }]} href="/mitglieder/beitraege/status">
+          <span class="kpi__wert">{kennzahlen.rueckstandZahl}</span>
+          <span class="kpi__label">im Rückstand{kennzahlen.rueckstandZahl > 0 ? ` · ${eur(kennzahlen.rueckstandSumme)} €` : ''}</span>
+        </a>
+        <a class="kpi" href="/mitglieder/wawi">
+          <span class="kpi__wert">{gramm(kennzahlen.bestandG)} g</span>
+          <span class="kpi__label">Bestand freigegeben</span>
+        </a>
+        <a class="kpi" href="/mitglieder/ausgabe">
+          <span class="kpi__wert">{gramm(kennzahlen.abgabe7G)} g</span>
+          <span class="kpi__label">abgegeben (7 Tage)</span>
+        </a>
+        <a class:list={['kpi', { 'kpi--warn': kennzahlen.antraegeOffen > 0 }]} href="/mitglieder/antraege">
+          <span class="kpi__wert">{kennzahlen.antraegeOffen}</span>
+          <span class="kpi__label">offene Anträge</span>
+        </a>
+        <a class:list={['kpi', { 'kpi--warn': kennzahlen.kasseOffen && kennzahlen.kasseErwartet > 0 }]} href="/mitglieder/kasse">
+          <span class="kpi__wert">{eur(kennzahlen.kasseErwartet)} €</span>
+          <span class="kpi__label">Kasse heute{kennzahlen.kasseOffen ? ' · offen' : ' · abgeschlossen'}</span>
+        </a>
+        {kennzahlen.rueckrufeAktiv > 0 && (
+          <a class="kpi kpi--gefahr" href="/mitglieder/wawi">
+            <span class="kpi__wert">{kennzahlen.rueckrufeAktiv}</span>
+            <span class="kpi__label">aktive Rückrufe</span>
+          </a>
+        )}
+      </section>
+    </>
+  )}
 
   {istPersonal(mitglied.rollen) && (
     <p class="eyebrow" style="margin:1.6rem 0 0.6rem;">Vereinsarbeit</p>
@@ -336,6 +381,54 @@ const downloadUrl = (d: Dokument) =>
     font-weight: 600;
     line-height: 1.3;
     color: var(--brand-strong);
+  }
+
+  /* Vorstands-Cockpit: kompakte Kennzahlen-Kacheln */
+  .cockpit {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.6rem;
+    margin: 0 0 1rem;
+    max-width: var(--mass);
+  }
+  .kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-rein);
+    text-decoration: none;
+    color: var(--ink);
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .kpi:hover {
+    background: var(--line-soft);
+  }
+  .kpi__wert {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--brand-strong);
+  }
+  .kpi__label {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .kpi--warn {
+    border-color: var(--accent);
+  }
+  .kpi--warn .kpi__wert {
+    color: var(--accent);
+  }
+  .kpi--gefahr {
+    border-color: var(--gefahr);
+    background: var(--gefahr-bg);
+  }
+  .kpi--gefahr .kpi__wert {
+    color: var(--gefahr);
   }
 
   /* Terminliste als saubere Zeitachse */
