@@ -22,7 +22,14 @@ try {
 }
 
 const ok = Astro.url.searchParams.get('ok');
+const neu = Astro.url.searchParams.get('neu') === '1';
+const startpw = Astro.url.searchParams.get('pw') ?? '';
 const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  selbst: 'Das eigene Konto kann nicht gelöscht werden.',
+  loeschen: 'Löschen fehlgeschlagen. Bitte erneut versuchen.',
+};
+const fmeldung = fehler ? (fehlertext[fehler] ?? 'Speichern fehlgeschlagen.') : null;
 const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
 const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
 ---
@@ -36,7 +43,14 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
   <p class="karte-link"><a href={`/mitglieder/verwaltung/${m.id}/karte`}>→ QR-Ausweis (Karte) drucken</a></p>
 
   {ok && <p class="hinweis" role="status">Gespeichert.</p>}
-  {fehler && <p class="hinweis hinweis--fehler" role="alert">Speichern fehlgeschlagen.</p>}
+  {fmeldung && <p class="hinweis hinweis--fehler" role="alert">{fmeldung}</p>}
+  {neu && (
+    <div class="hinweis pw-box" role="status">
+      <strong>Mitglied angelegt.</strong> Startpasswort zum Weitergeben:
+      <code class="pw">{startpw}</code>
+      <span class="pw-note">Bitte notieren — es wird nur jetzt angezeigt. Das Mitglied ändert es beim ersten Login.</span>
+    </div>
+  )}
 
   <form method="post" action="/mitglieder/verwaltung/speichern">
     <input type="hidden" name="mitglied" value={m.id} />
@@ -113,6 +127,21 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
 
     <button class="knopf" type="submit">Änderungen speichern</button>
   </form>
+
+  {m.id !== mitglied.id && (
+    <section class="entfernen">
+      <h2 class="abschnitt">Mitglied entfernen</h2>
+      <p class="entfernen-hinweis">
+        Löscht das Konto endgültig. Abgaben-, Anbau- und Jahresmeldungsdaten
+        bleiben erhalten (pseudonymisiert über die Mitgliedsnummer).
+      </p>
+      <form method="post" action="/mitglieder/verwaltung/loeschen"
+        onsubmit={`return confirm('Mitglied „${(m.name || m.email).replace(/'/g, '')}" wirklich endgültig entfernen?')`}>
+        <input type="hidden" name="mitglied" value={m.id} />
+        <button class="knopf-gefahr" type="submit">Mitglied endgültig entfernen</button>
+      </form>
+    </section>
+  )}
 </Basis>
 
 <style>
@@ -133,4 +162,16 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
   .rollen { display: flex; flex-direction: column; gap: 0.1rem; }
   .chk { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.98rem; min-height: 44px; }
   .chk input { width: 1.2rem; height: 1.2rem; flex: none; }
+  .pw-box { display: flex; flex-direction: column; gap: 0.3rem; }
+  .pw { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; letter-spacing: 0.03em; color: var(--brand-strong); }
+  .pw-note { font-size: 0.85rem; color: var(--ink-soft); }
+  .entfernen { max-width: var(--mass); margin: 2rem 0 0; padding: 1rem 1.1rem; border: 1px solid var(--gefahr); border-radius: var(--radius); background: var(--gefahr-bg); }
+  .entfernen .abschnitt { color: var(--gefahr); }
+  .entfernen-hinweis { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.8rem; }
+  .knopf-gefahr {
+    display: inline-block; padding: 0.6rem 1rem; border: 1px solid var(--gefahr);
+    border-radius: var(--radius); background: transparent; color: var(--gefahr);
+    font: inherit; font-weight: 600; cursor: pointer; min-height: 44px;
+  }
+  .knopf-gefahr:hover { background: var(--gefahr); color: var(--bg-rein); }
 </style>

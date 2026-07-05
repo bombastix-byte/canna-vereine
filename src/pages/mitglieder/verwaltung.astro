@@ -57,8 +57,16 @@ if (exakt) return Astro.redirect(`/mitglieder/verwaltung/${exakt.id}`, 303);
 const rollenKurz = (r?: string[]) =>
   (r ?? []).filter((x) => x !== 'mitglied').map((x) => ROLLEN_LABEL[x as Rolle] ?? x);
 
-const angelegt = Astro.url.searchParams.get('angelegt');
 const geloescht = Astro.url.searchParams.get('geloescht');
+const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  email: 'Bitte eine gültige E-Mail-Adresse angeben.',
+  name: 'Bitte mindestens einen Namen angeben.',
+  existiert: 'Diese E-Mail-Adresse ist bereits vergeben.',
+  fehlgeschlagen: 'Anlegen fehlgeschlagen. Bitte erneut versuchen.',
+};
+const fmeldung = fehler ? fehlertext[fehler] ?? 'Es ist ein Fehler aufgetreten.' : null;
+const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const;
 ---
 
 <Basis titel="Mitgliederverwaltung" beschreibung="Mitglieder suchen und verwalten.">
@@ -72,7 +80,34 @@ const geloescht = Astro.url.searchParams.get('geloescht');
   </p>
 
   {geloescht && <p class="hinweis" role="status">Mitglied gelöscht.</p>}
-  {angelegt && <p class="hinweis" role="status">Mitglied angelegt.</p>}
+  {fmeldung && <p class="hinweis hinweis--fehler" role="alert">{fmeldung}</p>}
+
+  <details class="klappe" open={!!fmeldung}>
+    <summary>＋ Mitglied anlegen</summary>
+    <form class="kasten" method="post" action="/mitglieder/verwaltung/anlegen">
+      <div class="feld-reihe">
+        <div class="feld"><label for="a-vorname">Vorname</label><input class="eingabe" id="a-vorname" name="vorname" type="text" /></div>
+        <div class="feld"><label for="a-nachname">Nachname</label><input class="eingabe" id="a-nachname" name="nachname" type="text" /></div>
+      </div>
+      <div class="feld-reihe">
+        <div class="feld"><label for="a-email">E-Mail</label><input class="eingabe" id="a-email" name="email" type="email" required placeholder="fuer die Anmeldung" /></div>
+        <div class="feld"><label for="a-nr">Mitgliedsnr. (optional)</label><input class="eingabe" id="a-nr" name="mitgliedsnummer" type="text" placeholder="leer = automatisch" /></div>
+        <div class="feld"><label for="a-geb">Geburtsdatum</label><input class="eingabe" id="a-geb" name="geburtsdatum" type="date" /></div>
+      </div>
+      <fieldset class="a-rollen">
+        <legend>Zusätzliche Rollen (optional)</legend>
+        {ROLLEN_WAEHLBAR.map((r) => (
+          <label class="chk"><input type="checkbox" name="rollen" value={r} /> {ROLLEN_LABEL[r]}</label>
+        ))}
+        <input type="hidden" name="rollen" value="mitglied" />
+      </fieldset>
+      <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
+        Ein Startpasswort wird automatisch erzeugt und danach angezeigt (per Mail,
+        falls SMTP eingerichtet).
+      </p>
+      <button class="knopf" type="submit">Mitglied anlegen</button>
+    </form>
+  </details>
 
   <form class="suche" method="get" action="/mitglieder/verwaltung" role="search">
     <div class="suche-feld">
@@ -171,6 +206,16 @@ const geloescht = Astro.url.searchParams.get('geloescht');
 </script>
 
 <style>
+  .eingabe { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .feld { margin: 0 0 0.6rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 9rem; }
+  .a-rollen { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.6rem 0.9rem; margin: 0 0 0.8rem; }
+  .a-rollen legend { font-size: 0.85rem; color: var(--ink-soft); padding: 0 0.4rem; }
+  .chk { display: inline-flex; align-items: center; gap: 0.5rem; margin-right: 1rem; font-size: 0.95rem; min-height: 40px; }
+  .chk input { width: 1.2rem; height: 1.2rem; flex: none; }
+  @media (max-width: 700px) { .a-rollen { display: flex; flex-direction: column; } .chk { margin-right: 0; min-height: 44px; } }
   .suche { max-width: var(--mass); margin: 0 0 0.8rem; }
   .suche-feld { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .suche-feld input {
