@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
 import { protokolliere, feldDiff } from '../../../lib/audit';
+import { hatBeitraege } from '../../../lib/funktionen';
 
 // Speichert Rollen/Stammdaten eines Mitglieds. Nur Vorstand.
 export const prerender = false;
@@ -40,19 +41,23 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   }
 
   const neueRollen = rollen.length ? rollen : ['mitglied'];
-  const neu = {
+  const neu: Record<string, unknown> = {
     vorname,
     nachname,
     mitgliedsnummer,
     geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
-    beitrag_bis: beitragBis ? `${beitragBis} 00:00:00.000Z` : null,
-    beitrag_monatlich: Number.isFinite(beitragMonatlich) && beitragMonatlich > 0 ? beitragMonatlich : null,
-    iban,
-    bic,
-    mandatsref,
-    mandatsdatum: mandatsdatum ? `${mandatsdatum} 00:00:00.000Z` : null,
     rollen: neueRollen,
   };
+  // Beitrags-/SEPA-Felder nur pflegen, wenn das Modul aktiv ist (sonst würden
+  // die nicht angezeigten Felder bestehende Werte leeren).
+  if (hatBeitraege) {
+    neu.beitrag_bis = beitragBis ? `${beitragBis} 00:00:00.000Z` : null;
+    neu.beitrag_monatlich = Number.isFinite(beitragMonatlich) && beitragMonatlich > 0 ? beitragMonatlich : null;
+    neu.iban = iban;
+    neu.bic = bic;
+    neu.mandatsref = mandatsref;
+    neu.mandatsdatum = mandatsdatum ? `${mandatsdatum} 00:00:00.000Z` : null;
+  }
 
   try {
     await pb.collection('users').update(id, neu);

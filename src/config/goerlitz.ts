@@ -17,6 +17,10 @@ export const goerlitz: SiteConfig = {
   kurzname: 'Cannabis-Verein Görlitz',
   kuerzel: 'CVG',
   stadt: 'Görlitz',
+  // Finanzierung des CVG: KEINE laufenden Mitgliedsbeiträge/SEPA/Mahnwesen,
+  // nur ein einmaliger Aufnahmebeitrag (bar bei Aufnahme, in die Kasse).
+  funktionen: { beitraege: false },
+  aufnahmebeitrag_euro: 50, // TODO: echten CVG-Aufnahmebeitrag bestätigen
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',
   erlaubnisHinweis:
     'Erlaubnis zum gemeinschaftlichen Eigenanbau nach Paragraf 11 KCanG: TODO Aktenzeichen / Status',

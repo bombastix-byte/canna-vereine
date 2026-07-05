@@ -2,6 +2,7 @@
 // (Layout "sidebar") und der klassischen MitgliedNav-Leiste (Layout
 // "standard"/"zentriert") gemeinsam genutzt - ein Ort fuer Punkte + Rechte.
 import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from './rollen';
+import { hatBeitraege } from './funktionen';
 
 /**
  * Startseite direkt nach der Anmeldung. Einfache Mitglieder landen auf dem
@@ -60,12 +61,17 @@ export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
 }
 
 /** Reiter des Verwaltungs-Bereichs (Vorstand). Zentral, damit alle Seiten
- *  denselben Satz zeigen. */
+ *  denselben Satz zeigen. Die Beitrags-Reiter entfallen, wenn das Beitrags-Modul
+ *  für den Verein abgeschaltet ist. */
 export const VERWALTUNG_TABS: { label: string; href: string }[] = [
   { label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' },
   { label: 'Anträge', href: '/mitglieder/antraege' },
-  { label: 'Beiträge', href: '/mitglieder/beitraege' },
-  { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
+  ...(hatBeitraege
+    ? [
+        { label: 'Beiträge', href: '/mitglieder/beitraege' },
+        { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
+      ]
+    : []),
   { label: 'Nachricht', href: '/mitglieder/nachricht' },
   { label: 'Protokoll', href: '/mitglieder/verwaltung/protokoll' },
 ];

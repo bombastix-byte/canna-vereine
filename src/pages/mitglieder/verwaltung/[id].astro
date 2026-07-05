@@ -5,6 +5,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
 import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus } from '../../../lib/status';
 import { berlinTag } from '../../../lib/ausgabe';
+import { hatBeitraege } from '../../../lib/funktionen';
 
 // Detail-/Bearbeitungsseite eines Mitglieds (aus der Suche geöffnet).
 // Nur Vorstand.
@@ -86,13 +87,16 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
           <label for="f-geb">Geburtsdatum</label>
           <input id="f-geb" name="geburtsdatum" type="date" value={isoTag(m.geburtsdatum)} />
         </div>
-        <div class="feld">
-          <label for="f-bis">Beitrag bezahlt bis</label>
-          <input id="f-bis" name="beitrag_bis" type="date" value={isoTag(m.beitrag_bis)} />
-        </div>
+        {hatBeitraege && (
+          <div class="feld">
+            <label for="f-bis">Beitrag bezahlt bis</label>
+            <input id="f-bis" name="beitrag_bis" type="date" value={isoTag(m.beitrag_bis)} />
+          </div>
+        )}
       </div>
     </section>
 
+    {hatBeitraege && (
     <section class="kasten">
       <h2 class="abschnitt">Beitrag &amp; SEPA-Mandat</h2>
       <div class="feld-reihe">
@@ -120,6 +124,7 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
         </div>
       </div>
     </section>
+    )}
 
     <section class="kasten">
       <h2 class="abschnitt">Rollen</h2>

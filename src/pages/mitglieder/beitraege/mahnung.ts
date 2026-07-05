@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
+import { hatBeitraege } from '../../../lib/funktionen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { beitragStatus, mahnstufeName } from '../../../lib/beitrag';
 import { sendePush } from '../../../lib/push';
@@ -18,6 +19,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;
   if (!darfVerwalten(mitglied.rollen)) return redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+  if (!hatBeitraege) return redirect('/mitglieder/bereich', 303);
 
   const daten = await request.formData();
   const mitgliedId = String(daten.get('mitglied') ?? '').trim();

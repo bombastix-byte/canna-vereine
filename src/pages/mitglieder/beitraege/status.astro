@@ -7,6 +7,7 @@ import { darfVerwalten } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { beitragStatus, mahnstufeName, type BeitragStatus } from '../../../lib/beitrag';
 import { VERWALTUNG_TABS } from '../../../lib/mitglied-nav';
+import { hatBeitraege } from '../../../lib/funktionen';
 
 // Zahlungsstatus & Mahnwesen: zeigt fuer alle Mitglieder mit Monatsbeitrag den
 // Rueckstand, erfasst Zahlungen und stoesst Mahnungen an. Nur Vorstand.
@@ -16,6 +17,7 @@ const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { pb, mitglied } = ergebnis;
 if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+if (!hatBeitraege) return Astro.redirect('/mitglieder/bereich', 303);
 
 interface UserRow {
   id: string;

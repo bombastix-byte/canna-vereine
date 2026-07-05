@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { berlinTag } from '../../../lib/ausgabe';
 import { protokolliere } from '../../../lib/audit';
+import { hatBeitraege } from '../../../lib/funktionen';
 
 // Mitglieds-Selbstverwaltung: das angemeldete Mitglied ändert AUSSCHLIESSLICH
 // eigene Kontakt-/SEPA-Daten. Es werden bewusst nur diese Felder geschrieben;
@@ -28,18 +29,19 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     alt = {};
   }
 
-  const patch: Record<string, unknown> = { telefon, iban, bic };
+  // Ohne Beitrags-Modul pflegt das Mitglied nur die Kontaktdaten (kein SEPA).
+  const patch: Record<string, unknown> = hatBeitraege ? { telefon, iban, bic } : { telefon };
 
   // SEPA-Mandat: Erteilt das Mitglied (oder ändert die IBAN), setzen wir
   // Mandatsreferenz (einmalig) und -datum. Ohne IBAN kein Mandat.
-  if (mandat && iban) {
+  if (hatBeitraege && mandat && iban) {
     const ibanGeaendert = (alt.iban ?? '') !== iban;
     if (!alt.mandatsref || ibanGeaendert) {
       const ref = `${mitglied.mitgliedsnummer || mitglied.id}-${berlinTag().replace(/-/g, '')}`;
       patch.mandatsref = ref;
       patch.mandatsdatum = `${berlinTag()} 00:00:00.000Z`;
     }
-  } else if (!mandat) {
+  } else if (hatBeitraege && !mandat) {
     // Mandat zurückgezogen: Referenz/Datum entfernen (IBAN bleibt als Kontakt).
     patch.mandatsref = '';
     patch.mandatsdatum = null;

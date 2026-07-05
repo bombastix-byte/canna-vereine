@@ -7,6 +7,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten } from '../../lib/rollen';
 import { sepaGlaeubigerAusEnv } from '../../lib/sepa';
 import { berlinTag } from '../../lib/ausgabe';
+import { hatBeitraege } from '../../lib/funktionen';
 
 // Mitgliedsbeitraege: SEPA-Lastschriftdatei erzeugen. Nur Vorstand.
 // Bewusst schlank - kein Buchhaltungssystem, nur die Einzugsdatei fuer die Bank.
@@ -16,6 +17,7 @@ const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { pb, mitglied } = ergebnis;
 if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+if (!hatBeitraege) return Astro.redirect('/mitglieder/bereich', 303);
 
 interface UserRow {
   id: string;

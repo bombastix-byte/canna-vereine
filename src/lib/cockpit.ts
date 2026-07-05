@@ -3,6 +3,7 @@
 // und lädt nur dort volle Listen, wo pro Zeile gerechnet werden muss.
 import type PocketBase from 'pocketbase';
 import { beitragStatus } from './beitrag';
+import { hatBeitraege } from './funktionen';
 
 export interface Kennzahlen {
   mitglieder: number;
@@ -44,21 +45,23 @@ export async function vorstandsKennzahlen(pb: PocketBase, heute: string): Promis
   // Mitglieder gesamt (ohne technisches System-/Automatik-Konto).
   const mitglieder = await anzahl(pb, 'users', 'mitgliedsnummer != "SYS"');
 
-  // Beitragsrückstände (pro Mitglied rechnen).
-  const beitragsUser = await alle<{ beitrag_monatlich?: number; beitrag_bis?: string }>(pb, 'users', {
-    filter: 'beitrag_monatlich > 0',
-    fields: 'beitrag_monatlich,beitrag_bis',
-  });
+  // Beitragsrückstände (pro Mitglied rechnen) — nur wenn das Beitrags-Modul aktiv ist.
   let rueckstandZahl = 0;
   let rueckstandSumme = 0;
-  for (const u of beitragsUser) {
-    const st = beitragStatus(u, heute);
-    if (st.imRueckstand) {
-      rueckstandZahl += 1;
-      rueckstandSumme += st.offenerBetrag;
+  if (hatBeitraege) {
+    const beitragsUser = await alle<{ beitrag_monatlich?: number; beitrag_bis?: string }>(pb, 'users', {
+      filter: 'beitrag_monatlich > 0',
+      fields: 'beitrag_monatlich,beitrag_bis',
+    });
+    for (const u of beitragsUser) {
+      const st = beitragStatus(u, heute);
+      if (st.imRueckstand) {
+        rueckstandZahl += 1;
+        rueckstandSumme += st.offenerBetrag;
+      }
     }
+    rueckstandSumme = Math.round(rueckstandSumme * 100) / 100;
   }
-  rueckstandSumme = Math.round(rueckstandSumme * 100) / 100;
 
   // Freigegebener Bestand (Summe verfügbar).
   const freigegeben = await alle<{ verfuegbar_g?: number }>(pb, 'chargen', {

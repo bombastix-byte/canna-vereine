@@ -7,6 +7,7 @@ import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../
 import { vorstandsKennzahlen } from '../../lib/cockpit';
 import { berlinTag } from '../../lib/ausgabe';
 import { mussBestaetigen } from '../../lib/einwilligung';
+import { hatBeitraege } from '../../lib/funktionen';
 
 // Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
 export const prerender = false;
@@ -177,10 +178,12 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
           <span class="kpi__wert">{kennzahlen.mitglieder}</span>
           <span class="kpi__label">Mitglieder</span>
         </a>
-        <a class:list={['kpi', { 'kpi--warn': kennzahlen.rueckstandZahl > 0 }]} href="/mitglieder/beitraege/status">
-          <span class="kpi__wert">{kennzahlen.rueckstandZahl}</span>
-          <span class="kpi__label">im Rückstand{kennzahlen.rueckstandZahl > 0 ? ` · ${eur(kennzahlen.rueckstandSumme)} €` : ''}</span>
-        </a>
+        {hatBeitraege && (
+          <a class:list={['kpi', { 'kpi--warn': kennzahlen.rueckstandZahl > 0 }]} href="/mitglieder/beitraege/status">
+            <span class="kpi__wert">{kennzahlen.rueckstandZahl}</span>
+            <span class="kpi__label">im Rückstand{kennzahlen.rueckstandZahl > 0 ? ` · ${eur(kennzahlen.rueckstandSumme)} €` : ''}</span>
+          </a>
+        )}
         <a class="kpi" href="/mitglieder/wawi">
           <span class="kpi__wert">{gramm(kennzahlen.bestandG)} g</span>
           <span class="kpi__label">Bestand freigegeben</span>

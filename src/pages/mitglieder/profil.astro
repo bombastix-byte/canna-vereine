@@ -2,6 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { hatBeitraege } from '../../lib/funktionen';
 
 // Mein Konto: das Mitglied pflegt eigene Kontakt- und SEPA-Daten selbst.
 // Identitäts-, Rollen- und Beitragsfelder bleiben schreibgeschützt (nur Vorstand).
@@ -31,8 +32,8 @@ const hatMandat = !!(u.mandatsref && u.mandatsdatum);
   <p class="eyebrow">Mitgliederbereich</p>
   <h1 style="margin-bottom:0.4rem;">Mein Konto</h1>
   <p class="einleitung">
-    Hier pflegst du deine Kontaktdaten und dein SEPA-Lastschriftmandat selbst.
-    Name, Mitgliedsnummer und Beitragsangaben verwaltet der Vorstand — melde dich
+    Hier pflegst du deine Kontaktdaten{hatBeitraege ? ' und dein SEPA-Lastschriftmandat' : ''} selbst.
+    Name, Mitgliedsnummer und Stammdaten verwaltet der Vorstand — melde dich
     bei Änderungen dort.
   </p>
 
@@ -55,27 +56,31 @@ const hatMandat = !!(u.mandatsref && u.mandatsdatum);
       <input class="eingabe" id="telefon" name="telefon" type="tel" value={u.telefon ?? ''} placeholder="z. B. 0170 1234567" />
     </div>
 
-    <h2>SEPA-Lastschriftmandat</h2>
-    <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
-      Mit dem Mandat ermächtigst du den Verein, deinen Mitgliedsbeitrag von
-      deinem Konto einzuziehen. Du kannst es hier jederzeit ändern oder widerrufen.
-    </p>
-    <div class="feld-reihe">
-      <div class="feld" style="flex:2 1 16rem;">
-        <label for="iban">IBAN</label>
-        <input class="eingabe" id="iban" name="iban" type="text" value={u.iban ?? ''} placeholder="DE00 0000 0000 0000 0000 00" autocomplete="off" />
-      </div>
-      <div class="feld" style="flex:1 1 8rem;">
-        <label for="bic">BIC (optional)</label>
-        <input class="eingabe" id="bic" name="bic" type="text" value={u.bic ?? ''} placeholder="GENODEF1XXX" autocomplete="off" />
-      </div>
-    </div>
-    <label class="mandat-check">
-      <input type="checkbox" name="mandat" checked={hatMandat} />
-      <span>Ich erteile dem Verein ein SEPA-Lastschriftmandat für den Mitgliedsbeitrag.</span>
-    </label>
-    {hatMandat && (
-      <p class="fuss">Aktuelles Mandat: <strong>{u.mandatsref}</strong>, erteilt am {mandatDatumDe}. Änderst du die IBAN, wird ein neues Mandat mit heutigem Datum erzeugt.</p>
+    {hatBeitraege && (
+      <>
+        <h2>SEPA-Lastschriftmandat</h2>
+        <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
+          Mit dem Mandat ermächtigst du den Verein, deinen Mitgliedsbeitrag von
+          deinem Konto einzuziehen. Du kannst es hier jederzeit ändern oder widerrufen.
+        </p>
+        <div class="feld-reihe">
+          <div class="feld" style="flex:2 1 16rem;">
+            <label for="iban">IBAN</label>
+            <input class="eingabe" id="iban" name="iban" type="text" value={u.iban ?? ''} placeholder="DE00 0000 0000 0000 0000 00" autocomplete="off" />
+          </div>
+          <div class="feld" style="flex:1 1 8rem;">
+            <label for="bic">BIC (optional)</label>
+            <input class="eingabe" id="bic" name="bic" type="text" value={u.bic ?? ''} placeholder="GENODEF1XXX" autocomplete="off" />
+          </div>
+        </div>
+        <label class="mandat-check">
+          <input type="checkbox" name="mandat" checked={hatMandat} />
+          <span>Ich erteile dem Verein ein SEPA-Lastschriftmandat für den Mitgliedsbeitrag.</span>
+        </label>
+        {hatMandat && (
+          <p class="fuss">Aktuelles Mandat: <strong>{u.mandatsref}</strong>, erteilt am {mandatDatumDe}. Änderst du die IBAN, wird ein neues Mandat mit heutigem Datum erzeugt.</p>
+        )}
+      </>
     )}
 
     <button class="knopf" type="submit" style="margin-top:1rem;">Speichern</button>

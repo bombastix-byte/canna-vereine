@@ -31,6 +31,21 @@ export interface NavPunkt {
   href: string;
 }
 
+/**
+ * Funktions-Module, die je Verein abschaltbar sind. Alles ist standardmäßig AN;
+ * nur ausdrücklich auf `false` gesetzte Module verschwinden aus Navigation,
+ * Cockpit und Automatik (die Seiten selbst leiten dann ebenfalls ab).
+ */
+export interface Funktionen {
+  /**
+   * Laufende Mitgliedsbeiträge inkl. SEPA-Lastschrift und Mahnwesen.
+   * Vereine, die sich nur über einen einmaligen Aufnahmebeitrag finanzieren
+   * (z. B. CVG), setzen dies auf `false` — dann verschwinden die Reiter
+   * „Beiträge" und „Zahlungen", die SEPA-/IBAN-Felder und die Beitrags-Erinnerung.
+   */
+  beitraege?: boolean;
+}
+
 export interface SiteConfig {
   /** technische Kennung, identisch mit Dateiname ohne Endung */
   id: string;
@@ -62,6 +77,14 @@ export interface SiteConfig {
   registereintrag?: string;
   /** Erlaubnis-/Aktenzeichen der zuständigen Behörde, falls vorhanden */
   erlaubnisHinweis?: string;
+
+  /** Abschaltbare Funktions-Module (siehe Funktionen). Fehlt es, ist alles an. */
+  funktionen?: Funktionen;
+  /**
+   * Einmaliger Aufnahmebeitrag in Euro (bar bei Aufnahme). 0/undefined = keiner.
+   * Wird beim Aufnehmen eines Mitglieds vorgeschlagen und in die Kasse gebucht.
+   */
+  aufnahmebeitrag_euro?: number;
 
   kontakt: {
     strasse: string;

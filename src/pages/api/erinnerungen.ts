@@ -4,6 +4,7 @@ import { berlinTag } from '../../lib/ausgabe';
 import { sendePush } from '../../lib/push';
 import { protokolliere } from '../../lib/audit';
 import { berechneErinnerungen, type ErinnerungUser, type ErinnerungCharge, type Erinnerung } from '../../lib/erinnerungen';
+import { hatBeitraege } from '../../lib/funktionen';
 
 // Erinnerungs-Automatik. Wird täglich vom PocketBase-Cron-Hook aufgerufen
 // (http://astro-<verein>:4321/api/erinnerungen?token=…). Läuft mit einem
@@ -58,7 +59,9 @@ export const GET: APIRoute = async ({ url }) => {
   });
   const abos = await alle<Abo>('push_abos');
 
-  const erinnerungen = berechneErinnerungen(users, chargen, heute);
+  const erinnerungen = berechneErinnerungen(users, chargen, heute).filter(
+    (e) => hatBeitraege || e.typ !== 'beitrag',
+  );
 
   // Rollen-Index für Gruppenziele.
   const rollenVon = new Map(users.map((u) => [u.id, (u as { rollen?: string[] }).rollen ?? []]));
