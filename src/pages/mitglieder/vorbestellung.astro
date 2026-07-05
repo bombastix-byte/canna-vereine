@@ -2,6 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { hatVorbestellung } from '../../lib/funktionen';
 
 // Geschützt. Mitglieder reservieren eine Sorte zur späteren Abholung.
 export const prerender = false;
@@ -11,6 +12,7 @@ if (!ergebnis) {
   return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 }
 const { pb, mitglied } = ergebnis;
+if (!hatVorbestellung) return Astro.redirect('/mitglieder/bereich', 303);
 
 interface Bestellung {
   id: string;

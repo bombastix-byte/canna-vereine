@@ -6,7 +6,7 @@ import { mailAufnahme, mailAblehnung } from '../../../lib/mail-vorlagen';
 import { site } from '../../../config';
 import { protokolliere } from '../../../lib/audit';
 import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
-import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../../lib/funktionen';
+import { hatAntraege, hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../../lib/funktionen';
 
 const vereinKopf = { vereinsname: site.vereinsname, email: site.kontakt.email, ort: site.kontakt.ort };
 
@@ -25,6 +25,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;
+  if (!hatAntraege) return redirect('/mitglieder/bereich', 303);
   if (!darfVerwalten(mitglied.rollen)) return redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
   const daten = await request.formData();

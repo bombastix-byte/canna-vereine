@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { hatAntraege } from '../../../lib/funktionen';
 import { darfVerwalten } from '../../../lib/rollen';
 import { sendeMail, mailKonfiguriert } from '../../../lib/mail';
 import { mailTest } from '../../../lib/mail-vorlagen';
@@ -13,6 +14,7 @@ export const POST: APIRoute = async ({ cookies, redirect }) => {
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { mitglied } = ergebnis;
+  if (!hatAntraege) return redirect('/mitglieder/bereich', 303);
   if (!darfVerwalten(mitglied.rollen)) return redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
   if (!mailKonfiguriert()) return redirect('/mitglieder/antraege?ok=testmail_aus', 303);

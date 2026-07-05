@@ -44,7 +44,26 @@ export interface Funktionen {
    * „Beiträge" und „Zahlungen", die SEPA-/IBAN-Felder und die Beitrags-Erinnerung.
    */
   beitraege?: boolean;
+  /** Weiterverarbeitung zu Haschisch/Rosin (Warenwirtschaft). Reine-Blüte-Vereine: false. */
+  verarbeitung?: boolean;
+  /** Kassenbuch & Tagesabschluss (Nav-Punkt „Kasse", Cockpit-Kachel). */
+  kasse?: boolean;
+  /** Vorbestellungen durch Mitglieder. */
+  vorbestellung?: boolean;
+  /** Termine mit Zu-/Absage (RSVP). */
+  termine?: boolean;
+  /** Helferplan / Helferdienste. */
+  helferplan?: boolean;
+  /** Mitglieder-Abstimmungen. */
+  abstimmungen?: boolean;
+  /** Online-Beitrittsanträge (Reiter „Anträge", öffentliches Beitrittsformular, Cockpit-Kachel). */
+  antraege?: boolean;
+  /** Push-Benachrichtigungen gesamt (Reiter „Nachricht", Erinnerungs-Automatik, Push-Abo). */
+  push?: boolean;
 }
+
+/** Schlüssel der abschaltbaren Module (für generische Prüfungen). */
+export type FunktionsSchluessel = keyof Funktionen;
 
 export interface SiteConfig {
   /** technische Kennung, identisch mit Dateiname ohne Endung */

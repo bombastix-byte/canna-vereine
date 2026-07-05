@@ -4,7 +4,7 @@ import { berlinTag } from '../../lib/ausgabe';
 import { sendePush } from '../../lib/push';
 import { protokolliere } from '../../lib/audit';
 import { berechneErinnerungen, type ErinnerungUser, type ErinnerungCharge, type Erinnerung } from '../../lib/erinnerungen';
-import { hatBeitraege } from '../../lib/funktionen';
+import { hatBeitraege, hatPush } from '../../lib/funktionen';
 
 // Erinnerungs-Automatik. Wird täglich vom PocketBase-Cron-Hook aufgerufen
 // (http://astro-<verein>:4321/api/erinnerungen?token=…). Läuft mit einem
@@ -24,6 +24,12 @@ export const GET: APIRoute = async ({ url }) => {
   const erwartet = env('CRON_TOKEN');
   if (!erwartet || token !== erwartet) {
     return new Response('forbidden', { status: 403 });
+  }
+  // Push-Modul für diesen Verein abgeschaltet -> keine Erinnerungen.
+  if (!hatPush) {
+    return new Response(JSON.stringify({ ok: true, heute: null, erinnerungen: 0, gesendet: 0, hinweis: 'push aus' }), {
+      headers: { 'content-type': 'application/json' },
+    });
   }
 
   const systemEmail = env('SYSTEM_EMAIL');

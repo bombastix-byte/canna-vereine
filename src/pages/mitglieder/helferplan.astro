@@ -2,6 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { hatHelferplan } from '../../lib/funktionen';
 import { darfDienst, TEAM_LABEL } from '../../lib/rollen';
 import {
   type Dienst,
@@ -24,6 +25,7 @@ if (!ergebnis) {
   return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 }
 const { pb, mitglied } = ergebnis;
+if (!hatHelferplan) return Astro.redirect('/mitglieder/bereich', 303);
 
 let dienste: Dienst[] = [];
 let eintragungen: Eintrag[] = [];

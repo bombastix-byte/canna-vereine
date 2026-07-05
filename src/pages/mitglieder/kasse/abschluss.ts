@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { hatKasse } from '../../../lib/funktionen';
 import { darfAusgeben } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { euro, erwarteteEinnahme, differenz } from '../../../lib/kasse';
@@ -13,6 +14,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;
+  if (!hatKasse) return redirect('/mitglieder/bereich', 303);
   if (!darfAusgeben(mitglied.rollen)) return redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
   const daten = await request.formData();

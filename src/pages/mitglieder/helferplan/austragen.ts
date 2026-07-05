@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { hatHelferplan } from '../../../lib/funktionen';
 import { montagVon, parseTag, ymd } from '../../../lib/helfer';
 
 // Trägt das angemeldete Mitglied wieder aus einem Helferdienst an einem
@@ -12,6 +13,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect('/mitglieder?fehler=anmeldung', 303);
   }
   const { pb, mitglied } = ergebnis;
+  if (!hatHelferplan) return redirect('/mitglieder/bereich', 303);
 
   const daten = await request.formData();
   const dienst = String(daten.get('dienst') ?? '').trim();

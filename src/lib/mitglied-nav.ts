@@ -2,7 +2,9 @@
 // (Layout "sidebar") und der klassischen MitgliedNav-Leiste (Layout
 // "standard"/"zentriert") gemeinsam genutzt - ein Ort fuer Punkte + Rechte.
 import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from './rollen';
-import { hatBeitraege } from './funktionen';
+import {
+  hatBeitraege, hatKasse, hatVorbestellung, hatTermine, hatHelferplan, hatAbstimmungen, hatAntraege, hatPush,
+} from './funktionen';
 
 /**
  * Startseite direkt nach der Anmeldung. Einfache Mitglieder landen auf dem
@@ -20,14 +22,14 @@ export interface NavPunkt {
   auch?: string[];
 }
 
-/** Punkte fuer alle Mitglieder. */
+/** Punkte fuer alle Mitglieder. Abschaltbare Module werden je Verein gefiltert. */
 export const MITGLIED_PUNKTE: NavPunkt[] = [
   { label: 'Aktuelles', href: '/mitglieder/bereich' },
   { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
-  { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
-  { label: 'Termine', href: '/mitglieder/termine' },
-  { label: 'Helferplan', href: '/mitglieder/helferplan' },
-  { label: 'Abstimmungen', href: '/mitglieder/abstimmungen' },
+  ...(hatVorbestellung ? [{ label: 'Vorbestellung', href: '/mitglieder/vorbestellung' }] : []),
+  ...(hatTermine ? [{ label: 'Termine', href: '/mitglieder/termine' }] : []),
+  ...(hatHelferplan ? [{ label: 'Helferplan', href: '/mitglieder/helferplan' }] : []),
+  ...(hatAbstimmungen ? [{ label: 'Abstimmungen', href: '/mitglieder/abstimmungen' }] : []),
   { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
   { label: 'Ausweis', href: '/mitglieder/ausweis' },
   { label: 'Mein Konto', href: '/mitglieder/profil' },
@@ -41,7 +43,7 @@ export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
   if (darfAusgeben(rollen)) {
     // Ausgabe buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
     punkte.push({ label: 'Ausgabe', href: '/mitglieder/ausgabe' });
-    punkte.push({ label: 'Kasse', href: '/mitglieder/kasse' });
+    if (hatKasse) punkte.push({ label: 'Kasse', href: '/mitglieder/kasse' });
   }
   if (darfAnbau(rollen)) {
     punkte.push({ label: 'Anbau heute', href: '/mitglieder/anbau' });
@@ -65,14 +67,14 @@ export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
  *  für den Verein abgeschaltet ist. */
 export const VERWALTUNG_TABS: { label: string; href: string }[] = [
   { label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' },
-  { label: 'Anträge', href: '/mitglieder/antraege' },
+  ...(hatAntraege ? [{ label: 'Anträge', href: '/mitglieder/antraege' }] : []),
   ...(hatBeitraege
     ? [
         { label: 'Beiträge', href: '/mitglieder/beitraege' },
         { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
       ]
     : []),
-  { label: 'Nachricht', href: '/mitglieder/nachricht' },
+  ...(hatPush ? [{ label: 'Nachricht', href: '/mitglieder/nachricht' }] : []),
   { label: 'Protokoll', href: '/mitglieder/verwaltung/protokoll' },
 ];
 

@@ -5,7 +5,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfAusgeben } from '../../lib/rollen';
 import { berlinTag } from '../../lib/ausgabe';
 import { euro, euroText, erwarteteEinnahme } from '../../lib/kasse';
-import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../lib/funktionen';
+import { hatKasse, hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../lib/funktionen';
 
 // Kassenbuch & Tagesabschluss. Nur Ausgabe/Vorstand.
 export const prerender = false;
@@ -13,6 +13,7 @@ export const prerender = false;
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { pb, mitglied } = ergebnis;
+if (!hatKasse) return Astro.redirect('/mitglieder/bereich', 303);
 if (!darfAusgeben(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
 const tag = berlinTag();

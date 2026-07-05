@@ -7,6 +7,7 @@ import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } 
 import { VERARBEITUNG_TYPEN, PRODUKT_TYPEN, PRODUKT_LABEL, produktTyp, produktLabel, ausbeuteProzent } from '../../lib/verarbeitung';
 import { berlinTag } from '../../lib/ausgabe';
 import { type PlanSchritt, zyklustag, aktuellePhase } from '../../lib/anbauplan';
+import { hatVerarbeitung } from '../../lib/funktionen';
 
 // Warenwirtschaft: Chargen vom Anbau bis zur Freigabe + Vernichtung.
 // Nur Anbauverantwortliche/Vorstand.
@@ -550,6 +551,8 @@ const statusVariante: Record<string, string> = {
     </details>
   )}
 
+  {hatVerarbeitung && (
+  <Fragment>
   <h2>Weiterverarbeitung (Haschisch / Rosin)</h2>
   <p class="ablauf">
     Aus einer <strong>oder mehreren</strong> freigegebenen Blüten-Chargen wird
@@ -648,6 +651,8 @@ const statusVariante: Record<string, string> = {
         ))}
       </tbody>
     </table>
+  )}
+  </Fragment>
   )}
 
   <h2>Transporte</h2>

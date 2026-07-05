@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { hatPush } from '../../lib/funktionen';
 import { darfVerwalten } from '../../lib/rollen';
 import { pushKonfiguriert } from '../../lib/push';
 
@@ -13,6 +14,7 @@ export const prerender = false;
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { pb, mitglied } = ergebnis;
+if (!hatPush) return Astro.redirect('/mitglieder/bereich', 303);
 if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
 let abos = 0;

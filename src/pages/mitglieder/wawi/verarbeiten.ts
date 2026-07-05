@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { hatVerarbeitung } from '../../../lib/funktionen';
 import { darfAnbau } from '../../../lib/rollen';
 import { chargeNr } from '../../../lib/wawi';
 import { pruefeVerarbeitungMulti, verteileErtrag, produktTyp, produktLabel } from '../../../lib/verarbeitung';
@@ -18,6 +19,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;
+  if (!hatVerarbeitung) return redirect('/mitglieder/bereich', 303);
   if (!darfAnbau(mitglied.rollen)) return redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
   const daten = await request.formData();

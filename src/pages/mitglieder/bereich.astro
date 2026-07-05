@@ -7,7 +7,7 @@ import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../
 import { vorstandsKennzahlen } from '../../lib/cockpit';
 import { berlinTag } from '../../lib/ausgabe';
 import { mussBestaetigen } from '../../lib/einwilligung';
-import { hatBeitraege } from '../../lib/funktionen';
+import { hatBeitraege, hatKasse, hatAntraege, hatTermine, hatVorbestellung, hatHelferplan } from '../../lib/funktionen';
 
 // Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
 export const prerender = false;
@@ -122,6 +122,7 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
       <span class="uk__wert">{aktuellesAngebot ? aktuellesAngebot.titel : 'Keine Abgabe eingetragen'}</span>
     </a>
 
+    {hatTermine && (
     <a class="uk" href="#termine">
       <span class="uk__kopf">
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -134,6 +135,7 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         {naechsterTermin ? `${datum(naechsterTermin.datum)} - ${naechsterTermin.titel}` : 'Keine Termine'}
       </span>
     </a>
+    )}
 
     <a class="uk" href="#mitteilungen">
       <span class="uk__kopf">
@@ -145,6 +147,7 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
       <span class="uk__wert">{neuesteMitteilung ? neuesteMitteilung.titel : 'Keine Mitteilungen'}</span>
     </a>
 
+    {hatVorbestellung && (
     <a class="uk" href="/mitglieder/vorbestellung">
       <span class="uk__kopf">
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -156,7 +159,9 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         {offeneBestellungen > 0 ? `${offeneBestellungen} offen` : 'Keine offenen'}
       </span>
     </a>
+    )}
 
+    {hatHelferplan && (
     <a class="uk" href="/mitglieder/helferplan">
       <span class="uk__kopf">
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -168,6 +173,7 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         {offeneDienste > 0 ? `${offeneDienste} heute offen` : 'Heute nichts offen'}
       </span>
     </a>
+    )}
   </section>
 
   {kennzahlen && (
@@ -192,14 +198,18 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
           <span class="kpi__wert">{gramm(kennzahlen.abgabe7G)} g</span>
           <span class="kpi__label">abgegeben (7 Tage)</span>
         </a>
-        <a class:list={['kpi', { 'kpi--warn': kennzahlen.antraegeOffen > 0 }]} href="/mitglieder/antraege">
-          <span class="kpi__wert">{kennzahlen.antraegeOffen}</span>
-          <span class="kpi__label">offene Anträge</span>
-        </a>
-        <a class:list={['kpi', { 'kpi--warn': kennzahlen.kasseOffen && kennzahlen.kasseErwartet > 0 }]} href="/mitglieder/kasse">
-          <span class="kpi__wert">{eur(kennzahlen.kasseErwartet)} €</span>
-          <span class="kpi__label">Kasse heute{kennzahlen.kasseOffen ? ' · offen' : ' · abgeschlossen'}</span>
-        </a>
+        {hatAntraege && (
+          <a class:list={['kpi', { 'kpi--warn': kennzahlen.antraegeOffen > 0 }]} href="/mitglieder/antraege">
+            <span class="kpi__wert">{kennzahlen.antraegeOffen}</span>
+            <span class="kpi__label">offene Anträge</span>
+          </a>
+        )}
+        {hatKasse && (
+          <a class:list={['kpi', { 'kpi--warn': kennzahlen.kasseOffen && kennzahlen.kasseErwartet > 0 }]} href="/mitglieder/kasse">
+            <span class="kpi__wert">{eur(kennzahlen.kasseErwartet)} €</span>
+            <span class="kpi__label">Kasse heute{kennzahlen.kasseOffen ? ' · offen' : ' · abgeschlossen'}</span>
+          </a>
+        )}
         {kennzahlen.rueckrufeAktiv > 0 && (
           <a class="kpi kpi--gefahr" href="/mitglieder/wawi">
             <span class="kpi__wert">{kennzahlen.rueckrufeAktiv}</span>
