@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Anbauverein Görlitz</string>
-    <string name="title_activity_main">Anbauverein Görlitz</string>
+    <string name="app_name">CVMS</string>
+    <string name="title_activity_main">CVMS</string>
     <string name="package_name">de.cannaverein.goerlitz</string>
     <string name="custom_url_scheme">de.cannaverein.goerlitz</string>
 </resources>

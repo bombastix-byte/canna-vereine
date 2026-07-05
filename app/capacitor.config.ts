@@ -13,7 +13,7 @@ const appUrl = process.env.APP_URL ?? 'https://goerlitz.89.58.9.0.nip.io';
 
 const config: CapacitorConfig = {
   appId: process.env.APP_ID ?? 'de.cannaverein.goerlitz',
-  appName: process.env.APP_NAME ?? 'Anbauverein Görlitz',
+  appName: process.env.APP_NAME ?? 'CVMS',
   // webDir ist nur der Offline-Platzhalter; die echte App kommt vom Server.
   webDir: 'www',
   server: {
