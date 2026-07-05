@@ -37,23 +37,41 @@ try {
 
 const prozent = (n: unknown) =>
   n == null || n === '' ? '' : `${Number(n).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+const gramm = (n: number) => `${Number(n).toLocaleString('de-DE', { maximumFractionDigits: 1 })} g`;
+
+// Verfuegbare Produkte aus dem Bestand: alle freigegebenen Chargen mit
+// Restbestand, je Sorten-/Produktname zusammengefasst (Bestand summiert).
+// Dient als Auswahl (Dropdown) und zum Auto-Ausfuellen von Typ/THC/CBD.
+interface ProduktOpt { label: string; typ: string; thc: string; cbd: string; bestand: number }
+const chargen = await ladeListe<Record<string, any>>('chargen', { filter: 'status="freigegeben"', sort: 'sorte_name' });
+const sorten = await ladeListe<Record<string, any>>('sorten', {});
+const typVon = new Map(sorten.map((s) => [s.name, s.typ as string]));
+const produktMap = new Map<string, ProduktOpt>();
+for (const c of chargen) {
+  const rest = Number(c.verfuegbar_g ?? 0);
+  if (rest <= 0) continue;
+  const pt = produktTyp(c.produkt_typ);
+  const label = pt === 'bluete' ? (c.sorte_name || '') : `${produktLabel(pt)} · ${c.sorte_name || ''}`;
+  if (!label) continue;
+  const vorhanden = produktMap.get(label);
+  if (vorhanden) {
+    vorhanden.bestand += rest;
+  } else {
+    produktMap.set(label, {
+      label,
+      typ: typVon.get(c.sorte_name) ?? '',
+      thc: prozent(c.thc_prozent),
+      cbd: prozent(c.cbd_prozent),
+      bestand: rest,
+    });
+  }
+}
+const produkte = [...produktMap.values()].sort((a, b) => a.label.localeCompare(b.label, 'de'));
 
 // Zeilen: aus Bestand ODER aus vorhandenem Angebot ODER leer.
 let zeilen: SorteZeile[] = [];
 if (ausBestand) {
-  const chargen = await ladeListe<Record<string, any>>('chargen', { filter: 'status="freigegeben"', sort: 'sorte_name' });
-  const sorten = await ladeListe<Record<string, any>>('sorten', {});
-  const typVon = new Map(sorten.map((s) => [s.name, s.typ as string]));
-  // Nur mit Restbestand, je Sorten-/Produktname einmal.
-  const gesehen = new Set<string>();
-  for (const c of chargen) {
-    if ((c.verfuegbar_g ?? 0) <= 0) continue;
-    const pt = produktTyp(c.produkt_typ);
-    const label = pt === 'bluete' ? (c.sorte_name || '') : `${produktLabel(pt)} · ${c.sorte_name || ''}`;
-    if (!label || gesehen.has(label)) continue;
-    gesehen.add(label);
-    zeilen.push({ name: label, typ: typVon.get(c.sorte_name) ?? '', thc: prozent(c.thc_prozent), cbd: prozent(c.cbd_prozent) });
-  }
+  zeilen = produkte.map((p) => ({ name: p.label, typ: p.typ, thc: p.thc, cbd: p.cbd }));
 } else if (angebot?.sorten?.length) {
   zeilen = angebot.sorten.map((s) => ({ name: s.name ?? '', typ: s.typ ?? '', thc: s.thc ?? '', cbd: s.cbd ?? '' }));
 }
@@ -110,7 +128,15 @@ const TYPEN = ['', 'Indica', 'Sativa', 'Hybrid'];
     </div>
     {zeilen.map((z, i) => (
       <div class="sorten-zeile">
-        <input class="eingabe" name={`name_${i + 1}`} type="text" value={z.name} placeholder="Sorte / Produkt" aria-label={`Name ${i + 1}`} />
+        <select class="eingabe js-produkt" name={`name_${i + 1}`} aria-label={`Produkt ${i + 1}`}>
+          <option value="">— Produkt wählen —</option>
+          {produkte.map((p) => (
+            <option value={p.label} selected={p.label === z.name}>{p.label} ({gramm(p.bestand)})</option>
+          ))}
+          {z.name && !produkte.some((p) => p.label === z.name) && (
+            <option value={z.name} selected>{z.name} (kein Bestand)</option>
+          )}
+        </select>
         <select class="eingabe" name={`typ_${i + 1}`} aria-label={`Typ ${i + 1}`}>
           {TYPEN.map((t) => <option value={t} selected={t === z.typ}>{t || '—'}</option>)}
         </select>
@@ -118,6 +144,33 @@ const TYPEN = ['', 'Indica', 'Sativa', 'Hybrid'];
         <input class="eingabe" name={`cbd_${i + 1}`} type="text" value={z.cbd} placeholder="z. B. 2,0 %" aria-label={`CBD ${i + 1}`} />
       </div>
     ))}
+
+    <script type="application/json" id="produkt-daten" set:html={JSON.stringify(
+      Object.fromEntries(produkte.map((p) => [p.label, { typ: p.typ, thc: p.thc, cbd: p.cbd }]))
+    )} />
+    <script is:inline>
+      // Beim Wählen eines Produkts Typ/THC/CBD der Zeile automatisch füllen.
+      (() => {
+        const el = document.getElementById('produkt-daten');
+        if (!el) return;
+        let daten = {};
+        try { daten = JSON.parse(el.textContent || '{}'); } catch { daten = {}; }
+        document.querySelectorAll('.js-produkt').forEach((sel) => {
+          sel.addEventListener('change', () => {
+            const p = daten[sel.value];
+            if (!p) return;
+            const zeile = sel.closest('.sorten-zeile');
+            if (!zeile) return;
+            const typ = zeile.querySelector('select[name^="typ_"]');
+            const thc = zeile.querySelector('input[name^="thc_"]');
+            const cbd = zeile.querySelector('input[name^="cbd_"]');
+            if (typ && p.typ) typ.value = p.typ;
+            if (thc) thc.value = p.thc || '';
+            if (cbd) cbd.value = p.cbd || '';
+          });
+        });
+      })();
+    </script>
 
     <button class="knopf" type="submit" style="margin-top:1rem;">Angebot speichern</button>
   </form>
