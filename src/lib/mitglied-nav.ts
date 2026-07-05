@@ -24,6 +24,7 @@ export const MITGLIED_PUNKTE: NavPunkt[] = [
   { label: 'Aktuelles', href: '/mitglieder/bereich' },
   { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
   { label: 'Vorbestellung', href: '/mitglieder/vorbestellung' },
+  { label: 'Termine', href: '/mitglieder/termine' },
   { label: 'Helferplan', href: '/mitglieder/helferplan' },
   { label: 'Abstimmungen', href: '/mitglieder/abstimmungen' },
   { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },

@@ -1,0 +1,173 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+import { berlinTag } from '../../lib/ausgabe';
+
+// Termine mit Zu-/Absage (RSVP): Mitgliederversammlung, Pflegetage etc.
+// Jedes Mitglied antwortet; der Vorstand sieht die Teilnehmerliste und legt
+// Termine an.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+const vorstand = darfVerwalten(mitglied.rollen);
+
+interface Termin { id: string; titel: string; datum: string; ort?: string; beschreibung?: string }
+interface Zusage { id: string; termin: string; mitglied: string; antwort: string; expand?: { mitglied?: { vorname?: string; nachname?: string; name?: string; mitgliedsnummer?: string } } }
+
+let termine: Termin[] = [];
+let zusagen: Zusage[] = [];
+try {
+  termine = (await pb.collection('termine').getFullList({ sort: 'datum' })) as Termin[];
+} catch { termine = []; }
+try {
+  zusagen = (await pb.collection('termin_zusagen').getFullList({ expand: 'mitglied' })) as Zusage[];
+} catch { zusagen = []; }
+
+const heute = berlinTag();
+const tagVon = (s: string) => (s ? s.slice(0, 10) : '');
+const kommend = termine.filter((t) => tagVon(t.datum) >= heute);
+const vergangen = termine.filter((t) => tagVon(t.datum) < heute).reverse();
+
+const fuerTermin = (tid: string) => zusagen.filter((z) => z.termin === tid);
+const meineAntwort = (tid: string) => fuerTermin(tid).find((z) => z.mitglied === mitglied.id)?.antwort ?? '';
+const zaehle = (tid: string, a: string) => fuerTermin(tid).filter((z) => z.antwort === a).length;
+const namensListe = (tid: string, a: string) =>
+  fuerTermin(tid)
+    .filter((z) => z.antwort === a)
+    .map((z) => {
+      const u = z.expand?.mitglied;
+      return u ? [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || u.mitgliedsnummer || '—' : '—';
+    });
+
+const datumLang = (s: string) =>
+  s ? new Date(s).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '';
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+const oktext: Record<string, string> = { '1': 'Antwort gespeichert.', neu: 'Termin angelegt.', geloescht: 'Termin gelöscht.' };
+const vorschlag = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+---
+
+<Basis titel="Termine" beschreibung="Vereinstermine mit Zu- und Absage.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Termine</h1>
+  <p class="einleitung">
+    Mitgliederversammlungen, Pflegetage und andere Termine. Sag zu oder ab —
+    so kann der Vorstand besser planen.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt.</p>}
+
+  {vorstand && (
+    <details class="klappe">
+      <summary>＋ Neuen Termin anlegen</summary>
+      <form class="kasten" method="post" action="/mitglieder/termine/neu">
+        <div class="feld-reihe">
+          <div class="feld" style="flex:2 1 14rem;">
+            <label for="t-titel">Titel</label>
+            <input class="eingabe" id="t-titel" name="titel" type="text" required placeholder="z. B. Mitgliederversammlung" />
+          </div>
+          <div class="feld">
+            <label for="t-datum">Datum</label>
+            <input class="eingabe" id="t-datum" name="datum" type="date" value={vorschlag} required />
+          </div>
+          <div class="feld">
+            <label for="t-ort">Ort</label>
+            <input class="eingabe" id="t-ort" name="ort" type="text" placeholder="z. B. Vereinsheim" />
+          </div>
+        </div>
+        <div class="feld">
+          <label for="t-besch">Beschreibung</label>
+          <input class="eingabe" id="t-besch" name="beschreibung" type="text" placeholder="optional" />
+        </div>
+        <button class="knopf" type="submit">Termin anlegen</button>
+      </form>
+    </details>
+  )}
+
+  {kommend.length === 0 ? (
+    <p style="color:var(--ink-soft);">Aktuell sind keine Termine geplant.</p>
+  ) : (
+    kommend.map((t) => (
+      <section class="termin" id={`t-${t.id}`}>
+        <div class="termin-kopf">
+          <div>
+            <h2>{t.titel}</h2>
+            <p class="termin-meta">{datumLang(t.datum)}{t.ort ? ` · ${t.ort}` : ''}</p>
+            {t.beschreibung && <p class="termin-besch">{t.beschreibung}</p>}
+          </div>
+          {vorstand && (
+            <form method="post" action="/mitglieder/termine/loeschen" onsubmit="return confirm('Termin wirklich löschen?')">
+              <input type="hidden" name="termin" value={t.id} />
+              <button class="loeschen" type="submit" title="Termin löschen" aria-label="Termin löschen">✕</button>
+            </form>
+          )}
+        </div>
+
+        <div class="rsvp">
+          {['zu', 'vielleicht', 'ab'].map((a) => (
+            <form method="post" action="/mitglieder/termine/antwort" style="display:inline;">
+              <input type="hidden" name="termin" value={t.id} />
+              <input type="hidden" name="antwort" value={a} />
+              <button class:list={['rsvp-knopf', `rsvp-${a}`, { aktiv: meineAntwort(t.id) === a }]} type="submit">
+                {a === 'zu' ? 'Zusagen' : a === 'vielleicht' ? 'Vielleicht' : 'Absagen'}
+              </button>
+            </form>
+          ))}
+          <span class="rsvp-zahl">{zaehle(t.id, 'zu')} zu · {zaehle(t.id, 'vielleicht')} vielleicht</span>
+        </div>
+
+        {vorstand && zaehle(t.id, 'zu') + zaehle(t.id, 'vielleicht') > 0 && (
+          <details class="teilnehmer">
+            <summary>Teilnehmerliste</summary>
+            <p><strong>Zusagen ({zaehle(t.id, 'zu')}):</strong> {namensListe(t.id, 'zu').join(', ') || '—'}</p>
+            <p><strong>Vielleicht ({zaehle(t.id, 'vielleicht')}):</strong> {namensListe(t.id, 'vielleicht').join(', ') || '—'}</p>
+            <p><strong>Absagen ({zaehle(t.id, 'ab')}):</strong> {namensListe(t.id, 'ab').join(', ') || '—'}</p>
+          </details>
+        )}
+      </section>
+    ))
+  )}
+
+  {vergangen.length > 0 && (
+    <details class="klappe" style="margin-top:1.5rem;">
+      <summary>Vergangene Termine ({vergangen.length})</summary>
+      <ul class="vergangen">
+        {vergangen.map((t) => (
+          <li><span>{datumLang(t.datum)}</span> — {t.titel}{vorstand ? ` (${zaehle(t.id, 'zu')} waren dabei)` : ''}</li>
+        ))}
+      </ul>
+    </details>
+  )}
+</Basis>
+
+<style>
+  .termin { max-width: var(--mass); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; margin: 0 0 1rem; background: var(--bg-rein); }
+  .termin-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+  .termin h2 { margin: 0 0 0.2rem; font-size: 1.1rem; }
+  .termin-meta { color: var(--ink-soft); font-size: 0.92rem; margin: 0; }
+  .termin-besch { margin: 0.5rem 0 0; }
+  .loeschen { flex: none; border: 1px solid var(--line); background: none; color: var(--ink-soft); border-radius: var(--radius); width: 2rem; height: 2rem; cursor: pointer; }
+  .loeschen:hover { border-color: var(--gefahr); color: var(--gefahr); }
+  .rsvp { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.9rem; }
+  .rsvp-knopf { padding: 0.4rem 0.9rem; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink-soft); font: inherit; cursor: pointer; }
+  .rsvp-knopf.aktiv.rsvp-zu { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+  .rsvp-knopf.aktiv.rsvp-vielleicht { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .rsvp-knopf.aktiv.rsvp-ab { border-color: var(--gefahr); color: var(--gefahr); font-weight: 600; }
+  .rsvp-zahl { color: var(--ink-soft); font-size: 0.88rem; margin-left: 0.3rem; }
+  .teilnehmer { margin-top: 0.8rem; font-size: 0.92rem; }
+  .teilnehmer p { margin: 0.3rem 0; }
+  .vergangen { list-style: none; padding: 0; margin: 0.6rem 0 0; }
+  .vergangen li { padding: 0.4rem 0; border-bottom: 1px solid var(--line); color: var(--ink-soft); font-size: 0.92rem; }
+  .eingabe { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .feld-reihe { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .feld-reihe .feld { flex: 1 1 8rem; }
+  .feld { margin-bottom: 0.8rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+</style>
