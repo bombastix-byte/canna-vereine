@@ -72,7 +72,7 @@ const anonym = !mitglied && site.oeffentlich === false;
     </nav>
     <div class="sb-info">
       <a href="/mitglieder/abmelden">Abmelden</a>
-      <a href={pfad('/')}>Zur Website</a>
+      {site.oeffentlich !== false && <a href={pfad('/')}>Zur Website</a>}
       <a href={pfad('/impressum')}>Impressum</a>
       <a href={pfad('/datenschutz')}>Datenschutz</a>
     </div>

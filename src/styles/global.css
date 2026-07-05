@@ -536,6 +536,16 @@ thead th {
   font-size: 0.82rem;
 }
 
+/* Schlanke Fusszeile im App-Betrieb: nur der knappe Rechtshinweis. */
+.fuss--schlank .fuss__innen {
+  padding: 1rem 1.5rem;
+}
+.fuss--schlank .fuss__klein {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 /* ---------- Formular / Login ---------- */
 .feld {
   margin-bottom: 1.1rem;
@@ -752,5 +762,19 @@ table .r {
     max-width: 16rem;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Handy-Formulare: JEDES Eingabefeld mindestens 16px Schrift, sonst zoomt
+     iOS beim Antippen automatisch hinein (stoerend, springt das Layout).
+     !important, weil einige Komponenten-Styles kleinere Schriftgroessen
+     setzen (Astro-scoped und damit spezifischer). Nur Handy, nur Schrift. */
+  input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  /* Bequeme Mindest-Tipphoehe fuer die kompakten Inline-Felder. */
+  .eingabe {
+    min-height: 44px;
   }
 }

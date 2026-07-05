@@ -5,26 +5,38 @@ import Mark from './Mark.astro';
 const jahr = 2026;
 ---
 
-<footer class="fuss">
-  <div class="fuss__innen">
-    <Mark class="fuss__mark" />
-    <p>
-      <strong>{site.vereinsname}</strong><br />
-      {site.kontakt.plz} {site.kontakt.ort}
-    </p>
-    <ul>
-      <li><a href={pfad('/mitglieder')}>Mitgliederbereich</a></li>
-      <li><a href={pfad('/impressum')}>Impressum</a></li>
-      <li><a href={pfad('/datenschutz')}>Datenschutz</a></li>
-      {site.oeffentlich !== false && (
+{site.oeffentlich === false ? (
+  // App-Betrieb ohne oeffentliche Website: schlanke Fusszeile. Die Marke und
+  // Impressum/Datenschutz stehen bereits in der Seitenleiste - hier nur der
+  // knappe Rechtshinweis, damit interne Seiten nicht mit Chrome zugestellt sind.
+  <footer class="fuss fuss--schlank">
+    <div class="fuss__innen">
+      <p class="fuss__klein">
+        Interner Bereich – Abgabe ausschließlich an Mitglieder ab 18 Jahren,
+        kein Verkauf, keine Abgabe an Dritte. &copy; {jahr} {site.vereinsname}
+      </p>
+    </div>
+  </footer>
+) : (
+  <footer class="fuss">
+    <div class="fuss__innen">
+      <Mark class="fuss__mark" />
+      <p>
+        <strong>{site.vereinsname}</strong><br />
+        {site.kontakt.plz} {site.kontakt.ort}
+      </p>
+      <ul>
+        <li><a href={pfad('/mitglieder')}>Mitgliederbereich</a></li>
+        <li><a href={pfad('/impressum')}>Impressum</a></li>
+        <li><a href={pfad('/datenschutz')}>Datenschutz</a></li>
         <li><a href={pfad('/rechtliche-hinweise')}>Rechtliche Hinweise</a></li>
-      )}
-    </ul>
-    <p class="fuss__klein">
-      {site.oeffentlich === false
-        ? 'Interner Bereich der Vereinigung - kein öffentliches Angebot, keine Werbung im Sinne von Paragraf 6 KCanG. Abgabe ausschließlich an Mitglieder ab 18 Jahren. Kein Verkauf, keine Abgabe an Dritte. '
-        : 'Diese Website dient ausschließlich der sachlichen Information und enthält keine Werbung im Sinne von Paragraf 6 KCanG. Abgabe ausschließlich an Mitglieder ab 18 Jahren. Kein Verkauf, keine Abgabe an Dritte. '}
-      &copy; {jahr} {site.vereinsname}
-    </p>
-  </div>
-</footer>
+      </ul>
+      <p class="fuss__klein">
+        Diese Website dient ausschließlich der sachlichen Information und enthält
+        keine Werbung im Sinne von Paragraf 6 KCanG. Abgabe ausschließlich an
+        Mitglieder ab 18 Jahren. Kein Verkauf, keine Abgabe an Dritte.
+        &copy; {jahr} {site.vereinsname}
+      </p>
+    </div>
+  </footer>
+)}

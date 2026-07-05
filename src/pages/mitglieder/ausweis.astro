@@ -89,4 +89,16 @@ const qrSvg = nummer
     padding-top: 0.7rem;
     border-top: 1px solid var(--line);
   }
+  /* Handy: der Ausweis ist die Startseite fuers Mitglied - Kopf schlank
+     halten, damit die QR-Karte moeglichst ohne Scrollen sichtbar ist. */
+  @media (max-width: 700px) {
+    .einleitung {
+      font-size: 0.9rem;
+      margin: 0.2rem 0 0.9rem;
+    }
+    .ausweis {
+      margin-top: 0;
+      padding: 1.1rem 1.2rem;
+    }
+  }
 </style>

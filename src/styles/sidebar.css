@@ -180,7 +180,8 @@
 [data-layout='sidebar'] .inhalt {
   max-width: none;
   margin: 0;
-  padding: 2.4rem 1.5rem 3.5rem;
+  /* Handy: straffer Rand fuer App-Gefuehl und mehr Formularbreite. */
+  padding: 1.4rem 1.1rem 3rem;
 }
 /* Einheitliche linke Textkante: Hero und Fusszeile nicht mehr als Block
    zentrieren (margin auto aus global.css), sonst springt die Ausrichtung

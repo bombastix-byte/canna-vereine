@@ -102,6 +102,11 @@ const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
   .mrow-sepa .mrow-felder input { min-width: 0; }
   .mrow-rollen { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.6rem 0.9rem; margin: 0 0 0.7rem; }
   .mrow-rollen legend { font-size: 0.85rem; color: var(--ink-soft); padding: 0 0.4rem; }
-  .chk { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 1rem; font-size: 0.92rem; }
-  .chk input { width: auto; }
+  .chk { display: inline-flex; align-items: center; gap: 0.5rem; margin-right: 1rem; font-size: 0.95rem; min-height: 40px; }
+  .chk input { width: 1.2rem; height: 1.2rem; flex: none; }
+  /* Handy: jede Rolle als eigene, gut treffbare Zeile (statt gedraengt nebeneinander). */
+  @media (max-width: 700px) {
+    .mrow-rollen { display: flex; flex-direction: column; gap: 0.1rem; }
+    .chk { margin-right: 0; min-height: 44px; }
+  }
 </style>
