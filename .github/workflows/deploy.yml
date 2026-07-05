@@ -1,8 +1,10 @@
 name: Deploy oeffentliche Seiten (GitHub Pages)
 
+# Bewusst NUR manuell: der echte Betrieb läuft per SSH-Deploy auf den Netcup-VPS
+# (nicht über GitHub). Diese öffentliche Vorschau (GitHub Pages) wird bei Bedarf
+# von Hand gestartet — Actions-Tab › "Run workflow" — statt bei jedem Push.
+# Verhindert Fehlermails, wenn der GitHub-Pages-Veröffentlichungsschritt hakt.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
