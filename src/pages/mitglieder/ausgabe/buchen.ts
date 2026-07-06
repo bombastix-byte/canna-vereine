@@ -11,6 +11,7 @@ import {
 } from '../../../lib/ausgabe';
 import { produktTyp } from '../../../lib/verarbeitung';
 import { abgabeErlaubt, abgabeSperrGrund } from '../../../lib/status';
+import { erfasseVorgang } from '../../../lib/kassen-konnektor';
 
 // Bucht eine Abgabe am Tresen - EIN Vorgang mit einer oder MEHREREN Positionen
 // (Mitglied nimmt mehrere Sorten mit). Alle Positionen teilen sich eine
@@ -26,7 +27,7 @@ function zurueck(redirect: (u: string, s?: number) => Response, mitgliedId: stri
   return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
 }
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied: personal } = ergebnis;
@@ -179,6 +180,24 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       // Bestand korrigieren Anbau/Vorstand im CMS bzw. der Warenwirtschaft.
     }
   }
+
+  // Barvorgang protokollieren und – falls eine externe Kasse angebunden ist –
+  // dorthin zustellen (Beitrag = Selbstkostenbeitrag der Abgabe).
+  const positionen = gebucht.map(({ charge, menge }) => ({
+    bezeichnung: `${charge.sorte_name ?? ''} ${charge.charge_nr ?? ''}`.trim(),
+    menge_g: menge,
+    betrag_euro: beitragEuro(menge),
+  }));
+  const beitragGesamt = positionen.reduce((s, p) => s + p.betrag_euro, 0);
+  await erfasseVorgang(pb, locals.kasseExtern, {
+    art: 'abgabe',
+    belegnr,
+    mitglied: mitgliedId,
+    mitgliedsnummer: empfaenger.mitgliedsnummer || '',
+    betrag_euro: Math.round(beitragGesamt * 100) / 100,
+    datum: tag,
+    positionen,
+  }, personal.id);
 
   return redirect(`/mitglieder/ausgabe/beleg/${erster!.id}?neu=1`, 303);
 };

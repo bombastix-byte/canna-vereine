@@ -36,6 +36,7 @@ const SEEDS = [
   'seed-einwilligung.mjs',     // Feature 9
   'seed-termine-rsvp.mjs',     // Feature 10
   'seed-einstellungen.mjs',    // Laufzeit-Module
+  'seed-kassen-konnektor.mjs', // externe Kasse
   'seed-angebot.mjs',
   'seed-anleitungen.mjs',
   'seed-abstimmungen.mjs',

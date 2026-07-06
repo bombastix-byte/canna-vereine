@@ -5,6 +5,7 @@
 import type PocketBase from 'pocketbase';
 import { site } from '../config';
 import type { FunktionsSchluessel } from '../config/types';
+import type { KonnektorConfig } from './kassen-konnektor';
 
 export const MODUL_KEYS: FunktionsSchluessel[] = [
   'beitraege', 'verarbeitung', 'kasse', 'vorbestellung', 'termine', 'helferplan', 'abstimmungen', 'antraege', 'push',
@@ -40,6 +41,18 @@ export async function ladeFunktionen(pb: PocketBase): Promise<Funktionen> {
     /* keine/leere Einstellung -> Defaults */
   }
   return eff;
+}
+
+/** Kassen-Konnektor-Konfiguration aus der DB (Default: keiner). Wirft nie. */
+export async function ladeKonnektor(pb: PocketBase): Promise<KonnektorConfig> {
+  try {
+    const row = await pb.collection('einstellungen').getFirstListItem('');
+    const k = (row.kasse_extern ?? {}) as Partial<KonnektorConfig>;
+    const typ = k.typ === 'webhook' || k.typ === 'jtl' ? k.typ : 'keiner';
+    return { typ, url: typeof k.url === 'string' ? k.url : '', token: typeof k.token === 'string' ? k.token : '' };
+  } catch {
+    return { typ: 'keiner' };
+  }
 }
 
 /** Menschlesbare Labels der Module (für die Admin-Oberfläche). */

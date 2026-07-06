@@ -19,6 +19,7 @@ if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?
 const fn = Astro.locals.funktionen;
 const anAus = (k: (typeof MODUL_KEYS)[number]) => (fn ? fn[k] !== false : true);
 const aufnahme = fn?.aufnahmebeitragEuro ?? 0;
+const kx = Astro.locals.kasseExtern ?? { typ: 'keiner' as const };
 
 const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
@@ -52,7 +53,31 @@ const fehler = Astro.url.searchParams.get('fehler');
     <div class="feld">
       <label for="ab">Aufnahmebeitrag (€) — 0 = keiner</label>
       <input class="eingabe" id="ab" name="aufnahmebeitrag_euro" type="number" min="0" step="0.01" value={aufnahme || ''} placeholder="z. B. 50" />
-      <p class="feld-hinweis">Wird beim Aufnehmen eines Mitglieds vorgeschlagen und in die Kasse gebucht.</p>
+      <p class="feld-hinweis">Wird beim Aufnehmen eines Mitglieds vorgeschlagen und (je nach Kasse) intern gebucht oder an die externe Kasse gemeldet.</p>
+    </div>
+
+    <h2 style="margin-top:1.4rem;">Externe Kasse</h2>
+    <p class="feld-hinweis" style="margin-bottom:0.8rem;">
+      Statt der internen Kasse kann jeder Barvorgang (Abgabe-Beitrag,
+      Aufnahmebeitrag) an eine externe Kassensoftware gemeldet werden — z. B. an
+      eine bestehende Kasse mit TSE. Dann interne „Kasse" oben abschalten.
+      <a href="/mitglieder/verwaltung/kasse-extern">→ Übertragungs-Protokoll & erneute Zustellung</a>
+    </p>
+    <div class="feld">
+      <label for="kx-typ">Anbindung</label>
+      <select class="eingabe" id="kx-typ" name="kx_typ">
+        <option value="keiner" selected={kx.typ === 'keiner'}>Keine (nur internes Protokoll)</option>
+        <option value="webhook" selected={kx.typ === 'webhook'}>Webhook (universell, JSON-POST)</option>
+        <option value="jtl" selected={kx.typ === 'jtl'}>JTL (über Webhook-Middleware)</option>
+      </select>
+    </div>
+    <div class="feld">
+      <label for="kx-url">Ziel-URL (Endpoint der externen Kasse/Middleware)</label>
+      <input class="eingabe" id="kx-url" name="kx_url" type="url" value={kx.url ?? ''} placeholder="https://…/kasse-eingang" style="max-width:32rem;" />
+    </div>
+    <div class="feld">
+      <label for="kx-token">Token (optional, wird als Bearer gesendet)</label>
+      <input class="eingabe" id="kx-token" name="kx_token" type="text" value={kx.token ?? ''} placeholder="geheimes Token" autocomplete="off" style="max-width:24rem;" />
     </div>
 
     <button class="knopf" type="submit" style="margin-top:0.8rem;">Speichern</button>

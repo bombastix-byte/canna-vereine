@@ -107,7 +107,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
 
     // Aufnahmebeitrag (falls konfiguriert und bar kassiert) in die Kasse buchen.
     if (hatAufnahmebeitrag && daten.get('aufnahme_kassiert')) {
-      await bucheAufnahmebeitrag(pb, aufnahmebeitragEuro, neuerNutzer.id, mitglied.id);
+      await bucheAufnahmebeitrag(pb, aufnahmebeitragEuro, neuerNutzer.id, mitglied.id, {
+        kasseIntern: __fn ? __fn.kasse !== false : true,
+        kasseExtern: locals.kasseExtern,
+      });
     }
 
     // Zugangsdaten per Mail (falls SMTP konfiguriert); sonst zeigt die Seite

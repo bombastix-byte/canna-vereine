@@ -33,6 +33,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     }
   }
 
-  const ok = await bucheAufnahmebeitrag(pb, betrag, mitgliedId, mitglied.id);
+  const ok = await bucheAufnahmebeitrag(pb, betrag, mitgliedId, mitglied.id, { kasseIntern: hatKasse, kasseExtern: locals.kasseExtern });
   return redirect(`/mitglieder/kasse?${ok ? 'ok=aufnahme' : 'fehler=fehlgeschlagen'}`, 303);
 };

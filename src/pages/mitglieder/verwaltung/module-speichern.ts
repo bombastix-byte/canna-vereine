@@ -27,6 +27,15 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const abRaw = String(daten.get('aufnahmebeitrag_euro') ?? '').trim().replace(',', '.');
   const ab = abRaw === '' ? null : Math.max(0, Number(abRaw) || 0);
 
+  // Externe Kassen-Anbindung.
+  const kxTypRaw = String(daten.get('kx_typ') ?? 'keiner');
+  const kxTyp = kxTypRaw === 'webhook' || kxTypRaw === 'jtl' ? kxTypRaw : 'keiner';
+  const kasse_extern = {
+    typ: kxTyp,
+    url: String(daten.get('kx_url') ?? '').trim(),
+    token: String(daten.get('kx_token') ?? '').trim(),
+  };
+
   try {
     let row;
     try {
@@ -37,6 +46,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const patch = {
       funktionen,
       aufnahmebeitrag_euro: ab,
+      kasse_extern,
       aktualisiert_am: berlinTag(),
       aktualisiert_von: mitglied.name || mitglied.mitgliedsnummer || mitglied.id,
     };
@@ -51,7 +61,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   await protokolliere(pb, mitglied, 'module.geaendert', {
     objektTyp: 'system', objektId: 'funktionen',
-    details: `aktiv: ${an.join(', ') || '—'}${ab != null ? ` · Aufnahmebeitrag ${ab.toFixed(2)} €` : ''}`,
+    details: `aktiv: ${an.join(', ') || '—'}${ab != null ? ` · Aufnahmebeitrag ${ab.toFixed(2)} €` : ''} · externe Kasse: ${kxTyp}`,
   });
 
   return redirect('/mitglieder/verwaltung/module?ok=1', 303);
