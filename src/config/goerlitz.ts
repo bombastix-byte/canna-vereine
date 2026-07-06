@@ -19,7 +19,8 @@ export const goerlitz: SiteConfig = {
   stadt: 'Görlitz',
   // Finanzierung des CVG: KEINE laufenden Mitgliedsbeiträge/SEPA/Mahnwesen,
   // nur ein einmaliger Aufnahmebeitrag (bar bei Aufnahme, in die Kasse).
-  funktionen: { beitraege: false },
+  // Beitritt läuft offline -> Online-Anträge aus. Alles andere aktiv.
+  funktionen: { beitraege: false, antraege: false },
   aufnahmebeitrag_euro: 50, // TODO: echten CVG-Aufnahmebeitrag bestätigen
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',
   erlaubnisHinweis:
