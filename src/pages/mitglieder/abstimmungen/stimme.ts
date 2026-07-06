@@ -1,13 +1,15 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatAbstimmungen } from '../../../lib/funktionen';
+
 import { berlinTag } from '../../../lib/ausgabe';
 
 // Gibt die Stimme des angemeldeten Mitglieds ab. Eine Stimme je Abstimmung
 // (auf DB-Ebene per Unique-Index garantiert). Nur bei offener Abstimmung.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatAbstimmungen = __fn ? __fn.abstimmungen !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

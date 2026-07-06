@@ -5,7 +5,7 @@ import UnterNav from '../../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
 import { AKTION_LABEL } from '../../../lib/audit';
-import { VERWALTUNG_TABS } from '../../../lib/mitglied-nav';
+import { verwaltungTabs } from '../../../lib/mitglied-nav';
 
 // Änderungshistorie / Audit-Log: chronologisches Protokoll sicherheits- und
 // governance-relevanter Aktionen. Nur Vorstand. Append-only (nicht editierbar).
@@ -68,7 +68,7 @@ const istGefahr = (a: string) => a === 'mitglied.geloescht' || a === 'charge.rue
 <Basis titel="Protokoll" beschreibung="Änderungshistorie sicherheits- und governance-relevanter Aktionen.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={VERWALTUNG_TABS} />
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
   <h1 style="margin-bottom:0.4rem;">Protokoll (Änderungshistorie)</h1>
   <p class="einleitung">
     Wer hat wann welche Mitgliedsdaten, Rollen, Freigaben, Zahlungen oder

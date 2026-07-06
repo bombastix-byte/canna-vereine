@@ -1,12 +1,14 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
-import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
+import { verwaltungTabs } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten } from '../../lib/rollen';
-import { hatAntraege, hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatAntraege = __fn ? __fn.antraege !== false : true;
+const hatAufnahmebeitrag = (__fn?.aufnahmebeitragEuro ?? 0) > 0;
+const aufnahmebeitragEuro = __fn?.aufnahmebeitragEuro ?? 0;
 // Beitrittsantraege und Warteliste. Nur Vorstand. "Aufnehmen" legt direkt
 // das Mitgliedskonto an (Startpasswort, Rolle mitglied).
 export const prerender = false;
@@ -66,7 +68,7 @@ const datum = (iso?: string) =>
 <Basis titel="Beitrittsanträge" beschreibung="Anträge und Warteliste verwalten.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={VERWALTUNG_TABS} />
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
   <h1 style="margin-bottom:0.4rem;">Beitrittsanträge</h1>
   <p class="einleitung">
     Anträge von der Website landen hier. Reihenfolge = Eingangsdatum.

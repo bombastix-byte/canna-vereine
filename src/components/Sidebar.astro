@@ -3,7 +3,7 @@ import { site, navigation, produkt } from '../config';
 import { pfad } from '../lib/url';
 import Mark from './Mark.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../lib/pb';
-import { MITGLIED_PUNKTE, arbeitPunkteFuer, istAktiv as punktAktiv } from '../lib/mitglied-nav';
+import { mitgliedPunkte as baueMitgliedPunkte, arbeitPunkteFuer, istAktiv as punktAktiv } from '../lib/mitglied-nav';
 
 // Seitenleiste (Layout "sidebar"). Oeffentliche Navigation fuer Besucher;
 // fuer angemeldete Mitglieder zusaetzlich der komplette Mitgliederbereich
@@ -20,7 +20,9 @@ try {
 } catch {
   mitglied = null;
 }
-const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen) : [];
+const funktionen = Astro.locals.funktionen;
+const MITGLIED_PUNKTE = baueMitgliedPunkte(funktionen);
+const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen, funktionen) : [];
 
 // Anonyme Eingangs-Ansicht: nicht angemeldet UND kein oeffentlicher Auftritt.
 // Dann verraet die Startseite weder Vereinsname noch Ort; Impressum/Daten-

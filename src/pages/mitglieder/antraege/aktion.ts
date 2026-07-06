@@ -6,7 +6,6 @@ import { mailAufnahme, mailAblehnung } from '../../../lib/mail-vorlagen';
 import { site } from '../../../config';
 import { protokolliere } from '../../../lib/audit';
 import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
-import { hatAntraege, hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../../lib/funktionen';
 
 const vereinKopf = { vereinsname: site.vereinsname, email: site.kontakt.email, ort: site.kontakt.ort };
 
@@ -21,7 +20,11 @@ function startpasswort(): string {
   return `Start-${teil()}-${teil()}`;
 }
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatAntraege = __fn ? __fn.antraege !== false : true;
+  const hatAufnahmebeitrag = (__fn?.aufnahmebeitragEuro ?? 0) > 0;
+  const aufnahmebeitragEuro = __fn?.aufnahmebeitragEuro ?? 0;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

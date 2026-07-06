@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatKasse } from '../../../lib/funktionen';
+
 import { darfAusgeben } from '../../../lib/rollen';
 import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
 
@@ -8,7 +8,9 @@ import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
 // Mitglied per Mitgliedsnummer zugeordnet. Nur Ausgabe/Vorstand.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatKasse = __fn ? __fn.kasse !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

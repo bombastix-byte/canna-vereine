@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
-import { hatBeitraege } from '../../../lib/funktionen';
+
 import { buildPain008, sepaGlaeubigerAusEnv, normIban, type SeqTyp } from '../../../lib/sepa';
 
 // Erzeugt die SEPA-Lastschriftdatei (pain.008) fuer alle Mitglieder mit
@@ -11,7 +11,9 @@ export const prerender = false;
 const SEQ: SeqTyp[] = ['FRST', 'RCUR', 'OOFF', 'FNAL'];
 const iso = /^\d{4}-\d{2}-\d{2}$/;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatBeitraege = __fn ? __fn.beitraege !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

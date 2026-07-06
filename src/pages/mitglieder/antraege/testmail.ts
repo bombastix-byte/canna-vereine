@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatAntraege } from '../../../lib/funktionen';
+
 import { darfVerwalten } from '../../../lib/rollen';
 import { sendeMail, mailKonfiguriert } from '../../../lib/mail';
 import { mailTest } from '../../../lib/mail-vorlagen';
@@ -10,7 +10,9 @@ import { site } from '../../../config';
 // Vorstand die SMTP-Einrichtung pruefen kann. Nur Vorstand.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ cookies, redirect }) => {
+export const POST: APIRoute = async ({ cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatAntraege = __fn ? __fn.antraege !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { mitglied } = ergebnis;

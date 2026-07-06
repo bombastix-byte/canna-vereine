@@ -1,0 +1,71 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import UnterNav from '../../../components/UnterNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten } from '../../../lib/rollen';
+import { verwaltungTabs } from '../../../lib/mitglied-nav';
+import { MODUL_KEYS, MODUL_LABEL } from '../../../lib/einstellungen';
+
+// Module live an-/abschalten (ohne Deploy). Nur Vorstand. Die Auswahl liegt in
+// der DB (einstellungen) und wirkt sofort über die Middleware.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+const fn = Astro.locals.funktionen;
+const anAus = (k: (typeof MODUL_KEYS)[number]) => (fn ? fn[k] !== false : true);
+const aufnahme = fn?.aufnahmebeitragEuro ?? 0;
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+---
+
+<Basis titel="Module" beschreibung="Funktions-Module des Vereins an- und abschalten.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <UnterNav punkte={verwaltungTabs(fn)} />
+  <h1 style="margin-bottom:0.4rem;">Module</h1>
+  <p class="einleitung">
+    Hier schaltest du Funktionen des Vereins an oder aus. Änderungen wirken
+    sofort — abgeschaltete Module verschwinden aus Navigation und Bedienung.
+    Kern-Funktionen (Ausgabe, Anbau, Jahresmeldung, Mitgliederverwaltung) sind
+    immer aktiv.
+  </p>
+
+  {ok && <p class="hinweis" role="status">Gespeichert — die Module sind aktualisiert.</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
+
+  <form class="kasten" method="post" action="/mitglieder/verwaltung/module-speichern">
+    <div class="module">
+      {MODUL_KEYS.map((k) => (
+        <label class="modul">
+          <input type="checkbox" name={k} checked={anAus(k)} />
+          <span class="modul-name">{MODUL_LABEL[k]}</span>
+        </label>
+      ))}
+    </div>
+
+    <div class="feld">
+      <label for="ab">Aufnahmebeitrag (€) — 0 = keiner</label>
+      <input class="eingabe" id="ab" name="aufnahmebeitrag_euro" type="number" min="0" step="0.01" value={aufnahme || ''} placeholder="z. B. 50" />
+      <p class="feld-hinweis">Wird beim Aufnehmen eines Mitglieds vorgeschlagen und in die Kasse gebucht.</p>
+    </div>
+
+    <button class="knopf" type="submit" style="margin-top:0.8rem;">Speichern</button>
+  </form>
+</Basis>
+
+<style>
+  .module { display: flex; flex-direction: column; gap: 0.1rem; margin-bottom: 1.2rem; }
+  .modul { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0.2rem; border-bottom: 1px solid var(--line); min-height: 44px; }
+  .modul:last-child { border-bottom: 0; }
+  .modul input { width: 1.25rem; height: 1.25rem; flex: none; }
+  .modul-name { font-size: 1rem; }
+  .feld label { display: block; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0.2rem; }
+  .eingabe { width: 100%; max-width: 14rem; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; }
+  .feld-hinweis { color: var(--ink-soft); font-size: 0.85rem; margin: 0.3rem 0 0; }
+</style>

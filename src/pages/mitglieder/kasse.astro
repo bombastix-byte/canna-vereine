@@ -5,8 +5,10 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfAusgeben } from '../../lib/rollen';
 import { berlinTag } from '../../lib/ausgabe';
 import { euro, euroText, erwarteteEinnahme } from '../../lib/kasse';
-import { hatKasse, hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatKasse = __fn ? __fn.kasse !== false : true;
+const hatAufnahmebeitrag = (__fn?.aufnahmebeitragEuro ?? 0) > 0;
+const aufnahmebeitragEuro = __fn?.aufnahmebeitragEuro ?? 0;
 // Kassenbuch & Tagesabschluss. Nur Ausgabe/Vorstand.
 export const prerender = false;
 

@@ -2,8 +2,8 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { hatVorbestellung } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatVorbestellung = __fn ? __fn.vorbestellung !== false : true;
 // Geschützt. Mitglieder reservieren eine Sorte zur späteren Abholung.
 export const prerender = false;
 

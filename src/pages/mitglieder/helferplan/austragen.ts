@@ -1,13 +1,15 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatHelferplan } from '../../../lib/funktionen';
+
 import { montagVon, parseTag, ymd } from '../../../lib/helfer';
 
 // Trägt das angemeldete Mitglied wieder aus einem Helferdienst an einem
 // konkreten Tag aus. Löscht nur die eigene Eintragung (per deleteRule gesichert).
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatHelferplan = __fn ? __fn.helferplan !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) {
     return redirect('/mitglieder?fehler=anmeldung', 303);

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatHelferplan } from '../../../lib/funktionen';
+
 import { darfDienst } from '../../../lib/rollen';
 import { montagVon, parseTag, ymd } from '../../../lib/helfer';
 
@@ -10,7 +10,9 @@ import { montagVon, parseTag, ymd } from '../../../lib/helfer';
 // der Helferplan direkt die passende Anleitung zeigt.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatHelferplan = __fn ? __fn.helferplan !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) {
     return redirect('/mitglieder?fehler=anmeldung', 303);

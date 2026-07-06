@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatTermine } from '../../../lib/funktionen';
 
 // RSVP: das angemeldete Mitglied sagt zu / vielleicht / ab. Eine Zeile je
 // Mitglied und Termin (Upsert). Jedes Mitglied darf antworten.
@@ -8,7 +7,9 @@ export const prerender = false;
 
 const ANTWORTEN = ['zu', 'vielleicht', 'ab'];
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatTermine = __fn ? __fn.termine !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

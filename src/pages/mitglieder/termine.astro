@@ -2,7 +2,8 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { hatTermine } from '../../lib/funktionen';
+const __fn = Astro.locals.funktionen;
+const hatTermine = __fn ? __fn.termine !== false : true;
 import { darfVerwalten } from '../../lib/rollen';
 import { berlinTag } from '../../lib/ausgabe';
 

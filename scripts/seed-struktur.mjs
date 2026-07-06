@@ -35,6 +35,7 @@ const SEEDS = [
   'seed-status.mjs',           // Feature 8
   'seed-einwilligung.mjs',     // Feature 9
   'seed-termine-rsvp.mjs',     // Feature 10
+  'seed-einstellungen.mjs',    // Laufzeit-Module
   'seed-angebot.mjs',
   'seed-anleitungen.mjs',
   'seed-abstimmungen.mjs',

@@ -3,7 +3,6 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
 import { protokolliere } from '../../../lib/audit';
 import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
-import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../../lib/funktionen';
 
 // Legt ein Mitglied manuell an (Vorstand). Naechste freie M-Nummer, wenn keine
 // angegeben; Startpasswort automatisch, wenn keins gesetzt. Zeigt das Passwort
@@ -15,7 +14,10 @@ function startpasswort(): string {
   return `Start-${teil()}-${teil()}`;
 }
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatAufnahmebeitrag = (__fn?.aufnahmebeitragEuro ?? 0) > 0;
+  const aufnahmebeitragEuro = __fn?.aufnahmebeitragEuro ?? 0;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

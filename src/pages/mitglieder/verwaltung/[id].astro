@@ -5,8 +5,8 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
 import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus } from '../../../lib/status';
 import { berlinTag } from '../../../lib/ausgabe';
-import { hatBeitraege } from '../../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Detail-/Bearbeitungsseite eines Mitglieds (aus der Suche geöffnet).
 // Nur Vorstand.
 export const prerender = false;

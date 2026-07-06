@@ -7,8 +7,13 @@ import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../
 import { vorstandsKennzahlen } from '../../lib/cockpit';
 import { berlinTag } from '../../lib/ausgabe';
 import { mussBestaetigen } from '../../lib/einwilligung';
-import { hatBeitraege, hatKasse, hatAntraege, hatTermine, hatVorbestellung, hatHelferplan } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatBeitraege = __fn ? __fn.beitraege !== false : true;
+const hatKasse = __fn ? __fn.kasse !== false : true;
+const hatAntraege = __fn ? __fn.antraege !== false : true;
+const hatTermine = __fn ? __fn.termine !== false : true;
+const hatVorbestellung = __fn ? __fn.vorbestellung !== false : true;
+const hatHelferplan = __fn ? __fn.helferplan !== false : true;
 // Geschütztes Mitglieder-Dashboard. Serverseitig gerendert.
 export const prerender = false;
 
@@ -94,7 +99,7 @@ const downloadUrl = (d: Dokument) =>
   d.datei ? dateiUrl(d as unknown as { collectionId: string; id: string }, d.datei) : '#';
 
 // Vorstands-Cockpit: Kennzahlen nur für Verwaltende laden.
-const kennzahlen = darfVerwalten(mitglied.rollen) ? await vorstandsKennzahlen(pb, berlinTag()) : null;
+const kennzahlen = darfVerwalten(mitglied.rollen) ? await vorstandsKennzahlen(pb, berlinTag(), hatBeitraege) : null;
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 ---

@@ -1,13 +1,15 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatAbstimmungen } from '../../../lib/funktionen';
+
 import { darfVerwalten } from '../../../lib/rollen';
 import { pushAnAlle } from '../../../lib/push-broadcast';
 
 // Legt eine neue Abstimmung an. Nur Vorstand. Optionen: eine je Zeile.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatAbstimmungen = __fn ? __fn.abstimmungen !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

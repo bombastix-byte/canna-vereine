@@ -1,10 +1,11 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
-import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
+import { verwaltungTabs } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { hatPush } from '../../lib/funktionen';
+const __fn = Astro.locals.funktionen;
+const hatPush = __fn ? __fn.push !== false : true;
 import { darfVerwalten } from '../../lib/rollen';
 import { pushKonfiguriert } from '../../lib/push';
 
@@ -37,7 +38,7 @@ const fehlertext: Record<string, string> = {
 <Basis titel="Nachricht senden" beschreibung="Push-Nachricht an alle Mitglieder.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={VERWALTUNG_TABS} />
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
   <h1 style="margin-bottom:0.4rem;">Nachricht senden</h1>
   <p class="einleitung">
     Sendet eine Push-Benachrichtigung an alle Mitglieder, die auf einem Gerät

@@ -2,8 +2,8 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
-import { hatBeitraege } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Mein Konto: das Mitglied pflegt eigene Kontakt- und SEPA-Daten selbst.
 // Identitäts-, Rollen- und Beitragsfelder bleiben schreibgeschützt (nur Vorstand).
 export const prerender = false;

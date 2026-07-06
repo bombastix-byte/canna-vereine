@@ -6,9 +6,9 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { beitragStatus, mahnstufeName, type BeitragStatus } from '../../../lib/beitrag';
-import { VERWALTUNG_TABS } from '../../../lib/mitglied-nav';
-import { hatBeitraege } from '../../../lib/funktionen';
-
+import { verwaltungTabs } from '../../../lib/mitglied-nav';
+const __fn = Astro.locals.funktionen;
+const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Zahlungsstatus & Mahnwesen: zeigt fuer alle Mitglieder mit Monatsbeitrag den
 // Rueckstand, erfasst Zahlungen und stoesst Mahnungen an. Nur Vorstand.
 export const prerender = false;
@@ -76,7 +76,7 @@ const fehlertext: Record<string, string> = {
 <Basis titel="Zahlungsstatus" beschreibung="Beitragsrückstände, Zahlungen erfassen, Mahnungen.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={VERWALTUNG_TABS} />
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
   <h1 style="margin-bottom:0.4rem;">Zahlungsstatus & Mahnwesen</h1>
   <p class="einleitung">
     Übersicht der Monatsbeiträge: Wer ist im Rückstand, wie viel ist offen. Hier

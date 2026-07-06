@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
-import { hatVorbestellung } from '../../../lib/funktionen';
 
 // Nimmt eine Vorbestellung entgegen. Schreibt als das angemeldete Mitglied,
 // Status stets "offen". Aenderung/Stornierung uebernimmt der Vorstand im CMS.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatVorbestellung = __fn ? __fn.vorbestellung !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) {
     return redirect('/mitglieder?fehler=anmeldung', 303);

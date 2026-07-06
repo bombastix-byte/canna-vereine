@@ -1,7 +1,7 @@
 ---
 import { site } from '../config';
 import {
-  MITGLIED_PUNKTE,
+  mitgliedPunkte as baueMitgliedPunkte,
   arbeitPunkteFuer,
   istAktiv as punktAktiv,
   type NavPunkt,
@@ -17,8 +17,9 @@ interface Props {
 const { rollen } = Astro.props;
 
 const sidebarLayout = (site.layout ?? 'standard') === 'sidebar';
-const mitgliedPunkte = MITGLIED_PUNKTE;
-const arbeitPunkte = arbeitPunkteFuer(rollen);
+const funktionen = Astro.locals.funktionen;
+const mitgliedPunkte = baueMitgliedPunkte(funktionen);
+const arbeitPunkte = arbeitPunkteFuer(rollen, funktionen);
 const istAktiv = (p: NavPunkt) => punktAktiv(p, Astro.url.pathname);
 ---
 

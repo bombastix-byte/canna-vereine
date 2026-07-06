@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
-import { hatBeitraege } from '../../../lib/funktionen';
+
 import { berlinTag } from '../../../lib/ausgabe';
 import { beitragStatus, mahnstufeName } from '../../../lib/beitrag';
 import { sendePush } from '../../../lib/push';
@@ -14,7 +14,9 @@ export const prerender = false;
 
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
+  const __fn = locals.funktionen;
+  const hatBeitraege = __fn ? __fn.beitraege !== false : true;
   const ergebnis = await mitgliedAusToken(cookies.get(AUTH_COOKIE)?.value);
   if (!ergebnis) return redirect('/mitglieder?fehler=anmeldung', 303);
   const { pb, mitglied } = ergebnis;

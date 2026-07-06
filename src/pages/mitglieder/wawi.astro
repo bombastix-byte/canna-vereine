@@ -7,8 +7,8 @@ import { STATUS_LABEL, moeglicheAktionen, schwundProzent, VERNICHTUNG_GRUENDE } 
 import { VERARBEITUNG_TYPEN, PRODUKT_TYPEN, PRODUKT_LABEL, produktTyp, produktLabel, ausbeuteProzent } from '../../lib/verarbeitung';
 import { berlinTag } from '../../lib/ausgabe';
 import { type PlanSchritt, zyklustag, aktuellePhase } from '../../lib/anbauplan';
-import { hatVerarbeitung } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatVerarbeitung = __fn ? __fn.verarbeitung !== false : true;
 // Warenwirtschaft: Chargen vom Anbau bis zur Freigabe + Vernichtung.
 // Nur Anbauverantwortliche/Vorstand.
 export const prerender = false;

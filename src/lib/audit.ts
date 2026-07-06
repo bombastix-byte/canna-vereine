@@ -82,6 +82,7 @@ export const AKTION_LABEL: Record<string, string> = {
   'mitglied.status': 'Status geändert',
   'hinweise.bestaetigt': 'Hinweise bestätigt',
   'erinnerung.lauf': 'Erinnerungen verschickt',
+  'module.geaendert': 'Module geändert',
   'rolle.geaendert': 'Rollen geändert',
   'antrag.aufgenommen': 'Antrag aufgenommen',
   'antrag.abgelehnt': 'Antrag abgelehnt',

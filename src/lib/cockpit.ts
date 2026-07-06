@@ -3,7 +3,6 @@
 // und lädt nur dort volle Listen, wo pro Zeile gerechnet werden muss.
 import type PocketBase from 'pocketbase';
 import { beitragStatus } from './beitrag';
-import { hatBeitraege } from './funktionen';
 
 export interface Kennzahlen {
   mitglieder: number;
@@ -41,7 +40,7 @@ async function alle<T = Record<string, any>>(pb: PocketBase, collection: string,
   }
 }
 
-export async function vorstandsKennzahlen(pb: PocketBase, heute: string): Promise<Kennzahlen> {
+export async function vorstandsKennzahlen(pb: PocketBase, heute: string, hatBeitraege = true): Promise<Kennzahlen> {
   // Mitglieder gesamt (ohne technisches System-/Automatik-Konto).
   const mitglieder = await anzahl(pb, 'users', 'mitgliedsnummer != "SYS"');
 

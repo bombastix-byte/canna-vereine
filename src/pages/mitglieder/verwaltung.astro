@@ -1,14 +1,15 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
-import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
+import { verwaltungTabs } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten, ROLLEN_LABEL, istSystemkonto, type Rolle } from '../../lib/rollen';
 import { effektiverStatus, STATUS_LABEL } from '../../lib/status';
 import { berlinTag } from '../../lib/ausgabe';
-import { hatAufnahmebeitrag, aufnahmebeitragEuro } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatAufnahmebeitrag = (__fn?.aufnahmebeitragEuro ?? 0) > 0;
+const aufnahmebeitragEuro = __fn?.aufnahmebeitragEuro ?? 0;
 // Mitgliederverwaltung: Suche + Liste. Bearbeitet wird auf der Detailseite
 // (/mitglieder/verwaltung/[id]). Skaliert auf mehrere hundert Mitglieder.
 // Nur Vorstand.
@@ -80,7 +81,7 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
 <Basis titel="Mitgliederverwaltung" beschreibung="Mitglieder suchen und verwalten.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={VERWALTUNG_TABS} />
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
   <h1 style="margin-bottom:0.4rem;">Mitglieder</h1>
   <p class="einleitung">
     Nach Name, Mitgliedsnummer oder E-Mail suchen — oder den Mitgliedsausweis

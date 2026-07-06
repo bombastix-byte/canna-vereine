@@ -1,10 +1,9 @@
 // Zentrale Definition der Mitglieder-Navigation. Wird von der Seitenleiste
 // (Layout "sidebar") und der klassischen MitgliedNav-Leiste (Layout
 // "standard"/"zentriert") gemeinsam genutzt - ein Ort fuer Punkte + Rechte.
+// Die abschaltbaren Module kommen als Laufzeit-Flags (locals.funktionen) herein.
 import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from './rollen';
-import {
-  hatBeitraege, hatKasse, hatVorbestellung, hatTermine, hatHelferplan, hatAbstimmungen, hatAntraege, hatPush,
-} from './funktionen';
+import type { Funktionen } from './einstellungen';
 
 /**
  * Startseite direkt nach der Anmeldung. Einfache Mitglieder landen auf dem
@@ -22,28 +21,35 @@ export interface NavPunkt {
   auch?: string[];
 }
 
+/** An = Modul aktiv (Default an, wenn keine Flags geladen wurden). */
+function an(fn: Funktionen | undefined, key: keyof Funktionen): boolean {
+  return fn ? fn[key] !== false : true;
+}
+
 /** Punkte fuer alle Mitglieder. Abschaltbare Module werden je Verein gefiltert. */
-export const MITGLIED_PUNKTE: NavPunkt[] = [
-  { label: 'Aktuelles', href: '/mitglieder/bereich' },
-  { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
-  ...(hatVorbestellung ? [{ label: 'Vorbestellung', href: '/mitglieder/vorbestellung' }] : []),
-  ...(hatTermine ? [{ label: 'Termine', href: '/mitglieder/termine' }] : []),
-  ...(hatHelferplan ? [{ label: 'Helferplan', href: '/mitglieder/helferplan' }] : []),
-  ...(hatAbstimmungen ? [{ label: 'Abstimmungen', href: '/mitglieder/abstimmungen' }] : []),
-  { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
-  { label: 'Ausweis', href: '/mitglieder/ausweis' },
-  { label: 'Mein Konto', href: '/mitglieder/profil' },
-  { label: 'App', href: '/mitglieder/app' },
-  { label: 'Sicherheit', href: '/mitglieder/sicherheit' },
-];
+export function mitgliedPunkte(fn?: Funktionen): NavPunkt[] {
+  return [
+    { label: 'Aktuelles', href: '/mitglieder/bereich' },
+    { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
+    ...(an(fn, 'vorbestellung') ? [{ label: 'Vorbestellung', href: '/mitglieder/vorbestellung' }] : []),
+    ...(an(fn, 'termine') ? [{ label: 'Termine', href: '/mitglieder/termine' }] : []),
+    ...(an(fn, 'helferplan') ? [{ label: 'Helferplan', href: '/mitglieder/helferplan' }] : []),
+    ...(an(fn, 'abstimmungen') ? [{ label: 'Abstimmungen', href: '/mitglieder/abstimmungen' }] : []),
+    { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
+    { label: 'Ausweis', href: '/mitglieder/ausweis' },
+    { label: 'Mein Konto', href: '/mitglieder/profil' },
+    { label: 'App', href: '/mitglieder/app' },
+    { label: 'Sicherheit', href: '/mitglieder/sicherheit' },
+  ];
+}
 
 /** Vereinsarbeits-Punkte je nach Rollen (leeres Array fuer reine Mitglieder). */
-export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
+export function arbeitPunkteFuer(rollen?: string[], fn?: Funktionen): NavPunkt[] {
   const punkte: NavPunkt[] = [];
   if (darfAusgeben(rollen)) {
     // Ausgabe buendelt Abgabe (Bluete/Haschisch/Rosin) und Samen/Stecklinge.
     punkte.push({ label: 'Ausgabe', href: '/mitglieder/ausgabe' });
-    if (hatKasse) punkte.push({ label: 'Kasse', href: '/mitglieder/kasse' });
+    if (an(fn, 'kasse')) punkte.push({ label: 'Kasse', href: '/mitglieder/kasse' });
   }
   if (darfAnbau(rollen)) {
     punkte.push({ label: 'Anbau heute', href: '/mitglieder/anbau' });
@@ -62,21 +68,22 @@ export function arbeitPunkteFuer(rollen?: string[]): NavPunkt[] {
   return punkte;
 }
 
-/** Reiter des Verwaltungs-Bereichs (Vorstand). Zentral, damit alle Seiten
- *  denselben Satz zeigen. Die Beitrags-Reiter entfallen, wenn das Beitrags-Modul
- *  für den Verein abgeschaltet ist. */
-export const VERWALTUNG_TABS: { label: string; href: string }[] = [
-  { label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' },
-  ...(hatAntraege ? [{ label: 'Anträge', href: '/mitglieder/antraege' }] : []),
-  ...(hatBeitraege
-    ? [
-        { label: 'Beiträge', href: '/mitglieder/beitraege' },
-        { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
-      ]
-    : []),
-  ...(hatPush ? [{ label: 'Nachricht', href: '/mitglieder/nachricht' }] : []),
-  { label: 'Protokoll', href: '/mitglieder/verwaltung/protokoll' },
-];
+/** Reiter des Verwaltungs-Bereichs (Vorstand). Abschaltbare Reiter je nach Modul. */
+export function verwaltungTabs(fn?: Funktionen): { label: string; href: string }[] {
+  return [
+    { label: 'Mitglieder & Rollen', href: '/mitglieder/verwaltung' },
+    ...(an(fn, 'antraege') ? [{ label: 'Anträge', href: '/mitglieder/antraege' }] : []),
+    ...(an(fn, 'beitraege')
+      ? [
+          { label: 'Beiträge', href: '/mitglieder/beitraege' },
+          { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
+        ]
+      : []),
+    ...(an(fn, 'push') ? [{ label: 'Nachricht', href: '/mitglieder/nachricht' }] : []),
+    { label: 'Module', href: '/mitglieder/verwaltung/module' },
+    { label: 'Protokoll', href: '/mitglieder/verwaltung/protokoll' },
+  ];
+}
 
 /** Ist der Punkt fuer den aktuellen Pfad aktiv (inkl. gebuendelter Seiten)? */
 export function istAktiv(p: NavPunkt, pfadname: string): boolean {

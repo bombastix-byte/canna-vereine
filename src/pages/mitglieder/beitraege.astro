@@ -1,14 +1,14 @@
 ---
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
-import { VERWALTUNG_TABS } from '../../lib/mitglied-nav';
+import { verwaltungTabs } from '../../lib/mitglied-nav';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten } from '../../lib/rollen';
 import { sepaGlaeubigerAusEnv } from '../../lib/sepa';
 import { berlinTag } from '../../lib/ausgabe';
-import { hatBeitraege } from '../../lib/funktionen';
-
+const __fn = Astro.locals.funktionen;
+const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Mitgliedsbeitraege: SEPA-Lastschriftdatei erzeugen. Nur Vorstand.
 // Bewusst schlank - kein Buchhaltungssystem, nur die Einzugsdatei fuer die Bank.
 export const prerender = false;
@@ -59,7 +59,7 @@ const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2,
 <Basis titel="Mitgliedsbeiträge" beschreibung="SEPA-Lastschrift für die Monatsbeiträge erzeugen.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
-  <UnterNav punkte={VERWALTUNG_TABS} />
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
   <h1 style="margin-bottom:0.4rem;">Mitgliedsbeiträge (SEPA)</h1>
   <p class="einleitung">
     Erzeugt eine SEPA-Lastschriftdatei (pain.008) für alle Mitglieder mit
