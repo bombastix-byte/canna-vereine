@@ -13,8 +13,13 @@ const sites: Record<string, SiteConfig> = {
   cvg,
 };
 
-// Welche Seite gebaut/ausgeliefert wird, steuert SITE_ID (Default: goerlitz).
-const aktiveId = (import.meta.env.SITE_ID as string | undefined) ?? 'goerlitz';
+// Welche Seite ausgeliefert wird, steuert SITE_ID. Wird zur Build-Zeit
+// (import.meta.env, statischer Build) ODER zur Laufzeit (process.env im
+// Node-Server, ein Image für alle Vereine) gelesen. Default: goerlitz.
+const aktiveId =
+  (import.meta.env.SITE_ID as string | undefined) ||
+  (typeof process !== 'undefined' ? process.env?.SITE_ID : undefined) ||
+  'goerlitz';
 
 export const site: SiteConfig = sites[aktiveId] ?? goerlitz;
 

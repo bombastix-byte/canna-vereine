@@ -32,6 +32,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      SITE_ID: goerlitz
       PB_URL: http://pb-goerlitz:8090
       PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ}
       APK_PFAD: /downloads/canna-verein.apk
@@ -68,6 +69,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      SITE_ID: cvg
       PB_URL: http://pb-cvg:8090
       PB_PUBLIC_URL: https://${DOMAIN_CVG}
     depends_on:
@@ -95,6 +97,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      SITE_ID: goerlitz2
       PB_URL: http://pb-goerlitz2:8090
       PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ2}
     depends_on:
@@ -117,6 +120,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      SITE_ID: leipzig
       PB_URL: http://pb-leipzig:8090
       PB_PUBLIC_URL: https://${DOMAIN_LEIPZIG}
     depends_on:
