@@ -49,6 +49,7 @@ services:
     # CRON_TOKEN fuer den taeglichen Erinnerungs-Hook (pb_hooks/erinnerungen.pb.js).
     environment:
       CRON_TOKEN: ${CRON_TOKEN}
+      ERINNERUNG_TARGET: http://astro-goerlitz:4321
     volumes:
       - pb_goerlitz:/pb/pb_data
       # JS-Hooks (u. a. Erinnerungs-Cron). Nur lesend eingebunden.
@@ -56,6 +57,33 @@ services:
       # Automatische PocketBase-Backups landen auf dem Host (überleben so einen
       # Verlust des pb_data-Volumes). Off-site zusätzlich sichern.
       - ./backups/goerlitz:/pb/pb_data/backups
+
+  # ---------- CVG (Produktiv-Instanz) ----------
+  astro-cvg:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.astro
+      args:
+        SITE_ID: cvg
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PB_URL: http://pb-cvg:8090
+      PB_PUBLIC_URL: https://${DOMAIN_CVG}
+    depends_on:
+      - pb-cvg
+  pb-cvg:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.pocketbase
+    restart: unless-stopped
+    environment:
+      CRON_TOKEN: ${CRON_TOKEN}
+      ERINNERUNG_TARGET: http://astro-cvg:4321
+    volumes:
+      - pb_cvg:/pb/pb_data
+      - ./pb_hooks:/pb/pb_hooks:ro
+      - ./backups/cvg:/pb/pb_data/backups
 
   # ---------- Goerlitz 2 (CSC) ----------
   astro-goerlitz2:
@@ -106,6 +134,8 @@ volumes:
   caddy_config:
   pb_goerlitz:
     name: canna_pb_goerlitz
+  pb_cvg:
+    name: canna_pb_cvg
   pb_goerlitz2:
     name: canna_pb_goerlitz2
   pb_leipzig:

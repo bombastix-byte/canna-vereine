@@ -2,6 +2,7 @@ import type { SiteConfig, NavPunkt } from './types';
 import { goerlitz } from './goerlitz';
 import { goerlitz2 } from './goerlitz2';
 import { leipzig } from './leipzig';
+import { cvg } from './cvg';
 export { produkt } from './produkt';
 
 // Registry aller Vereinsseiten. Weitere Seite: Config importieren und ergänzen.
@@ -9,6 +10,7 @@ const sites: Record<string, SiteConfig> = {
   goerlitz,
   goerlitz2,
   leipzig,
+  cvg,
 };
 
 // Welche Seite gebaut/ausgeliefert wird, steuert SITE_ID (Default: goerlitz).

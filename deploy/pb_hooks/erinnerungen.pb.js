@@ -10,9 +10,11 @@ cronAdd("erinnerungen", "0 8 * * *", () => {
     console.log("[erinnerungen] CRON_TOKEN nicht gesetzt - übersprungen");
     return;
   }
+  // Ziel-Astro-Container je Verein über ERINNERUNG_TARGET (Fallback goerlitz).
+  const ziel = $os.getenv("ERINNERUNG_TARGET") || "http://astro-goerlitz:4321";
   try {
     const res = $http.send({
-      url: "http://astro-goerlitz:4321/api/erinnerungen?token=" + token,
+      url: ziel + "/api/erinnerungen?token=" + token,
       method: "GET",
       timeout: 120,
     });
