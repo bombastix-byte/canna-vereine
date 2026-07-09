@@ -35,6 +35,7 @@ export function mitgliedPunkte(fn?: Funktionen): NavPunkt[] {
     ...(an(fn, 'termine') ? [{ label: 'Termine', href: '/mitglieder/termine' }] : []),
     ...(an(fn, 'helferplan') ? [{ label: 'Helferplan', href: '/mitglieder/helferplan' }] : []),
     ...(an(fn, 'abstimmungen') ? [{ label: 'Abstimmungen', href: '/mitglieder/abstimmungen' }] : []),
+    ...(an(fn, 'brett') ? [{ label: 'Schwarzes Brett', href: '/mitglieder/brett' }] : []),
     { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
     { label: 'Ausweis', href: '/mitglieder/ausweis' },
     { label: 'Mein Konto', href: '/mitglieder/profil' },

@@ -37,6 +37,8 @@ const SEEDS = [
   'seed-termine-rsvp.mjs',     // Feature 10
   'seed-einstellungen.mjs',    // Laufzeit-Module
   'seed-kassen-konnektor.mjs', // externe Kasse
+  'seed-bewertungen.mjs',      // Sortenbewertung
+  'seed-brett.mjs',            // Schwarzes Brett
   'seed-angebot.mjs',
   'seed-anleitungen.mjs',
   'seed-abstimmungen.mjs',

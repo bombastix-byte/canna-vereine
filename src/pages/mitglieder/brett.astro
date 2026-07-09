@@ -1,0 +1,127 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+
+// Schwarzes Brett: Beiträge der Mitglieder mit einer Antwort-Ebene. Bewusst
+// ruhig (keine Likes, kein Live-Chat) — passt zum sachlichen KCanG-Stil.
+export const prerender = false;
+
+const __fn = Astro.locals.funktionen;
+const hatBrett = __fn ? __fn.brett !== false : true;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!hatBrett) return Astro.redirect('/mitglieder/bereich', 303);
+const vorstand = darfVerwalten(mitglied.rollen);
+
+interface Beitrag {
+  id: string; mitglied: string; text: string; antwort_auf?: string; created: string;
+  expand?: { mitglied?: { vorname?: string; nachname?: string; name?: string } };
+}
+let beitraege: Beitrag[] = [];
+try {
+  beitraege = (await pb.collection('brett_beitraege').getFullList({ sort: '-created', expand: 'mitglied' })) as Beitrag[];
+} catch { beitraege = []; }
+
+const haupt = beitraege.filter((b) => !b.antwort_auf);
+const antwortenAuf = (id: string) =>
+  beitraege.filter((b) => b.antwort_auf === id).sort((a, b) => a.created.localeCompare(b.created));
+const wer = (b: Beitrag) => {
+  const u = b.expand?.mitglied;
+  if (!u) return 'Mitglied';
+  return [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || 'Mitglied';
+};
+const wann = (s: string) =>
+  s ? new Date(s).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+const darfLoeschen = (b: Beitrag) => vorstand || b.mitglied === mitglied.id;
+
+const ok = Astro.url.searchParams.get('ok');
+const fehler = Astro.url.searchParams.get('fehler');
+---
+
+<Basis titel="Schwarzes Brett" beschreibung="Beiträge und Antworten der Mitglieder.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Mitgliederbereich</p>
+  <h1 style="margin-bottom:0.4rem;">Schwarzes Brett</h1>
+  <p class="einleitung">
+    Für Fragen, Angebote und den Austausch unter Mitgliedern. Bitte sachlich
+    bleiben — Beiträge sind für alle Mitglieder sichtbar. Eigene Beiträge kannst
+    du löschen{vorstand ? '; der Vorstand kann alle Beiträge entfernen' : ''}.
+  </p>
+
+  {ok && <p class="hinweis" role="status">{ok === 'geloescht' ? 'Beitrag gelöscht.' : 'Beitrag veröffentlicht.'}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
+
+  <form class="kasten neu" method="post" action="/mitglieder/brett/posten">
+    <label for="b-text" class="sr-only">Neuer Beitrag</label>
+    <textarea class="eingabe" id="b-text" name="text" rows="3" maxlength="2000" required
+      placeholder="Was möchtest du mit dem Verein teilen?"></textarea>
+    <button class="knopf" type="submit">Veröffentlichen</button>
+  </form>
+
+  {haupt.length === 0 ? (
+    <p style="color:var(--ink-soft);">Noch keine Beiträge — schreib den ersten!</p>
+  ) : (
+    haupt.map((b) => (
+      <article class="beitrag" id={`b-${b.id}`}>
+        <header class="b-kopf">
+          <strong>{wer(b)}</strong>
+          <span class="b-zeit">{wann(b.created)}</span>
+          {darfLoeschen(b) && (
+            <form method="post" action="/mitglieder/brett/loeschen" onsubmit="return confirm('Beitrag wirklich löschen?')">
+              <input type="hidden" name="beitrag" value={b.id} />
+              <button class="b-loeschen" type="submit" title="Beitrag löschen" aria-label="Beitrag löschen">✕</button>
+            </form>
+          )}
+        </header>
+        <p class="b-text">{b.text}</p>
+
+        {antwortenAuf(b.id).map((a) => (
+          <div class="antwort">
+            <header class="b-kopf">
+              <strong>{wer(a)}</strong>
+              <span class="b-zeit">{wann(a.created)}</span>
+              {darfLoeschen(a) && (
+                <form method="post" action="/mitglieder/brett/loeschen" onsubmit="return confirm('Antwort wirklich löschen?')">
+                  <input type="hidden" name="beitrag" value={a.id} />
+                  <button class="b-loeschen" type="submit" title="Antwort löschen" aria-label="Antwort löschen">✕</button>
+                </form>
+              )}
+            </header>
+            <p class="b-text">{a.text}</p>
+          </div>
+        ))}
+
+        <details class="antworten">
+          <summary>Antworten</summary>
+          <form method="post" action="/mitglieder/brett/posten">
+            <input type="hidden" name="antwort_auf" value={b.id} />
+            <textarea class="eingabe" name="text" rows="2" maxlength="2000" required placeholder="Deine Antwort…"></textarea>
+            <button class="knopf-sek" type="submit">Antworten</button>
+          </form>
+        </details>
+      </article>
+    ))
+  )}
+</Basis>
+
+<style>
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .neu { display: flex; flex-direction: column; gap: 0.6rem; }
+  .neu .knopf { align-self: flex-start; }
+  .eingabe { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); font: inherit; resize: vertical; }
+  .beitrag { max-width: var(--mass); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); padding: 0.9rem 1rem; margin: 0 0 0.8rem; }
+  .b-kopf { display: flex; gap: 0.6rem; align-items: baseline; }
+  .b-zeit { color: var(--ink-soft); font-size: 0.8rem; flex: 1; }
+  .b-loeschen { border: 1px solid var(--line); background: none; color: var(--ink-soft); border-radius: var(--radius); width: 1.7rem; height: 1.7rem; cursor: pointer; font-size: 0.8rem; }
+  .b-loeschen:hover { border-color: var(--gefahr); color: var(--gefahr); }
+  .b-text { margin: 0.3rem 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+  .antwort { margin: 0.7rem 0 0 1.2rem; padding: 0.6rem 0.8rem; border-left: 2px solid var(--line); }
+  .antworten { margin-top: 0.7rem; }
+  .antworten summary { cursor: pointer; color: var(--ink-soft); font-size: 0.9rem; }
+  .antworten form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+  .antworten .knopf-sek { align-self: flex-start; }
+</style>

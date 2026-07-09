@@ -29,7 +29,7 @@ export interface ErinnerungCharge {
 export type Ziel = { art: 'mitglied'; mitgliedId: string } | { art: 'anbau' } | { art: 'personal' };
 
 export interface Erinnerung {
-  typ: 'beitrag' | 'trocknung' | 'u21';
+  typ: 'beitrag' | 'trocknung' | 'u21' | 'geburtstag';
   ziel: Ziel;
   titel: string;
   text: string;
@@ -78,6 +78,13 @@ export function wird21In(geburtsdatum: string | undefined, heute: string, tage: 
 const nameVon = (u: ErinnerungUser) =>
   u.mitgliedsnummer || [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || 'Mitglied';
 
+/** Hat das Mitglied heute Geburtstag (Monat+Tag stimmen überein)? */
+export function hatHeuteGeburtstag(geburtsdatum: string | undefined, heute: string): boolean {
+  const g = tag(geburtsdatum);
+  if (!g) return false;
+  return g.slice(5, 10) === tag(heute).slice(5, 10);
+}
+
 export interface ErinnerungOpts {
   /** Tag im Monat, an dem Beitragserinnerungen laufen (Default 3.). */
   beitragTag?: number;
@@ -85,6 +92,10 @@ export interface ErinnerungOpts {
   trocknungTage?: number;
   /** Vorlauf für die U21-Erinnerung (Default 30 Tage). */
   u21Vorlauf?: number;
+  /** Vereinsname für den Geburtstagsgruß (Default „Dein Verein"). */
+  vereinsname?: string;
+  /** Geburtstagsgrüße verschicken (Default an). */
+  geburtstagsgruesse?: boolean;
 }
 
 /**
@@ -148,6 +159,24 @@ export function berechneErinnerungen(
         titel: 'U21-Grenze endet bald',
         text: `Mitglied ${nameVon(u)} wird in ${u21Vorlauf} Tagen 21 — ab dann gilt keine verschärfte THC-Grenze mehr.`,
         url: '/mitglieder/ausgabe',
+      });
+    }
+  }
+
+  // 4) Geburtstagsgruß an das Mitglied selbst (nur aktive Mitglieder; genau
+  //    einmal, weil täglicher Lauf + exakter Kalendertag).
+  if (opts.geburtstagsgruesse !== false) {
+    const verein = opts.vereinsname || 'Dein Verein';
+    for (const u of users) {
+      if (!hatHeuteGeburtstag(u.geburtsdatum, heute)) continue;
+      if (effektiverStatus(u, heute) !== 'aktiv') continue;
+      const vorname = u.vorname || (u.name ?? '').split(' ')[0] || '';
+      erinnerungen.push({
+        typ: 'geburtstag',
+        ziel: { art: 'mitglied', mitgliedId: u.id },
+        titel: 'Herzlichen Glückwunsch! 🎉',
+        text: `${vorname ? vorname + ', a' : 'A'}lles Gute zum Geburtstag wünscht dir ${verein}!`,
+        url: '/mitglieder/bereich',
       });
     }
   }

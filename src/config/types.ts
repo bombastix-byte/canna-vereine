@@ -60,6 +60,10 @@ export interface Funktionen {
   antraege?: boolean;
   /** Push-Benachrichtigungen gesamt (Reiter „Nachricht", Erinnerungs-Automatik, Push-Abo). */
   push?: boolean;
+  /** Sortenbewertung durch Mitglieder (Sterne + Kommentar). */
+  bewertungen?: boolean;
+  /** Schwarzes Brett (Beiträge + Antworten der Mitglieder). */
+  brett?: boolean;
 }
 
 /** Schlüssel der abschaltbaren Module (für generische Prüfungen). */
