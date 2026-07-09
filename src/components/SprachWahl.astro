@@ -1,0 +1,50 @@
+---
+import { SPRACHEN, type Sprache } from '../lib/i18n';
+
+// Kleiner Sprachumschalter (DE · EN · PL). Setzt das Cookie über /sprache
+// und kehrt zur aktuellen Seite zurück.
+interface Props {
+  aktuell?: Sprache;
+}
+const aktuell: Sprache = Astro.props.aktuell ?? Astro.locals.sprache ?? 'de';
+const zurueck = Astro.url.pathname;
+---
+
+<nav class="sprachen" aria-label="Sprache / Language / Język">
+  {SPRACHEN.map((s, i) => (
+    <>
+      {i > 0 && <span class="trenner" aria-hidden="true">·</span>}
+      <a
+        href={`/sprache?zu=${s}&zurueck=${encodeURIComponent(zurueck)}`}
+        aria-current={s === aktuell ? 'true' : undefined}
+        lang={s}
+      >{s.toUpperCase()}</a>
+    </>
+  ))}
+</nav>
+
+<style>
+  .sprachen {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: baseline;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+  .sprachen a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 0.15rem 0.2rem;
+    min-height: 0;
+  }
+  .sprachen a[aria-current='true'] {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .sprachen a:hover {
+    color: var(--ink);
+  }
+  .trenner {
+    color: var(--line);
+  }
+</style>

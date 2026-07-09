@@ -3,10 +3,13 @@ import Basis from '../../layouts/Basis.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { HINWEIS_VERSION, mussBestaetigen } from '../../lib/einwilligung';
 import { startseiteFuer } from '../../lib/mitglied-nav';
+import { uebersetzer } from '../../lib/i18n';
+import SprachWahl from '../../components/SprachWahl.astro';
 import { site } from '../../config';
 
 // Präventions-/Gesundheitshinweise nach § 23 KCanG mit Kenntnisnahme-Bestätigung.
 // Bewusst OHNE Navigation: Interstitial beim ersten Login, bis bestätigt wurde.
+// Mehrsprachig (DE/EN/PL), damit alle Mitglieder die Hinweise verstehen.
 export const prerender = false;
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
@@ -16,47 +19,46 @@ const { mitglied } = ergebnis;
 // Schon bestätigt (aktuelle Version)? Dann zurück in den Bereich.
 if (!mussBestaetigen(mitglied)) return Astro.redirect(startseiteFuer(mitglied.rollen), 303);
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehler = Astro.url.searchParams.get('fehler');
 const praev = site.praeventionsbeauftragter;
 ---
 
-<Basis titel="Wichtige Hinweise" beschreibung="Präventions- und Gesundheitshinweise zur Kenntnis nehmen.">
-  <p class="eyebrow">Vor der ersten Nutzung</p>
-  <h1 style="margin-bottom:0.4rem;">Präventions- und Gesundheitshinweise</h1>
-  <p class="einleitung">
-    Bitte lies die folgenden Hinweise nach § 23 Konsumcannabisgesetz aufmerksam
-    und bestätige die Kenntnisnahme. Erst danach steht dir der Mitgliederbereich
-    offen.
-  </p>
+<Basis titel={t('hinweise.titel')} beschreibung="Präventions- und Gesundheitshinweise zur Kenntnis nehmen.">
+  <p class="eyebrow">{t('hinweise.eyebrow')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('hinweise.titel')}</h1>
+  <p class="einleitung">{t('hinweise.intro')}</p>
+  <SprachWahl />
 
-  {fehler && <p class="hinweis hinweis--fehler" role="alert">Bitte setze das Häkchen zur Bestätigung.</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{t('hinweise.fehler')}</p>}
 
   <section class="kasten hinweistext">
-    <h2>Gesundheit &amp; Jugendschutz</h2>
+    <h2>{t('hinweise.h.gesundheit')}</h2>
     <ul>
-      <li>Der Konsum von Cannabis kann die Gesundheit beeinträchtigen, insbesondere bei jungen Menschen, in der Schwangerschaft und Stillzeit.</li>
-      <li>Konsum vor dem 18. Lebensjahr ist verboten. Für unter 21-Jährige gelten strengere THC-Grenzen bei der Abgabe.</li>
-      <li>Bewahre Cannabis unzugänglich für Kinder und Jugendliche auf.</li>
-      <li>Kein Konsum vor dem Führen von Fahrzeugen oder dem Bedienen von Maschinen.</li>
-      <li>Mischkonsum mit Alkohol oder anderen Substanzen erhöht die Risiken erheblich.</li>
+      <li>{t('hinweise.p1')}</li>
+      <li>{t('hinweise.p2')}</li>
+      <li>{t('hinweise.p3')}</li>
+      <li>{t('hinweise.p4')}</li>
+      <li>{t('hinweise.p5')}</li>
     </ul>
-    <h2>Verantwortungsvoller Umgang</h2>
+    <h2>{t('hinweise.h.umgang')}</h2>
     <ul>
-      <li>Die Abgabe erfolgt ausschließlich an Mitglieder zum Eigenkonsum. Eine Weitergabe an Dritte ist verboten.</li>
-      <li>Bei Fragen, Sorgen oder Anzeichen eines problematischen Konsums wende dich an unsere Präventionsbeauftragte/​unseren Präventionsbeauftragten:
-        <strong>{praev.name}</strong>{praev.email ? <> · <a href={`mailto:${praev.email}`}>{praev.email}</a></> : null}.
+      <li>{t('hinweise.p6')}</li>
+      <li>
+        {t('hinweise.p7a')}
+        <strong> {praev.name}</strong>{praev.email ? <> · <a href={`mailto:${praev.email}`}>{praev.email}</a></> : null}.
       </li>
-      <li>Weitere Beratung und Hilfe findest du unter <a href="/praevention-beratung">Prävention und Beratung</a>.</li>
+      <li>{t('hinweise.p8a')} <a href="/praevention-beratung">{t('hinweise.p8link')}</a>.</li>
     </ul>
   </section>
 
   <form method="post" action="/mitglieder/hinweise/bestaetigen" class="bestaetigung">
     <label class="check">
       <input type="checkbox" name="bestaetigt" required />
-      <span>Ich habe die Präventions- und Gesundheitshinweise gelesen und zur Kenntnis genommen.</span>
+      <span>{t('hinweise.check')}</span>
     </label>
-    <button class="knopf" type="submit">Bestätigen &amp; fortfahren</button>
-    <p class="fuss">Version {HINWEIS_VERSION}. Deine Bestätigung wird mit Zeitstempel dokumentiert.</p>
+    <button class="knopf" type="submit">{t('hinweise.knopf')}</button>
+    <p class="fuss">{t('hinweise.version')} {HINWEIS_VERSION}. {t('hinweise.fuss')}</p>
   </form>
 </Basis>
 

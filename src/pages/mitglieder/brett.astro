@@ -3,6 +3,7 @@ import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten } from '../../lib/rollen';
+import { uebersetzer } from '../../lib/i18n';
 
 // Schwarzes Brett: Beiträge der Mitglieder mit einer Antwort-Ebene. Bewusst
 // ruhig (keine Likes, kein Live-Chat) — passt zum sachlichen KCanG-Stil.
@@ -38,32 +39,29 @@ const wann = (s: string) =>
   s ? new Date(s).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 const darfLoeschen = (b: Beitrag) => vorstand || b.mitglied === mitglied.id;
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
 ---
 
 <Basis titel="Schwarzes Brett" beschreibung="Beiträge und Antworten der Mitglieder.">
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Schwarzes Brett</h1>
-  <p class="einleitung">
-    Für Fragen, Angebote und den Austausch unter Mitgliedern. Bitte sachlich
-    bleiben — Beiträge sind für alle Mitglieder sichtbar. Eigene Beiträge kannst
-    du löschen{vorstand ? '; der Vorstand kann alle Beiträge entfernen' : ''}.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('brett.titel')}</h1>
+  <p class="einleitung">{t('brett.intro')}</p>
 
-  {ok && <p class="hinweis" role="status">{ok === 'geloescht' ? 'Beitrag gelöscht.' : 'Beitrag veröffentlicht.'}</p>}
+  {ok && <p class="hinweis" role="status">{ok === 'geloescht' ? t('brett.geloescht') : t('brett.veroeffentlicht')}</p>}
   {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
 
   <form class="kasten neu" method="post" action="/mitglieder/brett/posten">
     <label for="b-text" class="sr-only">Neuer Beitrag</label>
     <textarea class="eingabe" id="b-text" name="text" rows="3" maxlength="2000" required
-      placeholder="Was möchtest du mit dem Verein teilen?"></textarea>
-    <button class="knopf" type="submit">Veröffentlichen</button>
+      placeholder={t('brett.platzhalter')}></textarea>
+    <button class="knopf" type="submit">{t('brett.veroeffentlichen')}</button>
   </form>
 
   {haupt.length === 0 ? (
-    <p style="color:var(--ink-soft);">Noch keine Beiträge — schreib den ersten!</p>
+    <p style="color:var(--ink-soft);">{t('brett.leer')}</p>
   ) : (
     haupt.map((b) => (
       <article class="beitrag" id={`b-${b.id}`}>
@@ -96,11 +94,11 @@ const fehler = Astro.url.searchParams.get('fehler');
         ))}
 
         <details class="antworten">
-          <summary>Antworten</summary>
+          <summary>{t('brett.antworten')}</summary>
           <form method="post" action="/mitglieder/brett/posten">
             <input type="hidden" name="antwort_auf" value={b.id} />
-            <textarea class="eingabe" name="text" rows="2" maxlength="2000" required placeholder="Deine Antwort…"></textarea>
-            <button class="knopf-sek" type="submit">Antworten</button>
+            <textarea class="eingabe" name="text" rows="2" maxlength="2000" required placeholder={t('brett.antwort_platzhalter')}></textarea>
+            <button class="knopf-sek" type="submit">{t('brett.antworten')}</button>
           </form>
         </details>
       </article>

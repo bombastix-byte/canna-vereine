@@ -5,6 +5,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import QRCode from 'qrcode-svg';
 import { site } from '../../config';
 import { mussBestaetigen } from '../../lib/einwilligung';
+import { uebersetzer } from '../../lib/i18n';
 
 // Digitaler Mitgliedsausweis: Name, Mitgliedsnummer und QR-Code (Inhalt =
 // Mitgliedsnummer). Am Tresen wird der QR ins Schnellfeld gescannt - das
@@ -17,6 +18,7 @@ const { mitglied } = ergebnis;
 // Einwilligungs-Gate: erst die Präventionshinweise bestätigen.
 if (mussBestaetigen(mitglied)) return Astro.redirect('/mitglieder/hinweise', 303);
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const nummer = mitglied.mitgliedsnummer ?? '';
 const qrSvg = nummer
   ? new QRCode({ content: nummer, width: 220, height: 220, padding: 2, ecl: 'M', join: true }).svg()
@@ -25,26 +27,21 @@ const qrSvg = nummer
 
 <Basis titel="Mitgliedsausweis" beschreibung="Digitaler Mitgliedsausweis mit QR-Code.">
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Mitgliedsausweis</h1>
-  <p class="einleitung">
-    Zeig diesen Ausweis am Tresen — der QR-Code wird gescannt und du bist
-    sofort ausgewählt. Ein Bildschirmfoto auf dem Handy reicht.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('ausweis.titel')}</h1>
+  <p class="einleitung">{t('ausweis.intro')}</p>
 
   {!nummer ? (
-    <p class="hinweis hinweis--fehler">Für dein Konto ist noch keine Mitgliedsnummer hinterlegt — bitte beim Vorstand melden.</p>
+    <p class="hinweis hinweis--fehler">{t('ausweis.keine_nummer')}</p>
   ) : (
     <div class="ausweis">
       <p class="ausweis-verein">{site.vereinsname}</p>
       <div class="ausweis-qr" set:html={qrSvg} />
       <p class="ausweis-name">{mitglied.name || mitglied.email}</p>
       <p class="ausweis-nummer">{nummer}</p>
-      <p class="ausweis-fuss">Mitgliedsausweis · nicht übertragbar</p>
+      <p class="ausweis-fuss">{t('ausweis.fuss')}</p>
     </div>
-    <p class="lichtbild-hinweis">
-      Nur zusammen mit einem gültigen amtlichen Lichtbildausweis gültig.
-    </p>
+    <p class="lichtbild-hinweis">{t('ausweis.lichtbild')}</p>
   )}
 </Basis>
 

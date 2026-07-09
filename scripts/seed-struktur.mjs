@@ -31,7 +31,6 @@ const SEEDS = [
   'seed-mahnwesen.mjs',        // Feature 3
   'seed-rueckruf.mjs',         // Feature 4
   'seed-audit.mjs',            // Feature 6
-  'seed-selbstverwaltung.mjs', // Feature 7
   'seed-status.mjs',           // Feature 8
   'seed-einwilligung.mjs',     // Feature 9
   'seed-termine-rsvp.mjs',     // Feature 10
@@ -46,6 +45,7 @@ const SEEDS = [
   'seed-push.mjs',
   'seed-sepa.mjs',
   'seed-erweiterung.mjs',
+  'seed-selbstverwaltung.mjs', // Feature 7 - NACH erweiterung (setzt users.updateRule final)
 ];
 
 if (!process.env.PB_URL || !process.env.PB_ADMIN_EMAIL || !process.env.PB_ADMIN_PW) {

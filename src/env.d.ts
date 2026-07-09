@@ -6,5 +6,7 @@ declare namespace App {
     funktionen?: import('./lib/einstellungen').Funktionen;
     /** Konfiguration der externen Kassen-Anbindung. */
     kasseExtern?: import('./lib/kassen-konnektor').KonnektorConfig;
+    /** Gewählte Oberflächensprache (Cookie, Default de). */
+    sprache?: import('./lib/i18n').Sprache;
   }
 }

@@ -4,6 +4,7 @@
 // Die abschaltbaren Module kommen als Laufzeit-Flags (locals.funktionen) herein.
 import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from './rollen';
 import type { Funktionen } from './einstellungen';
+import { uebersetzer, type Sprache } from './i18n';
 
 /**
  * Startseite direkt nach der Anmeldung. Einfache Mitglieder landen auf dem
@@ -26,21 +27,23 @@ function an(fn: Funktionen | undefined, key: keyof Funktionen): boolean {
   return fn ? fn[key] !== false : true;
 }
 
-/** Punkte fuer alle Mitglieder. Abschaltbare Module werden je Verein gefiltert. */
-export function mitgliedPunkte(fn?: Funktionen): NavPunkt[] {
+/** Punkte fuer alle Mitglieder. Abschaltbare Module werden je Verein gefiltert,
+ *  Labels folgen der gewaehlten Sprache. */
+export function mitgliedPunkte(fn?: Funktionen, sprache: Sprache = 'de'): NavPunkt[] {
+  const t = uebersetzer(sprache);
   return [
-    { label: 'Aktuelles', href: '/mitglieder/bereich' },
-    { label: 'Angebot der Woche', href: '/mitglieder/wochenangebot' },
-    ...(an(fn, 'vorbestellung') ? [{ label: 'Vorbestellung', href: '/mitglieder/vorbestellung' }] : []),
-    ...(an(fn, 'termine') ? [{ label: 'Termine', href: '/mitglieder/termine' }] : []),
-    ...(an(fn, 'helferplan') ? [{ label: 'Helferplan', href: '/mitglieder/helferplan' }] : []),
-    ...(an(fn, 'abstimmungen') ? [{ label: 'Abstimmungen', href: '/mitglieder/abstimmungen' }] : []),
-    ...(an(fn, 'brett') ? [{ label: 'Schwarzes Brett', href: '/mitglieder/brett' }] : []),
-    { label: 'Wissen', href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
-    { label: 'Ausweis', href: '/mitglieder/ausweis' },
-    { label: 'Mein Konto', href: '/mitglieder/profil' },
-    { label: 'App', href: '/mitglieder/app' },
-    { label: 'Sicherheit', href: '/mitglieder/sicherheit' },
+    { label: t('nav.aktuelles'), href: '/mitglieder/bereich' },
+    { label: t('nav.angebot'), href: '/mitglieder/wochenangebot' },
+    ...(an(fn, 'vorbestellung') ? [{ label: t('nav.vorbestellung'), href: '/mitglieder/vorbestellung' }] : []),
+    ...(an(fn, 'termine') ? [{ label: t('nav.termine'), href: '/mitglieder/termine' }] : []),
+    ...(an(fn, 'helferplan') ? [{ label: t('nav.helferplan'), href: '/mitglieder/helferplan' }] : []),
+    ...(an(fn, 'abstimmungen') ? [{ label: t('nav.abstimmungen'), href: '/mitglieder/abstimmungen' }] : []),
+    ...(an(fn, 'brett') ? [{ label: t('nav.brett'), href: '/mitglieder/brett' }] : []),
+    { label: t('nav.wissen'), href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
+    { label: t('nav.ausweis'), href: '/mitglieder/ausweis' },
+    { label: t('nav.konto'), href: '/mitglieder/profil' },
+    { label: t('nav.app'), href: '/mitglieder/app' },
+    { label: t('nav.sicherheit'), href: '/mitglieder/sicherheit' },
   ];
 }
 

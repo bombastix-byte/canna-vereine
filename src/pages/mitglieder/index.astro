@@ -3,6 +3,8 @@ import Basis from '../../layouts/Basis.astro';
 import { site } from '../../config';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { startseiteFuer } from '../../lib/mitglied-nav';
+import { uebersetzer } from '../../lib/i18n';
+import SprachWahl from '../../components/SprachWahl.astro';
 
 // Serverseitig, damit Status-/Fehlermeldungen und bereits angemeldete
 // Mitglieder behandelt werden können.
@@ -18,10 +20,11 @@ if (bereits) {
 const fehler = Astro.url.searchParams.get('fehler');
 const abgemeldet = Astro.url.searchParams.get('abgemeldet');
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehlertext: Record<string, string> = {
-  fehlend: 'Bitte E-Mail-Adresse und Passwort eingeben.',
-  ungueltig: 'Anmeldung nicht möglich. Bitte prüfen Sie Ihre Zugangsdaten.',
-  anmeldung: 'Bitte melden Sie sich an, um den Mitgliederbereich zu sehen.',
+  fehlend: t('login.fehler.fehlend'),
+  ungueltig: t('login.fehler.ungueltig'),
+  anmeldung: t('login.fehler.anmeldung'),
 };
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
 ---
@@ -32,12 +35,10 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
   anonym={site.oeffentlich === false}
 >
   <div class="seitenkopf">
-    <p class="eyebrow">Mitgliederbereich</p>
-    <h1 style="margin-bottom:0.6rem;">Anmeldung</h1>
-    <p class="einleitung">
-      Dieser Bereich ist Mitgliedern vorbehalten. Bitte melden Sie sich mit
-      Ihren Zugangsdaten an.
-    </p>
+    <p class="eyebrow">{t('nav.bereich')}</p>
+    <h1 style="margin-bottom:0.6rem;">{t('login.titel')}</h1>
+    <p class="einleitung">{t('login.intro')}</p>
+    <SprachWahl />
   </div>
 
   {
@@ -49,17 +50,17 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
   }
   {
     abgemeldet && (
-      <p class="hinweis" role="status">Sie wurden abgemeldet.</p>
+      <p class="hinweis" role="status">{t('login.abgemeldet')}</p>
     )
   }
 
   <form class="kasten" method="post" action="/mitglieder/anmelden">
     <div class="feld">
-      <label for="email">E-Mail-Adresse</label>
+      <label for="email">{t('login.email')}</label>
       <input id="email" name="email" type="email" autocomplete="username" required />
     </div>
     <div class="feld">
-      <label for="passwort">Passwort</label>
+      <label for="passwort">{t('login.passwort')}</label>
       <input
         id="passwort"
         name="passwort"
@@ -68,7 +69,7 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
         required
       />
     </div>
-    <button class="knopf" type="submit">Anmelden</button>
+    <button class="knopf" type="submit">{t('login.knopf')}</button>
   </form>
 
   {site.oeffentlich !== false && (

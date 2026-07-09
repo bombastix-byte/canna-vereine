@@ -2,6 +2,8 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { uebersetzer } from '../../lib/i18n';
+import SprachWahl from '../../components/SprachWahl.astro';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Mein Konto: das Mitglied pflegt eigene Kontakt- und SEPA-Daten selbst.
@@ -19,6 +21,7 @@ try {
   u = {};
 }
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
 const name = [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || '';
@@ -29,30 +32,27 @@ const hatMandat = !!(u.mandatsref && u.mandatsdatum);
 
 <Basis titel="Mein Konto" beschreibung="Eigene Kontakt- und SEPA-Daten pflegen.">
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Mein Konto</h1>
-  <p class="einleitung">
-    Hier pflegst du deine Kontaktdaten{hatBeitraege ? ' und dein SEPA-Lastschriftmandat' : ''} selbst.
-    Name, Mitgliedsnummer und Stammdaten verwaltet der Vorstand — melde dich
-    bei Änderungen dort.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('profil.titel')}</h1>
+  <p class="einleitung">{hatBeitraege ? t('profil.intro.mit_sepa') : t('profil.intro.ohne_sepa')}</p>
+  <p style="margin:0 0 1rem;"><SprachWahl /></p>
 
-  {ok && <p class="hinweis" role="status">Gespeichert. Danke!</p>}
-  {fehler && <p class="hinweis hinweis--fehler" role="alert">Das hat nicht geklappt. Bitte erneut versuchen.</p>}
+  {ok && <p class="hinweis" role="status">{t('profil.gespeichert')}</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{t('profil.fehler')}</p>}
 
   <section class="kasten identitaet">
-    <h2 style="margin-top:0;">Meine Daten</h2>
-    <div class="zeile"><span>Mitgliedsnummer</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
-    <div class="zeile"><span>Name</span><strong>{name || '—'}</strong></div>
-    <div class="zeile"><span>Geburtsdatum</span><strong>{gebDe}</strong></div>
-    <div class="zeile"><span>E-Mail (Login)</span><strong>{u.email}</strong></div>
-    <p class="fuss">Diese Angaben ändert nur der Vorstand.</p>
+    <h2 style="margin-top:0;">{t('profil.meine_daten')}</h2>
+    <div class="zeile"><span>{t('profil.nummer')}</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
+    <div class="zeile"><span>{t('profil.name')}</span><strong>{name || '—'}</strong></div>
+    <div class="zeile"><span>{t('profil.geburtsdatum')}</span><strong>{gebDe}</strong></div>
+    <div class="zeile"><span>{t('profil.email_login')}</span><strong>{u.email}</strong></div>
+    <p class="fuss">{t('profil.nur_vorstand')}</p>
   </section>
 
   <form class="kasten" method="post" action="/mitglieder/profil/speichern">
-    <h2 style="margin-top:0;">Kontakt</h2>
+    <h2 style="margin-top:0;">{t('profil.kontakt')}</h2>
     <div class="feld">
-      <label for="telefon">Telefon</label>
+      <label for="telefon">{t('profil.telefon')}</label>
       <input class="eingabe" id="telefon" name="telefon" type="tel" value={u.telefon ?? ''} placeholder="z. B. 0170 1234567" />
     </div>
 
@@ -83,7 +83,7 @@ const hatMandat = !!(u.mandatsref && u.mandatsdatum);
       </>
     )}
 
-    <button class="knopf" type="submit" style="margin-top:1rem;">Speichern</button>
+    <button class="knopf" type="submit" style="margin-top:1rem;">{t('profil.speichern')}</button>
   </form>
 </Basis>
 

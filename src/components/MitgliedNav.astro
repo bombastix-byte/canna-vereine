@@ -6,6 +6,7 @@ import {
   istAktiv as punktAktiv,
   type NavPunkt,
 } from '../lib/mitglied-nav';
+import { uebersetzer } from '../lib/i18n';
 
 // Interne Navigation des Mitgliederbereichs fuer die Layouts "standard"/
 // "zentriert". Im Layout "sidebar" uebernimmt die Seitenleiste (Sidebar.astro)
@@ -18,7 +19,9 @@ const { rollen } = Astro.props;
 
 const sidebarLayout = (site.layout ?? 'standard') === 'sidebar';
 const funktionen = Astro.locals.funktionen;
-const mitgliedPunkte = baueMitgliedPunkte(funktionen);
+const sprache = Astro.locals.sprache ?? 'de';
+const tNav = uebersetzer(sprache);
+const mitgliedPunkte = baueMitgliedPunkte(funktionen, sprache);
 const arbeitPunkte = arbeitPunkteFuer(rollen, funktionen);
 const istAktiv = (p: NavPunkt) => punktAktiv(p, Astro.url.pathname);
 ---
@@ -34,7 +37,7 @@ const istAktiv = (p: NavPunkt) => punktAktiv(p, Astro.url.pathname);
         </a>
       ))
     }
-    <a class="mnav-aus" href="/mitglieder/abmelden">Abmelden</a>
+    <a class="mnav-aus" href="/mitglieder/abmelden">{tNav('nav.abmelden')}</a>
   </div>
   {
     arbeitPunkte.length > 0 && (

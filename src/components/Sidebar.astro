@@ -4,6 +4,8 @@ import { pfad } from '../lib/url';
 import Mark from './Mark.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../lib/pb';
 import { mitgliedPunkte as baueMitgliedPunkte, arbeitPunkteFuer, istAktiv as punktAktiv } from '../lib/mitglied-nav';
+import { uebersetzer } from '../lib/i18n';
+import SprachWahl from './SprachWahl.astro';
 
 // Seitenleiste (Layout "sidebar"). Oeffentliche Navigation fuer Besucher;
 // fuer angemeldete Mitglieder zusaetzlich der komplette Mitgliederbereich
@@ -21,7 +23,9 @@ try {
   mitglied = null;
 }
 const funktionen = Astro.locals.funktionen;
-const MITGLIED_PUNKTE = baueMitgliedPunkte(funktionen);
+const sprache = Astro.locals.sprache ?? 'de';
+const tNav = uebersetzer(sprache);
+const MITGLIED_PUNKTE = baueMitgliedPunkte(funktionen, sprache);
 const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen, funktionen) : [];
 
 // Anonyme Eingangs-Ansicht: nicht angemeldet UND kein oeffentlicher Auftritt.
@@ -59,7 +63,7 @@ const anonym = !mitglied && site.oeffentlich === false;
 {mitglied ? (
   <>
     <nav class="sb-nav" aria-label="Mitgliederbereich">
-      <p class="sb-gruppe">Mitgliederbereich</p>
+      <p class="sb-gruppe">{tNav('nav.bereich')}</p>
       <ul>
         {MITGLIED_PUNKTE.map((p) => (
           <li>
@@ -81,10 +85,11 @@ const anonym = !mitglied && site.oeffentlich === false;
       )}
     </nav>
     <div class="sb-info">
-      <a href="/mitglieder/abmelden">Abmelden</a>
+      <a href="/mitglieder/abmelden">{tNav('nav.abmelden')}</a>
       {site.oeffentlich !== false && <a href={pfad('/')}>Zur Website</a>}
       <a href={pfad('/impressum')}>Impressum</a>
       <a href={pfad('/datenschutz')}>Datenschutz</a>
+      <SprachWahl aktuell={sprache} />
     </div>
   </>
 ) : anonym ? (

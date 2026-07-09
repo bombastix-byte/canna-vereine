@@ -50,7 +50,14 @@ await ensureCollection({
 });
 
 // Vorstand darf Mitglieder pflegen (Rollen/Stammdaten in der Verwaltung).
-await pb.collections.update('users', { updateRule: REGEL.vorstand });
-console.log('users.updateRule = Vorstand gesetzt.');
+// NUR setzen, wenn noch keine Regel existiert - sonst wuerde die feinere
+// Selbstverwaltungs-Regel (seed-selbstverwaltung.mjs) ueberschrieben.
+const usersColRegel = await pb.collections.getOne('users');
+if (!usersColRegel.updateRule) {
+  await pb.collections.update('users', { updateRule: REGEL.vorstand });
+  console.log('users.updateRule = Vorstand gesetzt.');
+} else {
+  console.log('users.updateRule vorhanden - unangetastet.');
+}
 
 console.log('\nFertig. Erweiterungen eingerichtet.');
