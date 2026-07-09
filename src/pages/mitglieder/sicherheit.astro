@@ -5,6 +5,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { neuesSecret, otpauthUrl } from '../../lib/totp';
 import QRCode from 'qrcode-svg';
 import { site } from '../../config';
+import { uebersetzer } from '../../lib/i18n';
 
 // Zwei-Faktor-Anmeldung einrichten/verwalten (TOTP, Authenticator-App).
 // Besonders empfohlen fuer Personal-Konten (Tresen, Anbau, Vorstand).
@@ -31,84 +32,92 @@ const qrSvg = secret
 
 const fehler = Astro.url.searchParams.get('fehler');
 const ok = Astro.url.searchParams.get('ok');
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehlertext: Record<string, string> = {
-  code: 'Der Code war nicht gültig — bitte mit dem aktuellen Code aus der App erneut versuchen.',
-  fehlgeschlagen: 'Das hat nicht geklappt. Bitte erneut versuchen.',
+  code: t('sich.fehler.code'),
+  fehlgeschlagen: t('sich.fehler.fehlgeschlagen'),
+};
+// Übersetzte Texte fürs Inline-Push-Script (per JSON-Blob übergeben).
+const pushTexte = {
+  pruefe: t('push.pruefe'),
+  unsupported: t('push.unsupported'),
+  aktiv: t('push.aktiv'),
+  blockiert: t('push.blockiert'),
+  inaktiv: t('push.inaktiv'),
+  geprueft_fehler: t('push.geprueft_fehler'),
+  nicht_eingerichtet: t('push.nicht_eingerichtet'),
+  ohne_erlaubnis: t('push.ohne_erlaubnis'),
+  jetzt_aktiv: t('push.jetzt_aktiv'),
+  speichern_fehler: t('push.speichern_fehler'),
+  deaktiviert: t('push.deaktiviert'),
+  fehler: t('push.fehler'),
 };
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 ---
 
-<Basis titel="Sicherheit" beschreibung="Zwei-Faktor-Anmeldung verwalten.">
+<Basis titel={t('nav.sicherheit')} beschreibung={t('sich.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Sicherheit</h1>
-  <p class="einleitung">
-    Mit der Zwei-Faktor-Anmeldung brauchst du beim Anmelden zusätzlich zum
-    Passwort einen 6-stelligen Code aus einer Authenticator-App.
-    Für Konten mit Vereinsarbeit (Tresen, Anbau, Vorstand) dringend empfohlen.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('nav.sicherheit')}</h1>
+  <p class="einleitung">{t('sich.intro')}</p>
 
   {meldung && <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>}
-  {ok === 'an' && <p class="hinweis" role="status">Zwei-Faktor-Anmeldung ist jetzt aktiv.</p>}
-  {ok === 'aus' && <p class="hinweis" role="status">Zwei-Faktor-Anmeldung wurde deaktiviert.</p>}
+  {ok === 'an' && <p class="hinweis" role="status">{t('sich.ok_an')}</p>}
+  {ok === 'aus' && <p class="hinweis" role="status">{t('sich.ok_aus')}</p>}
 
   {aktiv ? (
     <div class="kasten">
-      <p><span class="abzeichen abzeichen--ok">aktiv</span> Deine Anmeldung ist mit einem zweiten Faktor geschützt.</p>
+      <p><span class="abzeichen abzeichen--ok">{t('sich.aktiv_badge')}</span> {t('sich.aktiv_text')}</p>
       <form method="post" action="/mitglieder/sicherheit/deaktivieren">
         <div class="feld">
-          <label for="code">Zum Deaktivieren: aktueller Code aus der App</label>
+          <label for="code">{t('sich.deaktiv_label')}</label>
           <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required style="max-width:10rem;" />
         </div>
-        <button class="knopf-sek" type="submit">Zwei-Faktor deaktivieren</button>
+        <button class="knopf-sek" type="submit">{t('sich.deaktiv_btn')}</button>
       </form>
     </div>
   ) : (
     <div class="kasten">
-      <h2 style="margin-top:0;">Einrichten (2 Minuten)</h2>
+      <h2 style="margin-top:0;">{t('sich.einrichten_h')}</h2>
       <ol style="margin:0 0 1rem;padding-left:1.3rem;">
-        <li>Authenticator-App öffnen (z. B. Google Authenticator, Aegis, 2FAS).</li>
-        <li>Diesen QR-Code scannen.</li>
-        <li>Den angezeigten 6-stelligen Code unten eingeben.</li>
+        <li>{t('sich.schritt1')}</li>
+        <li>{t('sich.schritt2')}</li>
+        <li>{t('sich.schritt3')}</li>
       </ol>
       <div class="qr" set:html={qrSvg} />
-      <p style="color:var(--ink-soft);font-size:0.85rem;">Ohne Kamera: Geheimnis von Hand eintragen: <code>{secret}</code></p>
+      <p style="color:var(--ink-soft);font-size:0.85rem;">{t('sich.ohne_kamera')} <code>{secret}</code></p>
       <form method="post" action="/mitglieder/sicherheit/aktivieren">
         <input type="hidden" name="secret" value={secret} />
         <div class="feld">
-          <label for="code">Code aus der App</label>
+          <label for="code">{t('sich.code_label')}</label>
           <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" style="max-width:10rem;" />
         </div>
-        <button class="knopf" type="submit">Zwei-Faktor aktivieren</button>
+        <button class="knopf" type="submit">{t('sich.aktivieren_btn')}</button>
       </form>
     </div>
   )}
 
-  <p style="color:var(--ink-soft);font-size:0.92rem;max-width:var(--mass);">
-    Handy verloren? Der Vorstand kann die Zwei-Faktor-Anmeldung für dein Konto
-    im System zurücksetzen — danach richtest du sie hier neu ein.
-  </p>
+  <p style="color:var(--ink-soft);font-size:0.92rem;max-width:var(--mass);">{t('sich.handy_verloren')}</p>
 
-  <h2>Benachrichtigungen</h2>
+  <h2>{t('sich.benachr_h')}</h2>
   <div class="kasten" id="push-box">
-    <p style="margin-top:0;">
-      Erhalte eine Push-Nachricht auf dieses Gerät, wenn es etwas Wichtiges gibt
-      (z. B. eine neue Abstimmung). Funktioniert am besten in der installierten App.
-    </p>
-    <p id="push-status" class="push-status">Status wird geprüft …</p>
+    <p style="margin-top:0;">{t('sich.benachr_text')}</p>
+    <p id="push-status" class="push-status">{t('push.pruefe')}</p>
     <div class="push-knoepfe">
-      <button class="knopf" type="button" id="push-an" hidden>Benachrichtigungen aktivieren</button>
-      <button class="knopf-sek" type="button" id="push-aus" hidden>Deaktivieren</button>
+      <button class="knopf" type="button" id="push-an" hidden>{t('sich.push_an')}</button>
+      <button class="knopf-sek" type="button" id="push-aus" hidden>{t('sich.push_aus')}</button>
     </div>
   </div>
 </Basis>
 
+<script id="push-i18n" type="application/json" set:html={JSON.stringify(pushTexte)}></script>
 <script is:inline>
   (function () {
     var statusEl = document.getElementById('push-status');
     var anBtn = document.getElementById('push-an');
     var ausBtn = document.getElementById('push-aus');
     if (!statusEl) return;
+    var PT = JSON.parse(document.getElementById('push-i18n').textContent);
 
     function b64ToU8(base64) {
       var pad = '='.repeat((4 - (base64.length % 4)) % 4);
@@ -125,7 +134,7 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
     }
 
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-      setze('Dieses Gerät/dieser Browser unterstützt keine Push-Benachrichtigungen.', false, false);
+      setze(PT.unsupported, false, false);
       return;
     }
 
@@ -133,11 +142,11 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
       try {
         var reg = await navigator.serviceWorker.ready;
         var sub = await reg.pushManager.getSubscription();
-        if (sub) setze('Benachrichtigungen sind auf diesem Gerät aktiv.', false, true);
-        else if (Notification.permission === 'denied') setze('Benachrichtigungen sind im Browser blockiert — bitte in den Website-Einstellungen erlauben.', false, false);
-        else setze('Benachrichtigungen sind auf diesem Gerät nicht aktiv.', true, false);
+        if (sub) setze(PT.aktiv, false, true);
+        else if (Notification.permission === 'denied') setze(PT.blockiert, false, false);
+        else setze(PT.inaktiv, true, false);
       } catch (e) {
-        setze('Status konnte nicht geprüft werden.', true, false);
+        setze(PT.geprueft_fehler, true, false);
       }
     }
 
@@ -146,18 +155,18 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
       try {
         var vapid = await (await fetch('/mitglieder/push/vapid')).json();
         if (!vapid.konfiguriert || !vapid.key) {
-          setze('Der Verein hat den Push-Versand noch nicht eingerichtet.', false, false);
+          setze(PT.nicht_eingerichtet, false, false);
           return;
         }
         var perm = await Notification.requestPermission();
-        if (perm !== 'granted') { setze('Ohne Erlaubnis keine Benachrichtigungen.', true, false); return; }
+        if (perm !== 'granted') { setze(PT.ohne_erlaubnis, true, false); return; }
         var reg = await navigator.serviceWorker.ready;
         var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(vapid.key) });
         var r = await fetch('/mitglieder/push/anmelden', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sub) });
-        if (r.ok) setze('Benachrichtigungen sind jetzt aktiv.', false, true);
-        else setze('Das Speichern hat nicht geklappt. Bitte erneut versuchen.', true, false);
+        if (r.ok) setze(PT.jetzt_aktiv, false, true);
+        else setze(PT.speichern_fehler, true, false);
       } catch (e) {
-        setze('Das hat nicht geklappt: ' + (e && e.message ? e.message : e), true, false);
+        setze(PT.fehler + ' ' + (e && e.message ? e.message : e), true, false);
       } finally {
         anBtn.disabled = false;
       }
@@ -172,9 +181,9 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
           await fetch('/mitglieder/push/abmelden', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
           await sub.unsubscribe();
         }
-        setze('Benachrichtigungen sind deaktiviert.', true, false);
+        setze(PT.deaktiviert, true, false);
       } catch (e) {
-        setze('Das hat nicht geklappt.', false, true);
+        setze(PT.fehler, false, true);
       } finally {
         ausBtn.disabled = false;
       }

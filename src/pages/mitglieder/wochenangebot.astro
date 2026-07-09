@@ -3,6 +3,7 @@ import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfAusgeben } from '../../lib/rollen';
+import { uebersetzer } from '../../lib/i18n';
 
 // Geschützt. Sachliche Info zur aktuellen Abgabe an Mitglieder (KCanG Paragraf 6:
 // kein öffentliches Marketing, rein interne Vereinsinformation).
@@ -15,6 +16,7 @@ if (!ergebnis) {
 const { pb, mitglied } = ergebnis;
 const kannPflegen = darfAusgeben(mitglied.rollen);
 const gespeichert = Astro.url.searchParams.get('ok') === '1';
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 
 interface Sorte {
   name: string;
@@ -50,8 +52,8 @@ const datum = (iso?: string) =>
     : '';
 
 const zeitraum = (a: Angebot) => {
-  if (a.gueltig_von && a.gueltig_bis) return `${datum(a.gueltig_von)} bis ${datum(a.gueltig_bis)}`;
-  if (a.gueltig_von) return `ab ${datum(a.gueltig_von)}`;
+  if (a.gueltig_von && a.gueltig_bis) return `${datum(a.gueltig_von)} ${t('angebot.bis')} ${datum(a.gueltig_bis)}`;
+  if (a.gueltig_von) return `${t('angebot.ab')} ${datum(a.gueltig_von)}`;
   return '';
 };
 
@@ -65,14 +67,11 @@ const sortiere = (sorten: Sorte[]) =>
   });
 ---
 
-<Basis titel="Angebot der Woche" beschreibung="Aktuelle Abgabe an Mitglieder.">
+<Basis titel={t('nav.angebot')} beschreibung={t('angebot.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Angebot der Woche</h1>
-  <p class="einleitung">
-    Aktuelle Abgabe an Mitglieder zum Selbstkostenbeitrag. Diese Angaben sind rein
-    interne Vereinsinformation und nicht öffentlich einsehbar.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('nav.angebot')}</h1>
+  <p class="einleitung">{t('angebot.intro')}</p>
 
   {gespeichert && <p class="hinweis" role="status">Angebot gespeichert.</p>}
   {kannPflegen && (
@@ -81,7 +80,7 @@ const sortiere = (sorten: Sorte[]) =>
 
   {
     angebote.length === 0 ? (
-      <p style="color:var(--ink-soft);">Derzeit ist keine Abgabe eingetragen.</p>
+      <p style="color:var(--ink-soft);">{t('angebot.keine')}</p>
     ) : (
       angebote.map((a) => (
         <div class="kasten">
@@ -95,8 +94,8 @@ const sortiere = (sorten: Sorte[]) =>
             <table class="sortentabelle">
               <thead>
                 <tr>
-                  <th>Sorte</th>
-                  <th>Typ</th>
+                  <th>{t('angebot.th_sorte')}</th>
+                  <th>{t('angebot.th_typ')}</th>
                   <th class="num">THC</th>
                   <th class="num">CBD</th>
                 </tr>
@@ -118,7 +117,7 @@ const sortiere = (sorten: Sorte[]) =>
               {a.inhalt}
             </p>
           )}
-          <a class="knopf" href="/mitglieder/vorbestellung">Zur Vorbestellung</a>
+          <a class="knopf" href="/mitglieder/vorbestellung">{t('angebot.zur_vorbe')}</a>
         </div>
       ))
     )

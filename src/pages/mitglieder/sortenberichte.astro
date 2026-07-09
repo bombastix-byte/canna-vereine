@@ -3,6 +3,7 @@ import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { uebersetzer } from '../../lib/i18n';
 
 // Geschützt. Sachliche Sortenbeschreibungen für Mitglieder + Bewertungen
 // der Mitglieder (Sterne + Kurzkommentar, eine Bewertung je Mitglied/Sorte).
@@ -52,6 +53,7 @@ const meine = (id: string) => fuerSorte(id).find((b) => b.mitglied === mitglied.
 const vornameVon = (b: Bewertung) => b.expand?.mitglied?.vorname || b.expand?.mitglied?.name?.split(' ')[0] || 'Mitglied';
 const sterneText = (n: number) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
 
@@ -65,22 +67,19 @@ const datum = (iso: string) =>
     : '';
 ---
 
-<Basis titel="Sortenberichte" beschreibung="Sachliche Sortenbeschreibungen für Mitglieder.">
+<Basis titel={t('sorten.titel')} beschreibung={t('sorten.intro_ohne')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <UnterNav punkte={[{ label: 'Anleitungen', href: '/mitglieder/anleitungen' }, { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' }, { label: 'Prävention & Beratung', href: '/mitglieder/praevention' }]} />
-  <h1 style="margin-bottom:0.4rem;">Sortenberichte</h1>
-  <p class="einleitung">
-    Sachliche Beschreibungen der im laufenden Vereinszyklus angebauten Sorten
-    {hatBewertungen ? ' — und die Erfahrungen der Mitglieder dazu.' : '.'}
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <UnterNav punkte={[{ label: t('wissen.anleitungen'), href: '/mitglieder/anleitungen' }, { label: t('wissen.sortenberichte'), href: '/mitglieder/sortenberichte' }, { label: t('wissen.praevention'), href: '/mitglieder/praevention' }]} />
+  <h1 style="margin-bottom:0.4rem;">{t('sorten.titel')}</h1>
+  <p class="einleitung">{hatBewertungen ? t('sorten.intro_mit') : t('sorten.intro_ohne')}</p>
 
-  {ok === 'bewertet' && <p class="hinweis" role="status">Danke — deine Bewertung ist gespeichert.</p>}
-  {fehler === 'bewertung' && <p class="hinweis hinweis--fehler" role="alert">Bewertung konnte nicht gespeichert werden. Bitte Sterne wählen und erneut versuchen.</p>}
+  {ok === 'bewertet' && <p class="hinweis" role="status">{t('sorten.ok_bewertet')}</p>}
+  {fehler === 'bewertung' && <p class="hinweis hinweis--fehler" role="alert">{t('sorten.fehler_bewertung')}</p>}
 
   {hatBewertungen && sorten.length > 0 && (
     <>
-      <h2>Bewertungen der Mitglieder</h2>
+      <h2>{t('sorten.bewertungen_h')}</h2>
       {sorten.map((s) => {
         const alle = fuerSorte(s.id);
         const avg = schnitt(s.id);
@@ -93,7 +92,7 @@ const datum = (iso: string) =>
                 {avg != null ? (
                   <><span class="sterne" aria-hidden="true">{sterneText(avg)}</span> {avg.toFixed(1)} ({alle.length})</>
                 ) : (
-                  <span style="color:var(--ink-soft);">noch keine Bewertung</span>
+                  <span style="color:var(--ink-soft);">{t('sorten.noch_keine')}</span>
                 )}
               </span>
             </summary>
@@ -101,7 +100,7 @@ const datum = (iso: string) =>
             <form class="bewerten" method="post" action="/mitglieder/sortenberichte/bewerten">
               <input type="hidden" name="sorte" value={s.id} />
               <fieldset class="sterne-wahl">
-                <legend>{mein ? 'Deine Bewertung ändern' : 'Deine Bewertung'}</legend>
+                <legend>{mein ? t('sorten.deine_aendern') : t('sorten.deine')}</legend>
                 <div class="radio-reihe">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <label class="stern-label">
@@ -112,8 +111,8 @@ const datum = (iso: string) =>
                 </div>
               </fieldset>
               <input class="eingabe" name="kommentar" type="text" maxlength="500"
-                value={mein?.kommentar ?? ''} placeholder="Kurzkommentar (optional, sachlich)" />
-              <button class="knopf-sek" type="submit">Speichern</button>
+                value={mein?.kommentar ?? ''} placeholder={t('sorten.kommentar_ph')} />
+              <button class="knopf-sek" type="submit">{t('sorten.speichern')}</button>
             </form>
 
             {alle.filter((b) => b.kommentar).length > 0 && (
@@ -133,10 +132,10 @@ const datum = (iso: string) =>
     </>
   )}
 
-  <h2>Berichte des Vereins</h2>
+  <h2>{t('sorten.berichte_h')}</h2>
   {
     berichte.length === 0 ? (
-      <p style="color:var(--ink-soft);">Es liegen noch keine Sortenberichte vor.</p>
+      <p style="color:var(--ink-soft);">{t('sorten.keine_berichte')}</p>
     ) : (
       berichte.map((b) => (
         <div class="kasten">

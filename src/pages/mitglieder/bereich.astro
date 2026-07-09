@@ -7,6 +7,7 @@ import { type Dienst, type Eintrag, findetStatt, belegtAm, tagVon } from '../../
 import { vorstandsKennzahlen } from '../../lib/cockpit';
 import { berlinTag } from '../../lib/ausgabe';
 import { mussBestaetigen } from '../../lib/einwilligung';
+import { uebersetzer } from '../../lib/i18n';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 const hatKasse = __fn ? __fn.kasse !== false : true;
@@ -102,18 +103,16 @@ const downloadUrl = (d: Dokument) =>
 const kennzahlen = darfVerwalten(mitglied.rollen) ? await vorstandsKennzahlen(pb, berlinTag(), hatBeitraege) : null;
 const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+const tr = uebersetzer(Astro.locals.sprache ?? 'de');
 ---
 
-<Basis titel="Mitgliederbereich" beschreibung="Interner Bereich für Mitglieder.">
+<Basis titel={tr('nav.bereich')} beschreibung={tr('bereich.sub')}>
   <MitgliedNav rollen={mitglied.rollen} />
 
   <header class="willkommen">
-    <p class="eyebrow">Mitgliederbereich</p>
-    <h1>Willkommen zurück{mitglied.name ? `, ${mitglied.name}` : ''}</h1>
-    <p class="willkommen__sub">
-      Aktuelle Mitteilungen, Termine, das Angebot der Woche und deine
-      Vorbestellungen auf einen Blick.
-    </p>
+    <p class="eyebrow">{tr('nav.bereich')}</p>
+    <h1>{tr('bereich.willkommen')}{mitglied.name ? `, ${mitglied.name}` : ''}</h1>
+    <p class="willkommen__sub">{tr('bereich.sub')}</p>
   </header>
 
   <section class="ueberblick" aria-label="Auf einen Blick">
@@ -122,9 +121,9 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
           <path d="M3 9h18M3 9l2-4h14l2 4M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M9 13h6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="uk__label">Angebot der Woche</span>
+        <span class="uk__label">{tr('nav.angebot')}</span>
       </span>
-      <span class="uk__wert">{aktuellesAngebot ? aktuellesAngebot.titel : 'Keine Abgabe eingetragen'}</span>
+      <span class="uk__wert">{aktuellesAngebot ? aktuellesAngebot.titel : tr('bereich.angebot_leer')}</span>
     </a>
 
     {hatTermine && (
@@ -134,10 +133,10 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
           <rect x="3" y="4.5" width="18" height="16" rx="2"/>
           <path d="M3 9h18M8 2.5v4M16 2.5v4" stroke-linecap="round"/>
         </svg>
-        <span class="uk__label">Nächster Termin</span>
+        <span class="uk__label">{tr('bereich.naechster_termin')}</span>
       </span>
       <span class="uk__wert">
-        {naechsterTermin ? `${datum(naechsterTermin.datum)} - ${naechsterTermin.titel}` : 'Keine Termine'}
+        {naechsterTermin ? `${datum(naechsterTermin.datum)} - ${naechsterTermin.titel}` : tr('bereich.keine_termine')}
       </span>
     </a>
     )}
@@ -147,9 +146,9 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
           <path d="M4 9v6h3l5 4V5L7 9H4zM16 8.5a4 4 0 0 1 0 7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="uk__label">Neueste Mitteilung</span>
+        <span class="uk__label">{tr('bereich.neueste_mitteilung')}</span>
       </span>
-      <span class="uk__wert">{neuesteMitteilung ? neuesteMitteilung.titel : 'Keine Mitteilungen'}</span>
+      <span class="uk__wert">{neuesteMitteilung ? neuesteMitteilung.titel : tr('bereich.keine_mitteilungen')}</span>
     </a>
 
     {hatVorbestellung && (
@@ -158,10 +157,10 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
           <path d="M6 7h12l-1 13H7L6 7zM9 7a3 3 0 0 1 6 0M9.5 12.5l1.8 1.8 3.2-3.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="uk__label">Deine Vorbestellungen</span>
+        <span class="uk__label">{tr('bereich.deine_vorbe')}</span>
       </span>
       <span class="uk__wert">
-        {offeneBestellungen > 0 ? `${offeneBestellungen} offen` : 'Keine offenen'}
+        {offeneBestellungen > 0 ? `${offeneBestellungen} ${tr('bereich.offen')}` : tr('bereich.keine_offenen')}
       </span>
     </a>
     )}
@@ -172,10 +171,10 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
         <svg class="uk__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
           <path d="M12 21s-7-4.5-9.3-9A5 5 0 0 1 12 7a5 5 0 0 1 9.3 5c-2.3 4.5-9.3 9-9.3 9z" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="uk__label">Mithelfen</span>
+        <span class="uk__label">{tr('bereich.mithelfen')}</span>
       </span>
       <span class="uk__wert">
-        {offeneDienste > 0 ? `${offeneDienste} heute offen` : 'Heute nichts offen'}
+        {offeneDienste > 0 ? `${offeneDienste} ${tr('bereich.heute_offen')}` : tr('bereich.heute_nichts')}
       </span>
     </a>
     )}
@@ -280,10 +279,10 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
   </section>
   )}
 
-  <h2 id="mitteilungen">Mitteilungen</h2>
+  <h2 id="mitteilungen">{tr('bereich.h.mitteilungen')}</h2>
   {
     mitteilungen.length === 0 ? (
-      <p style="color:var(--ink-soft);">Derzeit liegen keine Mitteilungen vor.</p>
+      <p style="color:var(--ink-soft);">{tr('bereich.keine_mitteilungen_lang')}</p>
     ) : (
       mitteilungen.map((m) => (
         <div class="kasten">
@@ -297,10 +296,10 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
     )
   }
 
-  <h2 id="termine">Termine</h2>
+  <h2 id="termine">{tr('bereich.h.termine')}</h2>
   {
     termine.length === 0 ? (
-      <p style="color:var(--ink-soft);">Keine anstehenden Termine eingetragen.</p>
+      <p style="color:var(--ink-soft);">{tr('bereich.keine_termine_lang')}</p>
     ) : (
       <ul class="terminliste">
         {termine.map((t) => (
@@ -319,10 +318,10 @@ const gramm = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 
     )
   }
 
-  <h2>Dokumente</h2>
+  <h2>{tr('bereich.h.dokumente')}</h2>
   {
     dokumente.length === 0 ? (
-      <p style="color:var(--ink-soft);">Es sind keine Dokumente hinterlegt.</p>
+      <p style="color:var(--ink-soft);">{tr('bereich.keine_dokumente')}</p>
     ) : (
       <ul>
         {dokumente.map((d) => (

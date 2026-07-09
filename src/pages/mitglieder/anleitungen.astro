@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfDienst, darfVerwalten, TEAM_LABEL } from '../../lib/rollen';
+import { uebersetzer } from '../../lib/i18n';
 
 // Verfahrensbibliothek: alle Arbeitsanleitungen des Vereins ("so wird es
 // gemacht"). Lesen darf jedes Mitglied - Transparenz. Ein Badge zeigt, wer
@@ -37,12 +38,13 @@ try {
   anleitungen = [];
 }
 
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const KATEGORIE_LABEL: Record<string, string> = {
-  anbau: 'Anbau und Pflege',
-  ernte: 'Ernte und Trocknung',
-  lager: 'Lager und Bestand',
-  ausgabe: 'Ausgabe',
-  allgemein: 'Allgemeines',
+  anbau: t('anl.kat.anbau'),
+  ernte: t('anl.kat.ernte'),
+  lager: t('anl.kat.lager'),
+  ausgabe: t('anl.kat.ausgabe'),
+  allgemein: t('anl.kat.allgemein'),
 };
 const reihenfolge = ['anbau', 'ernte', 'lager', 'ausgabe', 'allgemein'];
 const gruppen = reihenfolge
@@ -57,26 +59,21 @@ const stand = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 ---
 
-<Basis titel="Anleitungen" beschreibung="Verfahrensbibliothek: so werden die Aufgaben im Verein gemacht.">
+<Basis titel={t('wissen.anleitungen')} beschreibung={t('anl.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <UnterNav punkte={[{ label: 'Anleitungen', href: '/mitglieder/anleitungen' }, { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' }, { label: 'Prävention & Beratung', href: '/mitglieder/praevention' }]} />
-  <h1 style="margin-bottom:0.4rem;">Anleitungen</h1>
-  <p class="einleitung">
-    So werden die Aufgaben im Verein gemacht — Schritt für Schritt. Lesen darf
-    jedes Mitglied. Das Schild an der Anleitung zeigt, wer die Aufgabe
-    ausführen darf. Wer eine Aufgabe neu übernimmt: erst lesen, dann loslegen,
-    bei Fragen das jeweilige Team ansprechen.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <UnterNav punkte={[{ label: t('wissen.anleitungen'), href: '/mitglieder/anleitungen' }, { label: t('wissen.sortenberichte'), href: '/mitglieder/sortenberichte' }, { label: t('wissen.praevention'), href: '/mitglieder/praevention' }]} />
+  <h1 style="margin-bottom:0.4rem;">{t('wissen.anleitungen')}</h1>
+  <p class="einleitung">{t('anl.intro')}</p>
 
   {verwalten && (
-    <p><a class="knopf-sek" href="/mitglieder/anleitungen/pflege">＋ Neue Anleitung anlegen</a></p>
+    <p><a class="knopf-sek" href="/mitglieder/anleitungen/pflege">{t('anl.neu')}</a></p>
   )}
 
   {anleitungen.length === 0 && (
     <p style="color:var(--ink-soft);">
-      Noch keine Anleitungen hinterlegt.
-      {verwalten ? ' Über „Neue Anleitung anlegen" starten.' : ' Der Vorstand legt sie an.'}
+      {t('anl.keine')}
+      {verwalten ? ' ' + t('anl.keine_verwalten') : ' ' + t('anl.keine_mitglied')}
     </p>
   )}
 
@@ -88,9 +85,9 @@ const stand = (iso?: string) =>
           <summary>
             <span class="sop-titel">{a.titel}</span>
             <span class="sop-badges">
-              {a.aktiv === false && <span class="abzeichen abzeichen--gefahr">inaktiv</span>}
+              {a.aktiv === false && <span class="abzeichen abzeichen--gefahr">{t('anl.inaktiv')}</span>}
               <span class:list={['abzeichen', !a.benoetigte_rolle ? null : darfDienst(mitglied.rollen, a.benoetigte_rolle) ? 'abzeichen--ok' : 'abzeichen--warn']}>
-                {a.benoetigte_rolle ? `nur ${TEAM_LABEL[a.benoetigte_rolle] ?? a.benoetigte_rolle}` : 'jedes Mitglied'}
+                {a.benoetigte_rolle ? `${t('anl.nur')} ${TEAM_LABEL[a.benoetigte_rolle] ?? a.benoetigte_rolle}` : t('anl.jedes_mitglied')}
               </span>
             </span>
           </summary>
@@ -99,15 +96,15 @@ const stand = (iso?: string) =>
             {schritteVon(a).map((s) => <li>{s}</li>)}
           </ol>
           {a.hinweise && (
-            <p class="sop-hinweis"><strong>Wichtig:</strong> {a.hinweise}</p>
+            <p class="sop-hinweis"><strong>{t('anl.wichtig')}</strong> {a.hinweise}</p>
           )}
           <p class="sop-stand">
-            Stand: {stand(a.updated)}
+            {t('anl.stand')} {stand(a.updated)}
             {verwalten && (
-              <span> · <a href={`/mitglieder/anleitungen/pflege?id=${a.id}`}>Bearbeiten</a></span>
+              <span> · <a href={`/mitglieder/anleitungen/pflege?id=${a.id}`}>{t('anl.bearbeiten')}</a></span>
             )}
             {a.benoetigte_rolle && !darfDienst(mitglied.rollen, a.benoetigte_rolle) && (
-              <span> · Du darfst diese Aufgabe derzeit nicht ausführen — sprich den Vorstand an, wenn du sie übernehmen möchtest.</span>
+              <span> · {t('anl.darf_nicht')}</span>
             )}
           </p>
         </details>

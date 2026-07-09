@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { site } from '../../config';
+import { uebersetzer } from '../../lib/i18n';
 
 // Praevention & Beratung im Mitgliederbereich (Paragraf 23 KCanG:
 // Praeventionsbeauftragte Person + Hinweis auf unabhaengige Beratung).
@@ -15,40 +16,34 @@ const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { mitglied } = ergebnis;
 const p = site.praeventionsbeauftragter;
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 ---
 
-<Basis titel="Prävention und Beratung" beschreibung="Präventionsbeauftragte Person und externe Beratungsstellen.">
+<Basis titel={t('praev.titel')} beschreibung={t('praev.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <UnterNav punkte={[{ label: 'Anleitungen', href: '/mitglieder/anleitungen' }, { label: 'Sortenberichte', href: '/mitglieder/sortenberichte' }, { label: 'Prävention & Beratung', href: '/mitglieder/praevention' }]} />
-  <h1 style="margin-bottom:0.4rem;">Prävention und Beratung</h1>
-  <p class="einleitung">
-    Der Verein benennt eine präventionsbeauftragte Person und weist auf
-    unabhängige Beratungsangebote hin. Diese Informationen dienen dem
-    Gesundheitsschutz.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <UnterNav punkte={[{ label: t('wissen.anleitungen'), href: '/mitglieder/anleitungen' }, { label: t('wissen.sortenberichte'), href: '/mitglieder/sortenberichte' }, { label: t('wissen.praevention'), href: '/mitglieder/praevention' }]} />
+  <h1 style="margin-bottom:0.4rem;">{t('praev.titel')}</h1>
+  <p class="einleitung">{t('praev.intro')}</p>
 
-  <h2>Präventionsbeauftragte Person</h2>
+  <h2>{t('praev.person_h')}</h2>
   <dl class="fakten">
-    <dt>Name</dt>
+    <dt>{t('praev.name')}</dt>
     <dd>{p.name}</dd>
-    <dt>Funktion</dt>
+    <dt>{t('praev.funktion')}</dt>
     <dd>{p.rolle}</dd>
-    {p.email && (<><dt>E-Mail</dt><dd><a href={`mailto:${p.email}`}>{p.email}</a></dd></>)}
-    {p.telefon && (<><dt>Telefon</dt><dd>{p.telefon}</dd></>)}
+    {p.email && (<><dt>{t('praev.email')}</dt><dd><a href={`mailto:${p.email}`}>{p.email}</a></dd></>)}
+    {p.telefon && (<><dt>{t('praev.telefon')}</dt><dd>{p.telefon}</dd></>)}
   </dl>
 
-  <h2>Externe Sucht- und Beratungsstellen</h2>
-  <p>
-    Die folgenden Stellen beraten unabhängig vom Verein, kostenfrei und auf
-    Wunsch anonym.
-  </p>
+  <h2>{t('praev.extern_h')}</h2>
+  <p>{t('praev.extern_intro')}</p>
   <ul>
     {
       site.externeBeratung.map((b) => (
         <li>
           <strong>{b.name}</strong>: {b.beschreibung}
-          {b.telefon && <> Telefon: {b.telefon}.</>}
+          {b.telefon && <> {t('praev.telefon_wort')} {b.telefon}.</>}
           {b.url && (
             <> <a href={b.url} rel="noopener">{b.url.replace('https://', '')}</a></>
           )}
@@ -57,17 +52,8 @@ const p = site.praeventionsbeauftragter;
     }
   </ul>
 
-  <h2>Jugendschutz und Gesundheit</h2>
-  <p>
-    Die Abgabe erfolgt ausschließlich an Mitglieder ab 18 Jahren; bis zur
-    Vollendung des 21. Lebensjahres gelten zusätzliche Beschränkungen
-    (30 g/Monat, höchstens 10 % THC). Der Konsum von Cannabis kann
-    insbesondere bei jungen Menschen die Gehirnentwicklung beeinträchtigen
-    und gesundheitliche Risiken mit sich bringen.
-  </p>
+  <h2>{t('praev.jugend_h')}</h2>
+  <p>{t('praev.jugend_text')}</p>
 
-  <div class="hinweis">
-    Bei akuten Krisen wenden Sie sich bitte an den ärztlichen Notdienst (116117)
-    oder im Notfall an 112.
-  </div>
+  <div class="hinweis">{t('praev.krise')}</div>
 </Basis>

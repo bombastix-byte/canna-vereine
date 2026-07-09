@@ -6,6 +6,7 @@ const __fn = Astro.locals.funktionen;
 const hatAbstimmungen = __fn ? __fn.abstimmungen !== false : true;
 import { darfVerwalten } from '../../lib/rollen';
 import { berlinTag } from '../../lib/ausgabe';
+import { uebersetzer } from '../../lib/i18n';
 
 // Abstimmungen/Umfragen: Mitglieder stimmen ab (eine Stimme), sehen danach
 // bzw. nach dem Schliessen die Ergebnisse. Vorstand legt an und schliesst.
@@ -54,61 +55,59 @@ const zaehle = (id: string, optionen: string[]) => {
 
 const ok = Astro.url.searchParams.get('ok');
 const fehler = Astro.url.searchParams.get('fehler');
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehlertext: Record<string, string> = {
-  schon: 'Du hast bei dieser Abstimmung bereits abgestimmt.',
-  geschlossen: 'Diese Abstimmung ist geschlossen.',
-  optionen: 'Bitte Titel und mindestens zwei Antwortoptionen (je eine Zeile) angeben.',
-  fehlend: 'Bitte eine gültige Option wählen.',
-  fehlgeschlagen: 'Das hat nicht geklappt. Bitte erneut versuchen.',
+  schon: t('abst.fehler.schon'),
+  geschlossen: t('abst.fehler.geschlossen'),
+  optionen: t('abst.fehler.optionen'),
+  fehlend: t('abst.fehler.fehlend'),
+  fehlgeschlagen: t('abst.fehler.fehlgeschlagen'),
 };
 const oktext: Record<string, string> = {
-  '1': 'Danke, deine Stimme wurde gezählt.',
-  neu: 'Abstimmung angelegt.',
-  status: 'Status geändert.',
+  '1': t('abst.ok.1'),
+  neu: t('abst.ok.neu'),
+  status: t('abst.ok.status'),
 };
 
 const datum = (iso?: string) =>
   iso ? new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 ---
 
-<Basis titel="Abstimmungen" beschreibung="Vereinsabstimmungen und Umfragen.">
+<Basis titel={t('nav.abstimmungen')} beschreibung={t('abst.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Abstimmungen</h1>
-  <p class="einleitung">
-    Vereinsabstimmungen und Umfragen. Jedes Mitglied hat eine Stimme. Nach dem
-    Abstimmen — oder sobald eine Abstimmung geschlossen ist — siehst du das Ergebnis.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('nav.abstimmungen')}</h1>
+  <p class="einleitung">{t('abst.intro')}</p>
 
   {ok && <p class="hinweis" role="status">{oktext[ok] ?? 'Erledigt.'}</p>}
   {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? 'Das hat nicht geklappt.'}</p>}
 
   {vorstand && (
     <details class="klappe">
-      <summary>＋ Neue Abstimmung anlegen</summary>
+      <summary>{t('abst.neu')}</summary>
       <form class="kasten" method="post" action="/mitglieder/abstimmungen/neu">
         <div class="feld">
-          <label for="titel">Frage / Titel</label>
+          <label for="titel">{t('abst.f.titel')}</label>
           <input id="titel" name="titel" type="text" required placeholder="z. B. Termin für den nächsten Vereinsabend" />
         </div>
         <div class="feld">
-          <label for="beschreibung">Beschreibung (optional)</label>
+          <label for="beschreibung">{t('abst.f.beschreibung')}</label>
           <input id="beschreibung" name="beschreibung" type="text" />
         </div>
         <div class="feld">
-          <label for="optionen">Antwortoptionen — eine je Zeile</label>
+          <label for="optionen">{t('abst.f.optionen')}</label>
           <textarea id="optionen" name="optionen" rows="4" required placeholder={'Freitag\nSamstag\nSonntag'}></textarea>
         </div>
         <div class="feld">
-          <label for="ende">Ende (optional)</label>
+          <label for="ende">{t('abst.f.ende')}</label>
           <input id="ende" name="ende" type="date" />
         </div>
-        <button class="knopf" type="submit">Abstimmung starten</button>
+        <button class="knopf" type="submit">{t('abst.starten')}</button>
       </form>
     </details>
   )}
 
-  {abstimmungen.length === 0 && <p style="color:var(--ink-soft);">Zurzeit gibt es keine Abstimmung.</p>}
+  {abstimmungen.length === 0 && <p style="color:var(--ink-soft);">{t('abst.keine')}</p>}
 
   {abstimmungen.map((a) => {
     const offen = istOffen(a);
@@ -123,13 +122,13 @@ const datum = (iso?: string) =>
             {a.beschreibung && <span class="ab-sub">{a.beschreibung}</span>}
           </div>
           <span class:list={['abzeichen', offen ? 'abzeichen--ok' : 'abzeichen--gefahr']}>
-            {offen ? 'offen' : 'geschlossen'}
+            {offen ? t('abst.offen') : t('abst.geschlossen')}
           </span>
         </header>
         <p class="ab-meta">
-          {gesamt} {gesamt === 1 ? 'Stimme' : 'Stimmen'}
-          {a.ende && ` · Ende ${datum(a.ende)}`}
-          {wahl !== null && ` · du hast „${a.optionen[wahl]}" gewählt`}
+          {gesamt} {gesamt === 1 ? t('abst.stimme') : t('abst.stimmen')}
+          {a.ende && ` · ${t('abst.ende_wort')} ${datum(a.ende)}`}
+          {wahl !== null && ` · ${t('abst.du_gewaehlt').replace('{x}', a.optionen[wahl])}`}
         </p>
 
         {offen && wahl === null ? (
@@ -158,7 +157,7 @@ const datum = (iso?: string) =>
           <form method="post" action="/mitglieder/abstimmungen/status" class="ab-admin">
             <input type="hidden" name="abstimmung" value={a.id} />
             <input type="hidden" name="status" value={offen ? 'geschlossen' : 'offen'} />
-            <button class="knopf-sek" type="submit">{offen ? 'Abstimmung schließen' : 'Wieder öffnen'}</button>
+            <button class="knopf-sek" type="submit">{offen ? t('abst.schliessen') : t('abst.oeffnen')}</button>
           </form>
         )}
       </section>

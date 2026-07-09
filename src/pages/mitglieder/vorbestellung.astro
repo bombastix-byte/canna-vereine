@@ -2,6 +2,7 @@
 import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { uebersetzer } from '../../lib/i18n';
 const __fn = Astro.locals.funktionen;
 const hatVorbestellung = __fn ? __fn.vorbestellung !== false : true;
 // Geschützt. Mitglieder reservieren eine Sorte zur späteren Abholung.
@@ -45,10 +46,11 @@ try {
 
 const fehler = Astro.url.searchParams.get('fehler');
 const ok = Astro.url.searchParams.get('ok');
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehlertext: Record<string, string> = {
-  fehlend: 'Bitte Sorte und Menge angeben.',
-  menge: 'Bitte eine gültige Menge in Gramm angeben.',
-  fehlgeschlagen: 'Die Vorbestellung konnte nicht gespeichert werden. Bitte erneut versuchen.',
+  fehlend: t('vorbe.fehler.fehlend'),
+  menge: t('vorbe.fehler.menge'),
+  fehlgeschlagen: t('vorbe.fehler.fehlgeschlagen'),
 };
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 
@@ -62,36 +64,29 @@ const datum = (iso?: string) =>
     : '';
 
 const statusLabel: Record<string, string> = {
-  offen: 'Offen',
-  bestaetigt: 'Bestätigt',
-  abgeholt: 'Abgeholt',
-  storniert: 'Storniert',
+  offen: t('vorbe.status.offen'),
+  bestaetigt: t('vorbe.status.bestaetigt'),
+  abgeholt: t('vorbe.status.abgeholt'),
+  storniert: t('vorbe.status.storniert'),
 };
 ---
 
-<Basis titel="Vorbestellung" beschreibung="Sorte zur späteren Abholung reservieren.">
+<Basis titel={t('vorbe.titel')} beschreibung={t('vorbe.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Vorbestellung zur Abholung</h1>
-  <p class="einleitung">
-    Reservieren Sie eine Sorte aus der aktuellen Abgabe zur späteren Abholung im
-    Verein. Die Vorbestellung ist eine unverbindliche Reservierung; die Abgabe
-    erfolgt zum Selbstkostenbeitrag nach der Satzung.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('vorbe.titel')}</h1>
+  <p class="einleitung">{t('vorbe.intro')}</p>
 
   {meldung && (
     <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>
   )}
   {ok && (
-    <p class="hinweis" role="status">
-      Ihre Vorbestellung wurde aufgenommen. Der Vorstand bestätigt sie zu den
-      Vereinszeiten.
-    </p>
+    <p class="hinweis" role="status">{t('vorbe.ok')}</p>
   )}
 
   <form class="kasten" method="post" action="/mitglieder/vorbestellung/absenden">
     <div class="feld">
-      <label for="sorte">Sorte</label>
+      <label for="sorte">{t('vorbe.sorte')}</label>
       <input id="sorte" name="sorte" type="text" list="sortenliste" required />
       {sorten.length > 0 && (
         <datalist id="sortenliste">
@@ -100,24 +95,24 @@ const statusLabel: Record<string, string> = {
       )}
     </div>
     <div class="feld">
-      <label for="menge_gramm">Menge in Gramm</label>
+      <label for="menge_gramm">{t('vorbe.menge')}</label>
       <input id="menge_gramm" name="menge_gramm" type="number" min="1" step="1" required />
     </div>
     <div class="feld">
-      <label for="abholdatum">Gewünschtes Abholdatum (optional)</label>
+      <label for="abholdatum">{t('vorbe.abholdatum')}</label>
       <input id="abholdatum" name="abholdatum" type="date" />
     </div>
     <div class="feld">
-      <label for="hinweis">Hinweis (optional)</label>
+      <label for="hinweis">{t('vorbe.hinweis')}</label>
       <textarea id="hinweis" name="hinweis" rows="3"></textarea>
     </div>
-    <button class="knopf" type="submit">Vorbestellung absenden</button>
+    <button class="knopf" type="submit">{t('vorbe.absenden')}</button>
   </form>
 
-  <h2>Ihre Vorbestellungen</h2>
+  <h2>{t('vorbe.deine')}</h2>
   {
     bestellungen.length === 0 ? (
-      <p style="color:var(--ink-soft);">Sie haben noch keine Vorbestellung aufgegeben.</p>
+      <p style="color:var(--ink-soft);">{t('vorbe.keine')}</p>
     ) : (
       <ul>
         {bestellungen.map((b) => (
@@ -128,7 +123,7 @@ const statusLabel: Record<string, string> = {
             )}
             {b.abholdatum && (
               <div style="color:var(--ink-soft);font-size:0.92rem;">
-                Abholung: {datum(b.abholdatum)}
+                {t('vorbe.abholung')} {datum(b.abholdatum)}
               </div>
             )}
             {b.hinweis && (

@@ -16,6 +16,7 @@ import {
   findetStatt,
   belegtAm,
 } from '../../lib/helfer';
+import { uebersetzer } from '../../lib/i18n';
 
 // Geschützt. Wochenplan: wiederkehrende Dienste erscheinen automatisch an jedem
 // passenden Tag. Mitglieder tragen sich pro Tag und Dienst ein.
@@ -55,12 +56,13 @@ const meineEinsaetze = eintragungen.filter((e) => e.mitglied === mitglied.id).le
 const fehler = Astro.url.searchParams.get('fehler');
 const ok = Astro.url.searchParams.get('ok');
 const aus = Astro.url.searchParams.get('aus');
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehlertext: Record<string, string> = {
-  fehlend: 'Bitte einen Dienst auswählen.',
-  schon: 'Du bist für diesen Tag bereits eingetragen.',
-  voll: 'Dieser Dienst ist an diesem Tag bereits voll belegt.',
-  rolle: 'Diese Aufgabe darf nur ein bestimmtes Team übernehmen — Details stehen in der Anleitung.',
-  fehlgeschlagen: 'Das hat nicht geklappt. Bitte erneut versuchen.',
+  fehlend: t('helfer.fehler.fehlend'),
+  schon: t('helfer.fehler.schon'),
+  voll: t('helfer.fehler.voll'),
+  rolle: t('helfer.fehler.rolle'),
+  fehlgeschlagen: t('helfer.fehler.fehlgeschlagen'),
 };
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
 
@@ -70,10 +72,10 @@ const erstesmalDienst = dienste.find((d) => d.id === erstesmalId) ?? null;
 const anleitungLink = (id?: string) => (id ? `/mitglieder/anleitungen?a=${id}#a-${id}` : '');
 
 const rhythmusLabel: Record<string, string> = {
-  taeglich: 'Täglich',
-  woechentlich: 'Wöchentlich',
-  monatlich: 'Monatlich',
-  einmalig: 'Einmalig',
+  taeglich: t('helfer.rhythmus.taeglich'),
+  woechentlich: t('helfer.rhythmus.woechentlich'),
+  monatlich: t('helfer.rhythmus.monatlich'),
+  einmalig: t('helfer.rhythmus.einmalig'),
 };
 
 const langerTag = (d: Date) => d.toLocaleDateString('de-DE', { weekday: 'long' });
@@ -85,49 +87,45 @@ const meinAm = (id: string, tag: Date) =>
   );
 ---
 
-<Basis titel="Helferplan" beschreibung="Wochenplan der anstehenden Vereinsaufgaben.">
+<Basis titel={t('nav.helferplan')} beschreibung={t('helfer.intro')}>
   <MitgliedNav rollen={mitglied.rollen} />
-  <p class="eyebrow">Mitgliederbereich</p>
-  <h1 style="margin-bottom:0.4rem;">Helferplan</h1>
-  <p class="einleitung">
-    Wochenplan der anstehenden Aufgaben rund um den gemeinschaftlichen Anbau.
-    Trage dich bei einem Tag ein, an dem du helfen kannst. So sieht jeder, wo
-    noch Hilfe gebraucht wird.
-  </p>
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('nav.helferplan')}</h1>
+  <p class="einleitung">{t('helfer.intro')}</p>
 
   {meldung && (
     <p class="hinweis hinweis--fehler" role="alert">{meldung}</p>
   )}
-  {ok && !erstesmalDienst && <p class="hinweis" role="status">Danke, deine Eintragung wurde gespeichert.</p>}
-  {aus && <p class="hinweis" role="status">Du wurdest aus dem Dienst ausgetragen.</p>}
+  {ok && !erstesmalDienst && <p class="hinweis" role="status">{t('helfer.ok')}</p>}
+  {aus && <p class="hinweis" role="status">{t('helfer.aus')}</p>}
 
   {erstesmalDienst && (
     <div class="erstesmal" role="status">
-      <strong>Danke — du übernimmst „{erstesmalDienst.titel}" zum ersten Mal!</strong>
+      <strong>{t('helfer.erstesmal').replace('{x}', erstesmalDienst.titel)}</strong>
       {erstesmalDienst.anleitung ? (
         <p>
-          Damit du direkt weißt, wie es gemacht wird:
-          <a href={anleitungLink(erstesmalDienst.anleitung)}> Anleitung „{erstesmalDienst.titel}" lesen</a> — dauert 2 Minuten.
+          {t('helfer.erstesmal_anleitung')}
+          <a href={anleitungLink(erstesmalDienst.anleitung)}> {t('helfer.erstesmal_lesen').replace('{x}', erstesmalDienst.titel)}</a> — {t('helfer.erstesmal_dauer')}
         </p>
       ) : (
-        <p>Frag beim ersten Mal am besten kurz jemanden vom Team — alle Verfahren stehen unter <a href="/mitglieder/anleitungen">Anleitungen</a>.</p>
+        <p>{t('helfer.erstesmal_ohne')} <a href="/mitglieder/anleitungen">{t('wissen.anleitungen')}</a>.</p>
       )}
     </div>
   )}
 
   <nav class="wochennav" aria-label="Woche wählen">
-    <a class="wochennav__btn" href={`/mitglieder/helferplan?woche=${vorigeWoche}`}>‹ Vorige</a>
+    <a class="wochennav__btn" href={`/mitglieder/helferplan?woche=${vorigeWoche}`}>{t('helfer.vorige')}</a>
     <span class="wochennav__bereich">
       {kurzesDatum(montag)} – {kurzesDatum(tage[6])}
-      {istAktuelleWoche && <span class="wochennav__jetzt">diese Woche</span>}
+      {istAktuelleWoche && <span class="wochennav__jetzt">{t('helfer.diese_woche')}</span>}
     </span>
-    <a class="wochennav__btn" href={`/mitglieder/helferplan?woche=${naechsteWoche}`}>Nächste ›</a>
+    <a class="wochennav__btn" href={`/mitglieder/helferplan?woche=${naechsteWoche}`}>{t('helfer.naechste')}</a>
   </nav>
   {!istAktuelleWoche && (
-    <p style="margin:0 0 1rem;"><a href="/mitglieder/helferplan">Zur aktuellen Woche</a></p>
+    <p style="margin:0 0 1rem;"><a href="/mitglieder/helferplan">{t('helfer.zur_aktuellen')}</a></p>
   )}
 
-  <p class="einsatz-zaehler">Deine Einsätze insgesamt: <strong>{meineEinsaetze}</strong></p>
+  <p class="einsatz-zaehler">{t('helfer.einsaetze')} <strong>{meineEinsaetze}</strong></p>
 
   <div class="wochenplan">
     {
@@ -140,7 +138,7 @@ const meinAm = (id: string, tag: Date) =>
               <span class="tag__datum">{kurzesDatum(tag)}</span>
             </h2>
             {heutige.length === 0 ? (
-              <p class="tag__leer">Keine Dienste.</p>
+              <p class="tag__leer">{t('helfer.keine_dienste')}</p>
             ) : (
               <ul class="dienste">
                 {heutige.map((d) => {
@@ -157,13 +155,13 @@ const meinAm = (id: string, tag: Date) =>
                             <span class="dienst__tag">{rhythmusLabel[d.rhythmus] ?? d.rhythmus}</span>
                           )}
                           {d.benoetigte_rolle && (
-                            <span class="dienst__tag dienst__tag--rolle">nur {TEAM_LABEL[d.benoetigte_rolle] ?? d.benoetigte_rolle}</span>
+                            <span class="dienst__tag dienst__tag--rolle">{t('helfer.nur')} {TEAM_LABEL[d.benoetigte_rolle] ?? d.benoetigte_rolle}</span>
                           )}
                         </span>
                         <span class="dienst__meta">
-                          {belegt} von {d.bedarf} belegt
+                          {belegt} {t('helfer.von')} {d.bedarf} {t('helfer.belegt')}
                           {d.anleitung && (
-                            <> · <a class="dienst__sop" href={anleitungLink(d.anleitung)}>Anleitung</a></>
+                            <> · <a class="dienst__sop" href={anleitungLink(d.anleitung)}>{t('helfer.anleitung')}</a></>
                           )}
                         </span>
                       </span>
@@ -172,18 +170,18 @@ const meinAm = (id: string, tag: Date) =>
                           <form method="post" action="/mitglieder/helferplan/austragen">
                             <input type="hidden" name="dienst" value={d.id} />
                             <input type="hidden" name="datum" value={ymd(tag)} />
-                            <span class="dienst__mit">Du hilfst mit</span>
-                            <button class="knopf knopf--leise" type="submit">Austragen</button>
+                            <span class="dienst__mit">{t('helfer.du_hilfst')}</span>
+                            <button class="knopf knopf--leise" type="submit">{t('helfer.austragen')}</button>
                           </form>
                         ) : voll ? (
-                          <span class="dienst__voll">Voll belegt</span>
+                          <span class="dienst__voll">{t('helfer.voll')}</span>
                         ) : !darf ? (
-                          <span class="dienst__voll">nur {TEAM_LABEL[d.benoetigte_rolle ?? ''] ?? 'Team'}</span>
+                          <span class="dienst__voll">{t('helfer.nur')} {TEAM_LABEL[d.benoetigte_rolle ?? ''] ?? 'Team'}</span>
                         ) : (
                           <form method="post" action="/mitglieder/helferplan/eintragen">
                             <input type="hidden" name="dienst" value={d.id} />
                             <input type="hidden" name="datum" value={ymd(tag)} />
-                            <button class="knopf" type="submit">Ich helfe mit</button>
+                            <button class="knopf" type="submit">{t('helfer.ich_helfe')}</button>
                           </form>
                         )}
                       </span>
