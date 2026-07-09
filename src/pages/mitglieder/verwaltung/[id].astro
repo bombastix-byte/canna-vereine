@@ -27,11 +27,13 @@ try {
 const ok = Astro.url.searchParams.get('ok');
 const neu = Astro.url.searchParams.get('neu') === '1';
 const startpw = Astro.url.searchParams.get('pw') ?? '';
+const pwreset = Astro.url.searchParams.get('pwreset') ?? '';
 const fehler = Astro.url.searchParams.get('fehler');
 const fehlertext: Record<string, string> = {
   selbst: 'Das eigene Konto kann nicht gelöscht werden.',
   loeschen: 'Löschen fehlgeschlagen. Bitte erneut versuchen.',
   status: 'Status konnte nicht gesetzt werden.',
+  pwreset: 'Passwort zurücksetzen fehlgeschlagen. Bitte erneut versuchen.',
 };
 const fmeldung = fehler ? (fehlertext[fehler] ?? 'Speichern fehlgeschlagen.') : null;
 const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
@@ -59,6 +61,13 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
       <strong>Mitglied angelegt.</strong> Startpasswort zum Weitergeben:
       <code class="pw">{startpw}</code>
       <span class="pw-note">Bitte notieren — es wird nur jetzt angezeigt. Das Mitglied ändert es beim ersten Login.</span>
+    </div>
+  )}
+  {pwreset && (
+    <div class="hinweis pw-box" role="status">
+      <strong>Passwort zurückgesetzt.</strong> Neues Startpasswort:
+      <code class="pw">{pwreset}</code>
+      <span class="pw-note">Bitte notieren und dem Mitglied weitergeben — es wird nur jetzt angezeigt.</span>
     </div>
   )}
 
@@ -178,6 +187,21 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
         : 'noch nicht bestätigt'}.
     </p>
   </section>
+
+  {m.id !== mitglied.id && (
+    <section class="kasten">
+      <h2 class="abschnitt">Passwort zurücksetzen</h2>
+      <p class="rollen-hinweis">
+        Erzeugt ein neues Startpasswort und zeigt es dir einmalig an — zum
+        Weitergeben an das Mitglied (offline). Das alte Passwort wird ungültig.
+      </p>
+      <form method="post" action="/mitglieder/verwaltung/passwort-reset"
+        onsubmit={`return confirm('Passwort von „${(m.name || m.mitgliedsnummer || m.email).replace(/'/g, '')}" wirklich zurücksetzen?')`}>
+        <input type="hidden" name="mitglied" value={m.id} />
+        <button class="knopf-sek" type="submit">Neues Passwort erzeugen</button>
+      </form>
+    </section>
+  )}
 
   {m.id !== mitglied.id && (
     <section class="entfernen">

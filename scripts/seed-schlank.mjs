@@ -42,6 +42,11 @@ if (!users.fields.some((f) => f.name === 'reset_email')) {
   console.log('users: reset_email vorhanden.');
 }
 
+// 2b) manageRule: Vorstand darf fremde Passwörter/E-Mails setzen (ohne
+//     Alt-Passwort) — für den Passwort-Zurücksetzen-Knopf in der Verwaltung.
+await pb.collections.update('users', { manageRule: vorstand });
+console.log('users: manageRule = Vorstand (Passwort-Reset).');
+
 // 3) vorbestellungen: Vorstand sieht alle + darf Status setzen.
 await pb.collections.update('vorbestellungen', {
   listRule: `${angemeldet} && (mitglied = @request.auth.id || ${vorstand})`,
