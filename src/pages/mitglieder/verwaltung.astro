@@ -7,6 +7,10 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten, ROLLEN_LABEL, istSystemkonto, type Rolle } from '../../lib/rollen';
 import { effektiverStatus, STATUS_LABEL } from '../../lib/status';
 import { berlinTag } from '../../lib/ausgabe';
+import { site } from '../../config';
+// Datensparsamer Modus: Mitglieder werden nur mit der Mitgliedsnummer angelegt
+// (keine Personendaten). Das Formular blendet Name/E-Mail/Geburtsdatum aus.
+const privacy = site.login_modus === 'mitgliedsnummer';
 const __fn = Astro.locals.funktionen;
 const hatAufnahmebeitrag = (__fn?.aufnahmebeitragEuro ?? 0) > 0;
 const aufnahmebeitragEuro = __fn?.aufnahmebeitragEuro ?? 0;
@@ -94,15 +98,23 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
   <details class="klappe" open={!!fmeldung}>
     <summary>＋ Mitglied anlegen</summary>
     <form class="kasten" method="post" action="/mitglieder/verwaltung/anlegen">
-      <div class="feld-reihe">
-        <div class="feld"><label for="a-vorname">Vorname</label><input class="eingabe" id="a-vorname" name="vorname" type="text" /></div>
-        <div class="feld"><label for="a-nachname">Nachname</label><input class="eingabe" id="a-nachname" name="nachname" type="text" /></div>
-      </div>
-      <div class="feld-reihe">
-        <div class="feld"><label for="a-email">E-Mail</label><input class="eingabe" id="a-email" name="email" type="email" required placeholder="fuer die Anmeldung" /></div>
-        <div class="feld"><label for="a-nr">Mitgliedsnr. (optional)</label><input class="eingabe" id="a-nr" name="mitgliedsnummer" type="text" placeholder="leer = automatisch" /></div>
-        <div class="feld"><label for="a-geb">Geburtsdatum</label><input class="eingabe" id="a-geb" name="geburtsdatum" type="date" /></div>
-      </div>
+      {privacy ? (
+        <div class="feld-reihe">
+          <div class="feld"><label for="a-nr">Mitgliedsnummer (optional)</label><input class="eingabe" id="a-nr" name="mitgliedsnummer" type="text" placeholder="leer = automatisch (M-…)" /></div>
+        </div>
+      ) : (
+        <>
+          <div class="feld-reihe">
+            <div class="feld"><label for="a-vorname">Vorname</label><input class="eingabe" id="a-vorname" name="vorname" type="text" /></div>
+            <div class="feld"><label for="a-nachname">Nachname</label><input class="eingabe" id="a-nachname" name="nachname" type="text" /></div>
+          </div>
+          <div class="feld-reihe">
+            <div class="feld"><label for="a-email">E-Mail</label><input class="eingabe" id="a-email" name="email" type="email" required placeholder="fuer die Anmeldung" /></div>
+            <div class="feld"><label for="a-nr">Mitgliedsnr. (optional)</label><input class="eingabe" id="a-nr" name="mitgliedsnummer" type="text" placeholder="leer = automatisch" /></div>
+            <div class="feld"><label for="a-geb">Geburtsdatum</label><input class="eingabe" id="a-geb" name="geburtsdatum" type="date" /></div>
+          </div>
+        </>
+      )}
       <fieldset class="a-rollen">
         <legend>Zusätzliche Rollen (optional)</legend>
         {ROLLEN_WAEHLBAR.map((r) => (
@@ -117,8 +129,9 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
         </label>
       )}
       <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 0.8rem;">
-        Ein Startpasswort wird automatisch erzeugt und danach angezeigt (per Mail,
-        falls SMTP eingerichtet).
+        {privacy
+          ? 'Ein Startpasswort wird erzeugt und danach angezeigt — bitte zusammen mit der Mitgliedsnummer offline an das Mitglied weitergeben.'
+          : 'Ein Startpasswort wird automatisch erzeugt und danach angezeigt (per Mail, falls SMTP eingerichtet).'}
       </p>
       <button class="knopf" type="submit">Mitglied anlegen</button>
     </form>
@@ -160,7 +173,7 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
             <span class="zeile-nr">{m.mitgliedsnummer || '—'}</span>
             <span class="zeile-mitte">
               <span class="zeile-name">
-                {m.name || m.email}
+                {m.name || (privacy ? `Mitglied ${m.mitgliedsnummer ?? ''}`.trim() : m.email)}
                 {effektiverStatus(m, berlinTag()) !== 'aktiv' && (
                   <span class:list={['zeile-status', `st-${effektiverStatus(m, berlinTag())}`]}>{STATUS_LABEL[effektiverStatus(m, berlinTag())]}</span>
                 )}
