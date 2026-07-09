@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
 import { protokolliere, feldDiff } from '../../../lib/audit';
+import { site } from '../../../config';
+import { syntheticEmail } from '../../../lib/login';
 
 // Speichert Rollen/Stammdaten eines Mitglieds. Nur Vorstand.
 export const prerender = false;
@@ -42,13 +44,21 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   }
 
   const neueRollen = rollen.length ? rollen : ['mitglied'];
-  const neu: Record<string, unknown> = {
-    vorname,
-    nachname,
-    mitgliedsnummer,
-    geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
-    rollen: neueRollen,
-  };
+  // Datensparsamer Modus: nur Mitgliedsnummer + Rollen; keine Personendaten.
+  const privacy = site.login_modus === 'mitgliedsnummer';
+  const neu: Record<string, unknown> = privacy
+    ? { mitgliedsnummer, rollen: neueRollen }
+    : {
+        vorname,
+        nachname,
+        mitgliedsnummer,
+        geburtsdatum: geburtsdatum ? `${geburtsdatum} 00:00:00.000Z` : null,
+        rollen: neueRollen,
+      };
+  // Ändert sich im Privacy-Modus die Mitgliedsnummer, die Login-Kennung mitziehen.
+  if (privacy && mitgliedsnummer && alt && mitgliedsnummer !== alt.mitgliedsnummer) {
+    neu.email = syntheticEmail(mitgliedsnummer);
+  }
   // Beitrags-/SEPA-Felder nur pflegen, wenn das Modul aktiv ist (sonst würden
   // die nicht angezeigten Felder bestehende Werte leeren).
   if (hatBeitraege) {

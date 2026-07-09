@@ -5,8 +5,11 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
 import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus } from '../../../lib/status';
 import { berlinTag } from '../../../lib/ausgabe';
+import { site } from '../../../config';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
+// Datensparsamer Modus: keine Personendaten (Name/Geburtsdatum), nur Mitgliedsnummer.
+const privacy = site.login_modus === 'mitgliedsnummer';
 // Detail-/Bearbeitungsseite eines Mitglieds (aus der Suche geöffnet).
 // Nur Vorstand.
 export const prerender = false;
@@ -41,17 +44,19 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
 const heute = berlinTag();
 const statusJetzt = effektiverStatus(m, heute);
 const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
+// Anzeigename: im Privacy-Modus die Mitgliedsnummer statt der (synthetischen) Kennung.
+const anzeige = m.name || (privacy ? `Mitglied ${m.mitgliedsnummer ?? ''}`.trim() : m.email);
 ---
 
-<Basis titel={`${m.name || m.email}`} beschreibung="Mitglied bearbeiten.">
+<Basis titel={anzeige} beschreibung="Mitglied bearbeiten.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
   <p class="zurueck"><a href="/mitglieder/verwaltung">‹ Zurück zur Suche</a></p>
   <h1 style="margin-bottom:0.2rem;">
-    {m.name || m.email}
+    {anzeige}
     <span class:list={['status-marke', `status-${statusJetzt}`]}>{STATUS_LABEL[statusJetzt]}</span>
   </h1>
-  <p class="einleitung" style="margin-top:0.2rem;">{m.email}</p>
+  {!privacy && <p class="einleitung" style="margin-top:0.2rem;">{m.email}</p>}
   <p class="karte-link"><a href={`/mitglieder/verwaltung/${m.id}/karte`}>→ QR-Ausweis (Karte) drucken</a></p>
 
   {ok && <p class="hinweis" role="status">Gespeichert.</p>}
@@ -76,26 +81,32 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
 
     <section class="kasten">
       <h2 class="abschnitt">Stammdaten</h2>
-      <div class="feld-reihe">
-        <div class="feld">
-          <label for="f-vorname">Vorname</label>
-          <input id="f-vorname" name="vorname" type="text" value={m.vorname ?? ''} placeholder="leer = aus Name" />
-        </div>
-        <div class="feld">
-          <label for="f-nachname">Nachname</label>
-          <input id="f-nachname" name="nachname" type="text" value={m.nachname ?? ''} placeholder="leer = aus Name" />
-        </div>
-      </div>
-      <p class="feld-hinweis">Bleiben Vorname/Nachname leer, werden sie für den Ausweis automatisch aus dem Namen „{m.name || m.email}" abgeleitet.</p>
+      {!privacy && (
+        <>
+          <div class="feld-reihe">
+            <div class="feld">
+              <label for="f-vorname">Vorname</label>
+              <input id="f-vorname" name="vorname" type="text" value={m.vorname ?? ''} placeholder="leer = aus Name" />
+            </div>
+            <div class="feld">
+              <label for="f-nachname">Nachname</label>
+              <input id="f-nachname" name="nachname" type="text" value={m.nachname ?? ''} placeholder="leer = aus Name" />
+            </div>
+          </div>
+          <p class="feld-hinweis">Bleiben Vorname/Nachname leer, werden sie für den Ausweis automatisch aus dem Namen „{m.name || m.email}" abgeleitet.</p>
+        </>
+      )}
       <div class="feld-reihe">
         <div class="feld">
           <label for="f-nr">Mitgliedsnummer</label>
           <input id="f-nr" name="mitgliedsnummer" type="text" value={m.mitgliedsnummer ?? ''} />
         </div>
-        <div class="feld">
-          <label for="f-geb">Geburtsdatum</label>
-          <input id="f-geb" name="geburtsdatum" type="date" value={isoTag(m.geburtsdatum)} />
-        </div>
+        {!privacy && (
+          <div class="feld">
+            <label for="f-geb">Geburtsdatum</label>
+            <input id="f-geb" name="geburtsdatum" type="date" value={isoTag(m.geburtsdatum)} />
+          </div>
+        )}
         {hatBeitraege && (
           <div class="feld">
             <label for="f-bis">Beitrag bezahlt bis</label>
@@ -103,6 +114,9 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
           </div>
         )}
       </div>
+      {privacy && (
+        <p class="feld-hinweis">Datensparsamer Modus: es werden keine personenbezogenen Daten (Name, Geburtsdatum) gespeichert — nur die Mitgliedsnummer.</p>
+      )}
     </section>
 
     {hatBeitraege && (
@@ -212,7 +226,7 @@ const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
         Löscht das Konto endgültig; Abgaben-/Anbaudaten bleiben pseudonym erhalten.
       </p>
       <form method="post" action="/mitglieder/verwaltung/loeschen"
-        onsubmit={`return confirm('Mitglied „${(m.name || m.email).replace(/'/g, '')}" wirklich endgültig entfernen?')`}>
+        onsubmit={`return confirm('Mitglied „${anzeige.replace(/'/g, '')}" wirklich endgültig entfernen?')`}>
         <input type="hidden" name="mitglied" value={m.id} />
         <button class="knopf-gefahr" type="submit">Mitglied endgültig entfernen</button>
       </form>
