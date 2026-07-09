@@ -16,6 +16,9 @@ const bereits = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (bereits) {
   return Astro.redirect(startseiteFuer(bereits.mitglied.rollen), 303);
 }
+// Login-Seite nie im Browser zwischenspeichern (sonst kann nach einem
+// Modus-Wechsel eine veraltete Version mit falschem Feld erscheinen).
+Astro.response.headers.set('Cache-Control', 'no-store, must-revalidate');
 
 const fehler = Astro.url.searchParams.get('fehler');
 const abgemeldet = Astro.url.searchParams.get('abgemeldet');
@@ -59,7 +62,7 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
       {site.login_modus === 'mitgliedsnummer' ? (
         <>
           <label for="kennung">{t('login.mitgliedsnummer')}</label>
-          <input id="kennung" name="kennung" type="text" autocomplete="username" autocapitalize="characters" required />
+          <input id="kennung" name="kennung" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="z. B. M-042" required />
         </>
       ) : (
         <>
