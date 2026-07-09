@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import UnterNav from '../../components/UnterNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { uebersetzer } from '../../lib/i18n';
+import { anzeigeName } from '../../lib/mitglied-anzeige';
 
 // Geschützt. Sachliche Sortenbeschreibungen für Mitglieder + Bewertungen
 // der Mitglieder (Sterne + Kurzkommentar, eine Bewertung je Mitglied/Sorte).
@@ -29,7 +30,7 @@ interface Bericht {
 interface Sorte { id: string; name: string; typ?: string; aktiv?: boolean }
 interface Bewertung {
   id: string; sorte: string; mitglied: string; sterne: number; kommentar?: string; updated?: string;
-  expand?: { mitglied?: { vorname?: string; name?: string; mitgliedsnummer?: string } };
+  expand?: { mitglied?: { vorname?: string; name?: string; mitgliedsnummer?: string; alias?: string } };
 }
 
 async function ladeListe<T>(collection: string, opts: Record<string, unknown> = {}): Promise<T[]> {
@@ -51,7 +52,7 @@ const schnitt = (id: string) => {
   return Math.round((l.reduce((s, b) => s + (Number(b.sterne) || 0), 0) / l.length) * 10) / 10;
 };
 const meine = (id: string) => fuerSorte(id).find((b) => b.mitglied === mitglied.id);
-const vornameVon = (b: Bewertung) => b.expand?.mitglied?.vorname || b.expand?.mitglied?.name?.split(' ')[0] || 'Mitglied';
+const vornameVon = (b: Bewertung) => anzeigeName(b.expand?.mitglied);
 const sterneText = (n: number) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
 
 const t = uebersetzer(Astro.locals.sprache ?? 'de');

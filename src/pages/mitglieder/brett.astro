@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfVerwalten } from '../../lib/rollen';
 import { uebersetzer } from '../../lib/i18n';
+import { anzeigeName } from '../../lib/mitglied-anzeige';
 
 // Schwarzes Brett: Beiträge der Mitglieder mit einer Antwort-Ebene. Bewusst
 // ruhig (keine Likes, kein Live-Chat) — passt zum sachlichen KCanG-Stil.
@@ -20,7 +21,7 @@ const vorstand = darfVerwalten(mitglied.rollen);
 
 interface Beitrag {
   id: string; mitglied: string; text: string; antwort_auf?: string; created: string;
-  expand?: { mitglied?: { vorname?: string; nachname?: string; name?: string } };
+  expand?: { mitglied?: { vorname?: string; nachname?: string; name?: string; alias?: string; mitgliedsnummer?: string } };
 }
 let beitraege: Beitrag[] = [];
 try {
@@ -30,11 +31,7 @@ try {
 const haupt = beitraege.filter((b) => !b.antwort_auf);
 const antwortenAuf = (id: string) =>
   beitraege.filter((b) => b.antwort_auf === id).sort((a, b) => a.created.localeCompare(b.created));
-const wer = (b: Beitrag) => {
-  const u = b.expand?.mitglied;
-  if (!u) return 'Mitglied';
-  return [u.vorname, u.nachname].filter(Boolean).join(' ') || u.name || 'Mitglied';
-};
+const wer = (b: Beitrag) => anzeigeName(b.expand?.mitglied);
 const wann = (s: string) =>
   s ? new Date(s).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 const darfLoeschen = (b: Beitrag) => vorstand || b.mitglied === mitglied.id;

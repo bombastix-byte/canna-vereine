@@ -8,6 +8,7 @@ import { vorstandsKennzahlen } from '../../lib/cockpit';
 import { berlinTag } from '../../lib/ausgabe';
 import { mussBestaetigen } from '../../lib/einwilligung';
 import { uebersetzer } from '../../lib/i18n';
+import { anzeigeName } from '../../lib/mitglied-anzeige';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 const hatKasse = __fn ? __fn.kasse !== false : true;
@@ -111,7 +112,7 @@ const tr = uebersetzer(Astro.locals.sprache ?? 'de');
 
   <header class="willkommen">
     <p class="eyebrow">{tr('nav.bereich')}</p>
-    <h1>{tr('bereich.willkommen')}{mitglied.name ? `, ${mitglied.name}` : ''}</h1>
+    <h1>{tr('bereich.willkommen')}, {anzeigeName(mitglied)}</h1>
     <p class="willkommen__sub">{tr('bereich.sub')}</p>
   </header>
 

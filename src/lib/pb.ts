@@ -43,6 +43,8 @@ export interface Mitglied {
   id: string;
   email: string;
   name?: string;
+  /** Frei gewählter Anzeigename (Alias) statt „Mitglied M-…". */
+  alias?: string;
   /** Zugewiesene Rollen (Mehrfach). Steuert alle Rechte. Siehe lib/rollen.ts. */
   rollen: string[];
   /** Vereinsinterne Mitgliedsnummer (fuer Beleg/Identifikation). */
@@ -74,6 +76,7 @@ export async function mitgliedAusToken(
         id: record.id,
         email: record.email as string,
         name: (record.name as string) || undefined,
+        alias: (record.alias as string) || undefined,
         rollen: alsRollen(record.rollen).length ? alsRollen(record.rollen) : ['mitglied'],
         mitgliedsnummer: (record.mitgliedsnummer as string) || undefined,
         geburtsdatum: (record.geburtsdatum as string) || undefined,

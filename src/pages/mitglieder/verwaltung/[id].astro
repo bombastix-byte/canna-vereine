@@ -6,6 +6,7 @@ import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
 import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus } from '../../../lib/status';
 import { berlinTag } from '../../../lib/ausgabe';
 import { site } from '../../../config';
+import { anzeigeName } from '../../../lib/mitglied-anzeige';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Datensparsamer Modus: keine Personendaten (Name/Geburtsdatum), nur Mitgliedsnummer.
@@ -44,8 +45,8 @@ const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
 const heute = berlinTag();
 const statusJetzt = effektiverStatus(m, heute);
 const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
-// Anzeigename: im Privacy-Modus die Mitgliedsnummer statt der (synthetischen) Kennung.
-const anzeige = m.name || (privacy ? `Mitglied ${m.mitgliedsnummer ?? ''}`.trim() : m.email);
+// Anzeigename: Alias oder „Mitglied M-…" (nie Klarname/synthetische Kennung).
+const anzeige = anzeigeName(m);
 ---
 
 <Basis titel={anzeige} beschreibung="Mitglied bearbeiten.">

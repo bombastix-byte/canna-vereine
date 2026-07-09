@@ -40,7 +40,7 @@ const hatMandat = !!(u.mandatsref && u.mandatsdatum);
   <h1 style="margin-bottom:0.4rem;">{t('profil.titel')}</h1>
   <p style="margin:0 0 1rem;"><SprachWahl /></p>
 
-  {ok && <p class="hinweis" role="status">{ok === 'pw' ? t('profil.passwort_ok') : ok === 'mail' ? t('profil.reset_email_ok') : t('profil.gespeichert')}</p>}
+  {ok && <p class="hinweis" role="status">{ok === 'pw' ? t('profil.passwort_ok') : ok === 'mail' ? t('profil.reset_email_ok') : ok === 'alias' ? t('profil.alias_ok') : t('profil.gespeichert')}</p>}
   {fehler === 'pw' && <p class="hinweis hinweis--fehler" role="alert">{t('profil.passwort_fehler')}</p>}
   {fehler && fehler !== 'pw' && <p class="hinweis hinweis--fehler" role="alert">{t('profil.fehler')}</p>}
 
@@ -51,6 +51,16 @@ const hatMandat = !!(u.mandatsref && u.mandatsdatum);
       <section class="kasten identitaet">
         <div class="zeile"><span>{t('profil.nummer')}</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
       </section>
+
+      <form class="kasten" method="post" action="/mitglieder/profil/alias">
+        <h2 style="margin-top:0;">{t('profil.alias_h')}</h2>
+        <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">{t('profil.alias_hinweis')}</p>
+        <div class="feld">
+          <label for="alias">{t('profil.alias_label')}</label>
+          <input class="eingabe" id="alias" name="alias" type="text" maxlength="40" value={u.alias ?? ''} placeholder={t('profil.alias_ph')} autocomplete="off" />
+        </div>
+        <button class="knopf-sek" type="submit">{t('profil.alias_speichern')}</button>
+      </form>
 
       <form class="kasten" method="post" action="/mitglieder/profil/passwort">
         <h2 style="margin-top:0;">{t('profil.passwort_h')}</h2>

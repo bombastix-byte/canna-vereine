@@ -47,6 +47,15 @@ if (!users.fields.some((f) => f.name === 'reset_email')) {
 await pb.collections.update('users', { manageRule: vorstand });
 console.log('users: manageRule = Vorstand (Passwort-Reset).');
 
+// 2c) users.alias: frei wählbarer Anzeigename (statt „Mitglied M-…").
+const usersA = await pb.collections.getOne('users');
+if (!usersA.fields.some((f) => f.name === 'alias')) {
+  await pb.collections.update('users', { fields: [...usersA.fields, { name: 'alias', type: 'text', max: 40 }] });
+  console.log('users: alias ergänzt.');
+} else {
+  console.log('users: alias vorhanden.');
+}
+
 // 3) vorbestellungen: Vorstand sieht alle + darf Status setzen.
 await pb.collections.update('vorbestellungen', {
   listRule: `${angemeldet} && (mitglied = @request.auth.id || ${vorstand})`,

@@ -8,6 +8,7 @@ import { darfVerwalten, ROLLEN_LABEL, istSystemkonto, type Rolle } from '../../l
 import { effektiverStatus, STATUS_LABEL } from '../../lib/status';
 import { berlinTag } from '../../lib/ausgabe';
 import { site } from '../../config';
+import { anzeigeName } from '../../lib/mitglied-anzeige';
 // Datensparsamer Modus: Mitglieder werden nur mit der Mitgliedsnummer angelegt
 // (keine Personendaten). Das Formular blendet Name/E-Mail/Geburtsdatum aus.
 const privacy = site.login_modus === 'mitgliedsnummer';
@@ -40,7 +41,7 @@ const q = (Astro.url.searchParams.get('q') ?? '').trim();
 let alle: UserRow[] = [];
 try {
   alle = (await pb.collection('users').getFullList({
-    fields: 'id,name,email,mitgliedsnummer,rollen,mitglied_status,austritt_zum',
+    fields: 'id,name,alias,email,mitgliedsnummer,rollen,mitglied_status,austritt_zum',
     sort: 'mitgliedsnummer,name',
   })) as UserRow[];
 } catch {
@@ -173,7 +174,7 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
             <span class="zeile-nr">{m.mitgliedsnummer || '—'}</span>
             <span class="zeile-mitte">
               <span class="zeile-name">
-                {m.name || (privacy ? `Mitglied ${m.mitgliedsnummer ?? ''}`.trim() : m.email)}
+                {anzeigeName(m)}
                 {effektiverStatus(m, berlinTag()) !== 'aktiv' && (
                   <span class:list={['zeile-status', `st-${effektiverStatus(m, berlinTag())}`]}>{STATUS_LABEL[effektiverStatus(m, berlinTag())]}</span>
                 )}

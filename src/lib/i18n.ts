@@ -576,6 +576,18 @@ const W: Record<string, [string, string, string]> = {
   ],
   'profil.reset_email_label': ['E-Mail (nur für Reset)', 'Email (reset only)', 'E-mail (tylko do resetu)'],
   'profil.reset_email_ok': ['Gespeichert.', 'Saved.', 'Zapisano.'],
+
+  // --- Profil: frei wählbarer Anzeigename (Alias) ---
+  'profil.alias_h': ['Anzeigename (frei wählbar)', 'Display name (optional)', 'Nazwa wyświetlana (opcjonalnie)'],
+  'profil.alias_hinweis': [
+    'Optional. Wird anderen statt „Mitglied M-…" angezeigt. Wähle einen Spitznamen — bitte keinen Klarnamen, wenn du anonym bleiben möchtest. Leer lassen = nur die Mitgliedsnummer.',
+    'Optional. Shown to others instead of “Member M-…”. Choose a nickname — please avoid your real name if you want to stay anonymous. Leave empty = membership number only.',
+    'Opcjonalnie. Wyświetlana innym zamiast „Członek M-…”. Wybierz pseudonim — unikaj prawdziwego imienia, jeśli chcesz pozostać anonimowy. Puste = tylko numer członkowski.',
+  ],
+  'profil.alias_label': ['Anzeigename', 'Display name', 'Nazwa wyświetlana'],
+  'profil.alias_ph': ['z. B. Grüner Daumen', 'e.g. Green Thumb', 'np. Zielony Kciuk'],
+  'profil.alias_speichern': ['Anzeigename speichern', 'Save display name', 'Zapisz nazwę'],
+  'profil.alias_ok': ['Anzeigename gespeichert.', 'Display name saved.', 'Nazwa wyświetlana zapisana.'],
 };
 
 /** Liefert eine Übersetzungsfunktion für die gewählte Sprache (Fallback de). */
