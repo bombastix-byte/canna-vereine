@@ -17,10 +17,18 @@ export const goerlitz: SiteConfig = {
   kurzname: 'Cannabis-Verein Görlitz',
   kuerzel: 'CVG',
   stadt: 'Görlitz',
-  // Finanzierung des CVG: KEINE laufenden Mitgliedsbeiträge/SEPA/Mahnwesen,
-  // nur ein einmaliger Aufnahmebeitrag (bar bei Aufnahme, in die Kasse).
-  // Beitritt läuft offline -> Online-Anträge aus. Alles andere aktiv.
-  funktionen: { beitraege: false, antraege: false },
+  // TESTUMGEBUNG: goerlitz spiegelt bewusst die CVG-Produktionskonfiguration
+  // (Mitgliedsnummer-Login + schlanke Rubriken), damit hier GENAU die
+  // CVG-Erfahrung getestet wird, bevor auf cvg freigeschaltet wird. Demo-Daten
+  // bleiben. Zum Vorführen einzelner Module: live im Admin (Verwaltung › Module).
+  login_modus: 'mitgliedsnummer',
+  funktionen: {
+    beitraege: false, antraege: false, kasse: false, push: false,
+    termine: false, helferplan: false, abstimmungen: false,
+    brett: false, bewertungen: false,
+    wissen: false, ausweis: false, app: false, sicherheit: false,
+    aushang: true, vorbestellung: true,
+  },
   aufnahmebeitrag_euro: 50, // TODO: echten CVG-Aufnahmebeitrag bestätigen
   registereintrag: 'TODO: VR-Nummer, Amtsgericht',
   erlaubnisHinweis:
