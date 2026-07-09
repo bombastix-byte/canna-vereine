@@ -38,6 +38,7 @@ const SEEDS = [
   'seed-kassen-konnektor.mjs', // externe Kasse
   'seed-bewertungen.mjs',      // Sortenbewertung
   'seed-brett.mjs',            // Schwarzes Brett
+  'seed-schlank.mjs',          // Aushang-Rechte, reset_email, Vorbestellungs-Admin
   'seed-angebot.mjs',
   'seed-anleitungen.mjs',
   'seed-abstimmungen.mjs',

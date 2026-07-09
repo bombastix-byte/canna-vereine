@@ -3,6 +3,8 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
 import { protokolliere } from '../../../lib/audit';
 import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
+import { site } from '../../../config';
+import { syntheticEmail } from '../../../lib/login';
 
 // Legt ein Mitglied manuell an (Vorstand). Naechste freie M-Nummer, wenn keine
 // angegeben; Startpasswort automatisch, wenn keins gesetzt. Zeigt das Passwort
@@ -23,28 +25,22 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   const { pb, mitglied } = ergebnis;
   if (!darfVerwalten(mitglied.rollen)) return redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
+  // Datensparsamer Modus: keine personenbezogenen Daten (Name/E-Mail/Geburts-
+  // datum). Login läuft über die Mitgliedsnummer, intern via synthetischer Kennung.
+  const privacy = site.login_modus === 'mitgliedsnummer';
+
   const daten = await request.formData();
-  const vorname = String(daten.get('vorname') ?? '').trim();
-  const nachname = String(daten.get('nachname') ?? '').trim();
-  const email = String(daten.get('email') ?? '').trim().toLowerCase();
+  const vorname = privacy ? '' : String(daten.get('vorname') ?? '').trim();
+  const nachname = privacy ? '' : String(daten.get('nachname') ?? '').trim();
   let mitgliedsnummer = String(daten.get('mitgliedsnummer') ?? '').trim();
-  const geburtsdatum = String(daten.get('geburtsdatum') ?? '').trim();
+  const geburtsdatum = privacy ? '' : String(daten.get('geburtsdatum') ?? '').trim();
   const rollen = daten.getAll('rollen').map((r) => String(r)).filter((r) => (ROLLEN as string[]).includes(r));
   const passwort = String(daten.get('passwort') ?? '').trim() || startpasswort();
 
   const fehler = (code: string) => redirect(`/mitglieder/verwaltung?fehler=${code}`, 303);
-  if (!email || !email.includes('@')) return fehler('email');
-  if (!nachname && !vorname) return fehler('name');
+  if (!privacy && (!nachname && !vorname)) return fehler('name');
 
-  // E-Mail schon vergeben?
-  try {
-    await pb.collection('users').getFirstListItem(`email="${email}"`);
-    return fehler('existiert');
-  } catch {
-    /* frei */
-  }
-
-  // Freie M-Nummer, wenn keine angegeben.
+  // Freie M-Nummer, wenn keine angegeben (im Privacy-Modus die einzige Kennung).
   if (!mitgliedsnummer) {
     let nr = 1;
     try {
@@ -56,6 +52,20 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       /* Startwert */
     }
     mitgliedsnummer = 'M-' + String(nr).padStart(3, '0');
+  }
+
+  // Identität: synthetisch (Privacy) oder echte E-Mail (Standard-Modus).
+  const email = privacy
+    ? syntheticEmail(mitgliedsnummer)
+    : String(daten.get('email') ?? '').trim().toLowerCase();
+  if (!privacy && (!email || !email.includes('@'))) return fehler('email');
+
+  // Kennung schon vergeben?
+  try {
+    await pb.collection('users').getFirstListItem(`email="${email}"`);
+    return fehler('existiert');
+  } catch {
+    /* frei */
   }
 
   const name = [vorname, nachname].filter(Boolean).join(' ');

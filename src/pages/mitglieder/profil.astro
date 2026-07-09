@@ -4,11 +4,15 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { uebersetzer } from '../../lib/i18n';
 import SprachWahl from '../../components/SprachWahl.astro';
+import { site } from '../../config';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
-// Mein Konto: das Mitglied pflegt eigene Kontakt- und SEPA-Daten selbst.
-// Identitäts-, Rollen- und Beitragsfelder bleiben schreibgeschützt (nur Vorstand).
+// Mein Konto. Im datensparsamen Modus (login_modus 'mitgliedsnummer') nur
+// Passwortänderung + freiwillige Reset-E-Mail — keine Personendatenerhebung.
+// Sonst: eigene Kontakt- und SEPA-Daten pflegen.
 export const prerender = false;
+
+const privacy = site.login_modus === 'mitgliedsnummer';
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
@@ -30,61 +34,102 @@ const mandatDatumDe = u.mandatsdatum ? new Date(u.mandatsdatum).toLocaleDateStri
 const hatMandat = !!(u.mandatsref && u.mandatsdatum);
 ---
 
-<Basis titel="Mein Konto" beschreibung="Eigene Kontakt- und SEPA-Daten pflegen.">
+<Basis titel={t('profil.titel')} beschreibung="Passwort und Konto.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">{t('nav.bereich')}</p>
   <h1 style="margin-bottom:0.4rem;">{t('profil.titel')}</h1>
-  <p class="einleitung">{hatBeitraege ? t('profil.intro.mit_sepa') : t('profil.intro.ohne_sepa')}</p>
   <p style="margin:0 0 1rem;"><SprachWahl /></p>
 
-  {ok && <p class="hinweis" role="status">{t('profil.gespeichert')}</p>}
-  {fehler && <p class="hinweis hinweis--fehler" role="alert">{t('profil.fehler')}</p>}
+  {ok && <p class="hinweis" role="status">{ok === 'pw' ? t('profil.passwort_ok') : ok === 'mail' ? t('profil.reset_email_ok') : t('profil.gespeichert')}</p>}
+  {fehler === 'pw' && <p class="hinweis hinweis--fehler" role="alert">{t('profil.passwort_fehler')}</p>}
+  {fehler && fehler !== 'pw' && <p class="hinweis hinweis--fehler" role="alert">{t('profil.fehler')}</p>}
 
-  <section class="kasten identitaet">
-    <h2 style="margin-top:0;">{t('profil.meine_daten')}</h2>
-    <div class="zeile"><span>{t('profil.nummer')}</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
-    <div class="zeile"><span>{t('profil.name')}</span><strong>{name || '—'}</strong></div>
-    <div class="zeile"><span>{t('profil.geburtsdatum')}</span><strong>{gebDe}</strong></div>
-    <div class="zeile"><span>{t('profil.email_login')}</span><strong>{u.email}</strong></div>
-    <p class="fuss">{t('profil.nur_vorstand')}</p>
-  </section>
+  {privacy ? (
+    <>
+      <p class="einleitung">{t('profil.nur_passwort_intro')}</p>
 
-  <form class="kasten" method="post" action="/mitglieder/profil/speichern">
-    <h2 style="margin-top:0;">{t('profil.kontakt')}</h2>
-    <div class="feld">
-      <label for="telefon">{t('profil.telefon')}</label>
-      <input class="eingabe" id="telefon" name="telefon" type="tel" value={u.telefon ?? ''} placeholder="z. B. 0170 1234567" />
-    </div>
+      <section class="kasten identitaet">
+        <div class="zeile"><span>{t('profil.nummer')}</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
+      </section>
 
-    {hatBeitraege && (
-      <>
-        <h2>SEPA-Lastschriftmandat</h2>
-        <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
-          Mit dem Mandat ermächtigst du den Verein, deinen Mitgliedsbeitrag von
-          deinem Konto einzuziehen. Du kannst es hier jederzeit ändern oder widerrufen.
-        </p>
-        <div class="feld-reihe">
-          <div class="feld" style="flex:2 1 16rem;">
-            <label for="iban">IBAN</label>
-            <input class="eingabe" id="iban" name="iban" type="text" value={u.iban ?? ''} placeholder="DE00 0000 0000 0000 0000 00" autocomplete="off" />
-          </div>
-          <div class="feld" style="flex:1 1 8rem;">
-            <label for="bic">BIC (optional)</label>
-            <input class="eingabe" id="bic" name="bic" type="text" value={u.bic ?? ''} placeholder="GENODEF1XXX" autocomplete="off" />
-          </div>
+      <form class="kasten" method="post" action="/mitglieder/profil/passwort">
+        <h2 style="margin-top:0;">{t('profil.passwort_h')}</h2>
+        <div class="feld">
+          <label for="alt">{t('profil.passwort_alt')}</label>
+          <input class="eingabe" id="alt" name="alt" type="password" autocomplete="current-password" required />
         </div>
-        <label class="mandat-check">
-          <input type="checkbox" name="mandat" checked={hatMandat} />
-          <span>Ich erteile dem Verein ein SEPA-Lastschriftmandat für den Mitgliedsbeitrag.</span>
-        </label>
-        {hatMandat && (
-          <p class="fuss">Aktuelles Mandat: <strong>{u.mandatsref}</strong>, erteilt am {mandatDatumDe}. Änderst du die IBAN, wird ein neues Mandat mit heutigem Datum erzeugt.</p>
-        )}
-      </>
-    )}
+        <div class="feld">
+          <label for="neu">{t('profil.passwort_neu')}</label>
+          <input class="eingabe" id="neu" name="neu" type="password" autocomplete="new-password" minlength="8" required />
+        </div>
+        <div class="feld">
+          <label for="neu2">{t('profil.passwort_neu2')}</label>
+          <input class="eingabe" id="neu2" name="neu2" type="password" autocomplete="new-password" minlength="8" required />
+        </div>
+        <button class="knopf" type="submit">{t('profil.passwort_speichern')}</button>
+      </form>
 
-    <button class="knopf" type="submit" style="margin-top:1rem;">{t('profil.speichern')}</button>
-  </form>
+      <form class="kasten" method="post" action="/mitglieder/profil/reset-email">
+        <h2 style="margin-top:0;">{t('profil.reset_email_h')}</h2>
+        <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">{t('profil.reset_email_hinweis')}</p>
+        <div class="feld">
+          <label for="reset_email">{t('profil.reset_email_label')}</label>
+          <input class="eingabe" id="reset_email" name="reset_email" type="email" value={u.reset_email ?? ''} autocomplete="off" placeholder="—" />
+        </div>
+        <button class="knopf-sek" type="submit">{t('profil.speichern')}</button>
+      </form>
+    </>
+  ) : (
+    <>
+      <p class="einleitung">{hatBeitraege ? t('profil.intro.mit_sepa') : t('profil.intro.ohne_sepa')}</p>
+
+      <section class="kasten identitaet">
+        <h2 style="margin-top:0;">{t('profil.meine_daten')}</h2>
+        <div class="zeile"><span>{t('profil.nummer')}</span><strong>{u.mitgliedsnummer || '—'}</strong></div>
+        <div class="zeile"><span>{t('profil.name')}</span><strong>{name || '—'}</strong></div>
+        <div class="zeile"><span>{t('profil.geburtsdatum')}</span><strong>{gebDe}</strong></div>
+        <div class="zeile"><span>{t('profil.email_login')}</span><strong>{u.email}</strong></div>
+        <p class="fuss">{t('profil.nur_vorstand')}</p>
+      </section>
+
+      <form class="kasten" method="post" action="/mitglieder/profil/speichern">
+        <h2 style="margin-top:0;">{t('profil.kontakt')}</h2>
+        <div class="feld">
+          <label for="telefon">{t('profil.telefon')}</label>
+          <input class="eingabe" id="telefon" name="telefon" type="tel" value={u.telefon ?? ''} placeholder="z. B. 0170 1234567" />
+        </div>
+
+        {hatBeitraege && (
+          <>
+            <h2>SEPA-Lastschriftmandat</h2>
+            <p style="color:var(--ink-soft);font-size:0.92rem;margin:0 0 0.8rem;">
+              Mit dem Mandat ermächtigst du den Verein, deinen Mitgliedsbeitrag von
+              deinem Konto einzuziehen. Du kannst es hier jederzeit ändern oder widerrufen.
+            </p>
+            <div class="feld-reihe">
+              <div class="feld" style="flex:2 1 16rem;">
+                <label for="iban">IBAN</label>
+                <input class="eingabe" id="iban" name="iban" type="text" value={u.iban ?? ''} placeholder="DE00 0000 0000 0000 0000 00" autocomplete="off" />
+              </div>
+              <div class="feld" style="flex:1 1 8rem;">
+                <label for="bic">BIC (optional)</label>
+                <input class="eingabe" id="bic" name="bic" type="text" value={u.bic ?? ''} placeholder="GENODEF1XXX" autocomplete="off" />
+              </div>
+            </div>
+            <label class="mandat-check">
+              <input type="checkbox" name="mandat" checked={hatMandat} />
+              <span>Ich erteile dem Verein ein SEPA-Lastschriftmandat für den Mitgliedsbeitrag.</span>
+            </label>
+            {hatMandat && (
+              <p class="fuss">Aktuelles Mandat: <strong>{u.mandatsref}</strong>, erteilt am {mandatDatumDe}. Änderst du die IBAN, wird ein neues Mandat mit heutigem Datum erzeugt.</p>
+            )}
+          </>
+        )}
+
+        <button class="knopf" type="submit" style="margin-top:1rem;">{t('profil.speichern')}</button>
+      </form>
+    </>
+  )}
 </Basis>
 
 <style>

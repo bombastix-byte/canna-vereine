@@ -1,0 +1,89 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { darfVerwalten } from '../../lib/rollen';
+import { uebersetzer } from '../../lib/i18n';
+import { berlinTag } from '../../lib/ausgabe';
+
+// Aushang: durch den Vorstand pflegbare Ankündigungen, die sofort erscheinen
+// (SSR liest live). Nutzt die vorhandene mitteilungen-Collection.
+export const prerender = false;
+
+const __fn = Astro.locals.funktionen;
+const hatAushang = __fn ? __fn.aushang !== false : true;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!hatAushang) return Astro.redirect('/mitglieder/bereich', 303);
+const vorstand = darfVerwalten(mitglied.rollen);
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
+
+interface Aushang { id: string; titel: string; inhalt: string; datum?: string; created?: string }
+let eintraege: Aushang[] = [];
+try {
+  eintraege = (await pb.collection('mitteilungen').getFullList({ sort: '-datum,-created' })) as Aushang[];
+} catch { eintraege = []; }
+
+const ok = Astro.url.searchParams.get('ok');
+const datum = (s?: string) => (s ? new Date(s.length === 10 ? s + 'T00:00:00Z' : s).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+const heute = berlinTag();
+---
+
+<Basis titel={t('aushang.titel')} beschreibung={t('aushang.intro')}>
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('aushang.titel')}</h1>
+  <p class="einleitung">{t('aushang.intro')}</p>
+
+  {ok && <p class="hinweis" role="status">{t('aushang.ok')}</p>}
+
+  {vorstand && (
+    <details class="klappe">
+      <summary>{t('aushang.neu')}</summary>
+      <form class="kasten" method="post" action="/mitglieder/aushang/neu">
+        <div class="feld">
+          <label for="titel">{t('aushang.f.titel')}</label>
+          <input class="eingabe" id="titel" name="titel" type="text" required />
+        </div>
+        <div class="feld">
+          <label for="inhalt">{t('aushang.f.inhalt')}</label>
+          <textarea class="eingabe" id="inhalt" name="inhalt" rows="4" required></textarea>
+        </div>
+        <input type="hidden" name="datum" value={heute} />
+        <button class="knopf" type="submit">{t('aushang.veroeffentlichen')}</button>
+      </form>
+    </details>
+  )}
+
+  {eintraege.length === 0 ? (
+    <p style="color:var(--ink-soft);">{t('aushang.leer')}</p>
+  ) : (
+    eintraege.map((a) => (
+      <article class="aushang">
+        <header class="a-kopf">
+          <h2>{a.titel}</h2>
+          {vorstand && (
+            <form method="post" action="/mitglieder/aushang/loeschen" onsubmit="return confirm('Aushang wirklich löschen?')">
+              <input type="hidden" name="id" value={a.id} />
+              <button class="a-loeschen" type="submit" title={t('aushang.loeschen')} aria-label={t('aushang.loeschen')}>✕</button>
+            </form>
+          )}
+        </header>
+        <p class="a-datum">{datum(a.datum || a.created)}</p>
+        <p class="a-text">{a.inhalt}</p>
+      </article>
+    ))
+  )}
+</Basis>
+
+<style>
+  .aushang { max-width: var(--mass); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--bg-rein); padding: 1rem 1.2rem; margin: 0 0 1rem; }
+  .a-kopf { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+  .a-kopf h2 { margin: 0; font-size: 1.15rem; }
+  .a-datum { color: var(--ink-soft); font-size: 0.82rem; margin: 0.2rem 0 0.6rem; }
+  .a-text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+  .a-loeschen { flex: none; border: 1px solid var(--line); background: none; color: var(--ink-soft); border-radius: var(--radius); width: 1.9rem; height: 1.9rem; cursor: pointer; }
+  .a-loeschen:hover { border-color: var(--gefahr); color: var(--gefahr); }
+</style>

@@ -1,0 +1,44 @@
+---
+import Basis from '../../layouts/Basis.astro';
+import MitgliedNav from '../../components/MitgliedNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
+import { uebersetzer } from '../../lib/i18n';
+import { site } from '../../config';
+
+// Rechtliches im Mitgliederbereich: Impressum, Datenschutz, Cookie-Hinweis.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { mitglied } = ergebnis;
+const t = uebersetzer(Astro.locals.sprache ?? 'de');
+const imp = site.impressum;
+---
+
+<Basis titel={t('rechtliches.titel')} beschreibung={t('rechtliches.intro')}>
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">{t('nav.bereich')}</p>
+  <h1 style="margin-bottom:0.4rem;">{t('rechtliches.titel')}</h1>
+  <p class="einleitung">{t('rechtliches.intro')}</p>
+
+  <section class="kasten">
+    <h2 style="margin-top:0;">{t('rechtliches.impressum')}</h2>
+    <p style="margin:0 0 0.3rem;"><strong>{site.vereinsname}</strong></p>
+    <p style="margin:0 0 0.3rem;color:var(--ink-soft);">
+      {site.kontakt.strasse}, {site.kontakt.plz} {site.kontakt.ort}
+    </p>
+    <p style="margin:0 0 0.3rem;color:var(--ink-soft);">{imp.vertretungsberechtigt}</p>
+    {site.registereintrag && <p style="margin:0 0 0.3rem;color:var(--ink-soft);">{site.registereintrag}</p>}
+    <p style="margin:0.6rem 0 0;"><a href="/impressum">{t('rechtliches.zum_impressum')} →</a></p>
+  </section>
+
+  <section class="kasten">
+    <h2 style="margin-top:0;">{t('rechtliches.datenschutz')}</h2>
+    <p style="margin:0;"><a href="/datenschutz">{t('rechtliches.zum_datenschutz')} →</a></p>
+  </section>
+
+  <section class="kasten">
+    <h2 style="margin-top:0;">{t('rechtliches.cookies_h')}</h2>
+    <p style="margin:0;">{t('rechtliches.cookies_text')}</p>
+  </section>
+</Basis>

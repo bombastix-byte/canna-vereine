@@ -15,6 +15,7 @@ export const prerender = false;
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
 if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { mitglied } = ergebnis;
+if (Astro.locals.funktionen?.wissen === false) return Astro.redirect('/mitglieder/bereich', 303);
 const p = site.praeventionsbeauftragter;
 const t = uebersetzer(Astro.locals.sprache ?? 'de');
 ---

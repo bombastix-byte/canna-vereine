@@ -56,8 +56,17 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
 
   <form class="kasten" method="post" action="/mitglieder/anmelden">
     <div class="feld">
-      <label for="email">{t('login.email')}</label>
-      <input id="email" name="email" type="email" autocomplete="username" required />
+      {site.login_modus === 'mitgliedsnummer' ? (
+        <>
+          <label for="kennung">{t('login.mitgliedsnummer')}</label>
+          <input id="kennung" name="kennung" type="text" autocomplete="username" autocapitalize="characters" required />
+        </>
+      ) : (
+        <>
+          <label for="email">{t('login.email')}</label>
+          <input id="email" name="email" type="email" autocomplete="username" required />
+        </>
+      )}
     </div>
     <div class="feld">
       <label for="passwort">{t('login.passwort')}</label>
@@ -72,6 +81,9 @@ const meldung = fehler ? fehlertext[fehler] ?? fehlertext.anmeldung : null;
     <button class="knopf" type="submit">{t('login.knopf')}</button>
   </form>
 
+  {site.login_modus === 'mitgliedsnummer' && (
+    <p style="color:var(--ink-soft);font-size:0.9rem;max-width:var(--mass);">{t('login.reset_hinweis')}</p>
+  )}
   {site.oeffentlich !== false && (
     <p style="color:var(--ink-soft);font-size:0.95rem;">
       Zugangsdaten erhalten Mitglieder vom Vorstand. Bei Problemen wenden Sie

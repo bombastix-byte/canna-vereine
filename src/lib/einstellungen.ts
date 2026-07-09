@@ -9,7 +9,7 @@ import type { KonnektorConfig } from './kassen-konnektor';
 
 export const MODUL_KEYS: FunktionsSchluessel[] = [
   'beitraege', 'verarbeitung', 'kasse', 'vorbestellung', 'termine', 'helferplan', 'abstimmungen', 'antraege', 'push',
-  'bewertungen', 'brett',
+  'bewertungen', 'brett', 'aushang', 'wissen', 'ausweis', 'app', 'sicherheit',
 ];
 
 export type Funktionen = Record<FunktionsSchluessel, boolean> & { aufnahmebeitragEuro: number };
@@ -69,4 +69,9 @@ export const MODUL_LABEL: Record<FunktionsSchluessel, string> = {
   push: 'Push-Benachrichtigungen',
   bewertungen: 'Sortenbewertung durch Mitglieder',
   brett: 'Schwarzes Brett',
+  aushang: 'Aushang (Ankündigungen)',
+  wissen: 'Wissen (Anleitungen, Sortenberichte, Prävention)',
+  ausweis: 'Digitaler Mitgliedsausweis',
+  app: 'Vereins-App (Download)',
+  sicherheit: 'Sicherheit (2FA, Push)',
 };

@@ -31,6 +31,8 @@ const W: Record<string, [string, string, string]> = {
   'nav.sicherheit': ['Sicherheit', 'Security', 'Bezpieczeństwo'],
   'nav.abmelden': ['Abmelden', 'Sign out', 'Wyloguj'],
   'nav.bereich': ['Mitgliederbereich', 'Members area', 'Strefa członków'],
+  'nav.aushang': ['Aushang', 'Notices', 'Tablica'],
+  'nav.rechtliches': ['Rechtliches', 'Legal', 'Informacje prawne'],
 
   // --- Login ---
   'login.titel': ['Anmeldung', 'Sign in', 'Logowanie'],
@@ -40,7 +42,14 @@ const W: Record<string, [string, string, string]> = {
     'Ta strefa jest zarezerwowana dla członków. Zaloguj się swoimi danymi dostępowymi.',
   ],
   'login.email': ['E-Mail-Adresse', 'Email address', 'Adres e-mail'],
+  'login.mitgliedsnummer': ['Mitgliedsnummer', 'Membership number', 'Numer członkowski'],
   'login.passwort': ['Passwort', 'Password', 'Hasło'],
+  'login.passwort_vergessen': ['Passwort vergessen?', 'Forgot password?', 'Nie pamiętasz hasła?'],
+  'login.reset_hinweis': [
+    'Zugangsdaten (Mitgliedsnummer + Startpasswort) erhältst du vom Vorstand. Passwort vergessen? Bitte an den Vorstand wenden.',
+    'You receive your credentials (membership number + initial password) from the board. Forgot your password? Please contact the board.',
+    'Dane dostępu (numer członkowski + hasło startowe) otrzymasz od zarządu. Nie pamiętasz hasła? Zwróć się do zarządu.',
+  ],
   'login.knopf': ['Anmelden', 'Sign in', 'Zaloguj się'],
   'login.abgemeldet': ['Sie wurden abgemeldet.', 'You have been signed out.', 'Wylogowano.'],
   'login.fehler.fehlend': [
@@ -516,6 +525,57 @@ const W: Record<string, [string, string, string]> = {
   'push.speichern_fehler': ['Das Speichern hat nicht geklappt. Bitte erneut versuchen.', 'Saving did not work. Please try again.', 'Zapisywanie nie powiodło się. Spróbuj ponownie.'],
   'push.deaktiviert': ['Benachrichtigungen sind deaktiviert.', 'Notifications are disabled.', 'Powiadomienia są wyłączone.'],
   'push.fehler': ['Das hat nicht geklappt.', 'That did not work.', 'Nie udało się.'],
+
+  // --- Aushang ---
+  'aushang.titel': ['Aushang', 'Notices', 'Tablica ogłoszeń'],
+  'aushang.intro': ['Aktuelle Ankündigungen des Vorstands.', 'Current announcements from the board.', 'Aktualne ogłoszenia zarządu.'],
+  'aushang.leer': ['Zurzeit gibt es keine Ankündigungen.', 'There are currently no announcements.', 'Obecnie brak ogłoszeń.'],
+  'aushang.neu': ['＋ Neue Ankündigung', '＋ New announcement', '＋ Nowe ogłoszenie'],
+  'aushang.f.titel': ['Titel', 'Title', 'Tytuł'],
+  'aushang.f.inhalt': ['Text', 'Text', 'Treść'],
+  'aushang.veroeffentlichen': ['Veröffentlichen', 'Publish', 'Opublikuj'],
+  'aushang.loeschen': ['Löschen', 'Delete', 'Usuń'],
+  'aushang.ok': ['Aushang aktualisiert.', 'Notice updated.', 'Ogłoszenie zaktualizowane.'],
+
+  // --- Rechtliches ---
+  'rechtliches.titel': ['Rechtliches', 'Legal', 'Informacje prawne'],
+  'rechtliches.intro': ['Impressum, Datenschutz und Hinweise zu Cookies.', 'Imprint, privacy and cookie information.', 'Impressum, ochrona danych i informacje o plikach cookie.'],
+  'rechtliches.impressum': ['Impressum', 'Imprint', 'Impressum'],
+  'rechtliches.datenschutz': ['Datenschutz', 'Privacy', 'Ochrona danych'],
+  'rechtliches.cookies_h': ['Cookies', 'Cookies', 'Pliki cookie'],
+  'rechtliches.cookies_text': [
+    'Diese App verwendet nur technisch notwendige Cookies: einen Anmelde-Cookie (damit du angemeldet bleibst) und einen Cookie für die gewählte Sprache. Kein Tracking, keine Weitergabe an Dritte.',
+    'This app uses only technically necessary cookies: a login cookie (to keep you signed in) and a cookie for the chosen language. No tracking, no sharing with third parties.',
+    'Ta aplikacja używa wyłącznie technicznie niezbędnych plików cookie: cookie logowania (abyś pozostał zalogowany) i cookie wybranego języka. Bez śledzenia i bez udostępniania osobom trzecim.',
+  ],
+  'rechtliches.zum_impressum': ['Impressum öffnen', 'Open imprint', 'Otwórz impressum'],
+  'rechtliches.zum_datenschutz': ['Datenschutzerklärung öffnen', 'Open privacy policy', 'Otwórz politykę prywatności'],
+
+  // --- Profil: Passwort + optionale Reset-Mail ---
+  'profil.nur_passwort_intro': [
+    'Hier änderst du dein Passwort. Der Verein speichert bewusst keine personenbezogenen Daten — nur deine Mitgliedsnummer.',
+    'Here you change your password. The club deliberately stores no personal data — only your membership number.',
+    'Tutaj zmieniasz hasło. Klub celowo nie przechowuje danych osobowych — tylko Twój numer członkowski.',
+  ],
+  'profil.passwort_h': ['Passwort ändern', 'Change password', 'Zmień hasło'],
+  'profil.passwort_alt': ['Aktuelles Passwort', 'Current password', 'Aktualne hasło'],
+  'profil.passwort_neu': ['Neues Passwort (min. 8 Zeichen)', 'New password (min. 8 chars)', 'Nowe hasło (min. 8 znaków)'],
+  'profil.passwort_neu2': ['Neues Passwort wiederholen', 'Repeat new password', 'Powtórz nowe hasło'],
+  'profil.passwort_speichern': ['Passwort speichern', 'Save password', 'Zapisz hasło'],
+  'profil.passwort_ok': ['Passwort geändert.', 'Password changed.', 'Hasło zmienione.'],
+  'profil.passwort_fehler': [
+    'Passwort konnte nicht geändert werden. Bitte aktuelles Passwort prüfen; neues mind. 8 Zeichen, beide Felder gleich.',
+    'Password could not be changed. Check current password; new one min. 8 characters, both fields equal.',
+    'Nie udało się zmienić hasła. Sprawdź aktualne hasło; nowe min. 8 znaków, oba pola identyczne.',
+  ],
+  'profil.reset_email_h': ['E-Mail für Passwort-Reset (freiwillig)', 'Email for password reset (optional)', 'E-mail do resetu hasła (opcjonalnie)'],
+  'profil.reset_email_hinweis': [
+    'Freiwillig: Hinterlege eine E-Mail nur, um dein Passwort später selbst zurücksetzen zu können. Ohne E-Mail setzt der Vorstand es zurück.',
+    'Optional: store an email solely to reset your password yourself later. Without an email, the board resets it.',
+    'Opcjonalnie: podaj e-mail wyłącznie po to, by później samodzielnie zresetować hasło. Bez e-maila resetuje je zarząd.',
+  ],
+  'profil.reset_email_label': ['E-Mail (nur für Reset)', 'Email (reset only)', 'E-mail (tylko do resetu)'],
+  'profil.reset_email_ok': ['Gespeichert.', 'Saved.', 'Zapisano.'],
 };
 
 /** Liefert eine Übersetzungsfunktion für die gewählte Sprache (Fallback de). */

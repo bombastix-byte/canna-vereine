@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { neuePb, AUTH_COOKIE, PENDING_COOKIE } from '../../lib/pb';
 import { alsRollen } from '../../lib/rollen';
 import { startseiteFuer } from '../../lib/mitglied-nav';
+import { loginIdentitaet } from '../../lib/login';
 
 // Serverseitiger Login-Endpunkt. Authentifiziert gegen PocketBase und legt
 // den Token in einem httpOnly-Cookie ab. Keine Anmeldedaten im Browser-JS.
@@ -12,19 +13,20 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const daten = await request.formData();
-  const email = String(daten.get('email') ?? '').trim();
+  // 'kennung' = Mitgliedsnummer-Modus, 'email' = E-Mail-Modus (Abwärtskompat.).
+  const eingabe = String(daten.get('kennung') ?? daten.get('email') ?? '').trim();
   const passwort = String(daten.get('passwort') ?? '');
 
-  if (!email || !passwort) {
+  if (!eingabe || !passwort) {
     return redirect('/mitglieder?fehler=fehlend', 303);
   }
 
   const pb = neuePb();
   let record;
   try {
-    ({ record } = await pb.collection('users').authWithPassword(email, passwort));
+    ({ record } = await pb.collection('users').authWithPassword(loginIdentitaet(eingabe), passwort));
   } catch {
-    // Bewusst neutrale Meldung, keine Unterscheidung E-Mail/Passwort.
+    // Bewusst neutrale Meldung, keine Unterscheidung Kennung/Passwort.
     return redirect('/mitglieder?fehler=ungueltig', 303);
   }
 

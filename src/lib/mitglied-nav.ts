@@ -2,17 +2,17 @@
 // (Layout "sidebar") und der klassischen MitgliedNav-Leiste (Layout
 // "standard"/"zentriert") gemeinsam genutzt - ein Ort fuer Punkte + Rechte.
 // Die abschaltbaren Module kommen als Laufzeit-Flags (locals.funktionen) herein.
-import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten, istPersonal } from './rollen';
+import { darfAusgeben, darfAnbau, darfBerichte, darfVerwalten } from './rollen';
 import type { Funktionen } from './einstellungen';
 import { uebersetzer, type Sprache } from './i18n';
 
 /**
- * Startseite direkt nach der Anmeldung. Einfache Mitglieder landen auf dem
- * digitalen Ausweis (am Tresen sofort vorzeigbar); Personal auf dem
- * Dashboard „Aktuelles".
+ * Startseite direkt nach der Anmeldung: für alle die Übersicht „Aktuelles".
+ * (Früher landeten Mitglieder auf dem Ausweis — der ist aber abschaltbar, daher
+ * die stabile Übersicht als Einstieg.)
  */
-export function startseiteFuer(rollen?: string[]): string {
-  return istPersonal(rollen) ? '/mitglieder/bereich' : '/mitglieder/ausweis';
+export function startseiteFuer(_rollen?: string[]): string {
+  return '/mitglieder/bereich';
 }
 
 export interface NavPunkt {
@@ -33,17 +33,19 @@ export function mitgliedPunkte(fn?: Funktionen, sprache: Sprache = 'de'): NavPun
   const t = uebersetzer(sprache);
   return [
     { label: t('nav.aktuelles'), href: '/mitglieder/bereich' },
+    ...(an(fn, 'aushang') ? [{ label: t('nav.aushang'), href: '/mitglieder/aushang' }] : []),
     { label: t('nav.angebot'), href: '/mitglieder/wochenangebot' },
     ...(an(fn, 'vorbestellung') ? [{ label: t('nav.vorbestellung'), href: '/mitglieder/vorbestellung' }] : []),
     ...(an(fn, 'termine') ? [{ label: t('nav.termine'), href: '/mitglieder/termine' }] : []),
     ...(an(fn, 'helferplan') ? [{ label: t('nav.helferplan'), href: '/mitglieder/helferplan' }] : []),
     ...(an(fn, 'abstimmungen') ? [{ label: t('nav.abstimmungen'), href: '/mitglieder/abstimmungen' }] : []),
     ...(an(fn, 'brett') ? [{ label: t('nav.brett'), href: '/mitglieder/brett' }] : []),
-    { label: t('nav.wissen'), href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] },
-    { label: t('nav.ausweis'), href: '/mitglieder/ausweis' },
+    ...(an(fn, 'wissen') ? [{ label: t('nav.wissen'), href: '/mitglieder/anleitungen', auch: ['/mitglieder/sortenberichte', '/mitglieder/praevention'] }] : []),
+    ...(an(fn, 'ausweis') ? [{ label: t('nav.ausweis'), href: '/mitglieder/ausweis' }] : []),
     { label: t('nav.konto'), href: '/mitglieder/profil' },
-    { label: t('nav.app'), href: '/mitglieder/app' },
-    { label: t('nav.sicherheit'), href: '/mitglieder/sicherheit' },
+    ...(an(fn, 'app') ? [{ label: t('nav.app'), href: '/mitglieder/app' }] : []),
+    ...(an(fn, 'sicherheit') ? [{ label: t('nav.sicherheit'), href: '/mitglieder/sicherheit' }] : []),
+    { label: t('nav.rechtliches'), href: '/mitglieder/rechtliches' },
   ];
 }
 
@@ -83,6 +85,7 @@ export function verwaltungTabs(fn?: Funktionen): { label: string; href: string }
           { label: 'Zahlungen', href: '/mitglieder/beitraege/status' },
         ]
       : []),
+    ...(an(fn, 'vorbestellung') ? [{ label: 'Vorbestellungen', href: '/mitglieder/verwaltung/vorbestellungen' }] : []),
     ...(an(fn, 'push') ? [{ label: 'Nachricht', href: '/mitglieder/nachricht' }] : []),
     { label: 'Module', href: '/mitglieder/verwaltung/module' },
     { label: 'Protokoll', href: '/mitglieder/verwaltung/protokoll' },

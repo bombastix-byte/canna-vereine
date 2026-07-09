@@ -1,0 +1,92 @@
+---
+import Basis from '../../../layouts/Basis.astro';
+import MitgliedNav from '../../../components/MitgliedNav.astro';
+import UnterNav from '../../../components/UnterNav.astro';
+import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { darfVerwalten } from '../../../lib/rollen';
+import { verwaltungTabs } from '../../../lib/mitglied-nav';
+
+// Vorstand: Auflistung aller Vorbestellungen (nach Mitgliedsnummer, keine
+// Klarnamen nötig) mit Status-Aktionen.
+export const prerender = false;
+
+const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
+if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
+const { pb, mitglied } = ergebnis;
+if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
+
+interface Bestellung {
+  id: string; sorte: string; menge_gramm: number; abholdatum?: string; hinweis?: string;
+  status?: string; created: string;
+  expand?: { mitglied?: { mitgliedsnummer?: string } };
+}
+let bestellungen: Bestellung[] = [];
+try {
+  bestellungen = (await pb.collection('vorbestellungen').getFullList({ sort: '-created', expand: 'mitglied' })) as Bestellung[];
+} catch { bestellungen = []; }
+
+const ok = Astro.url.searchParams.get('ok');
+const offen = bestellungen.filter((b) => (b.status ?? 'offen') === 'offen');
+const rest = bestellungen.filter((b) => (b.status ?? 'offen') !== 'offen');
+const nummer = (b: Bestellung) => b.expand?.mitglied?.mitgliedsnummer || '—';
+const datum = (s?: string) => (s ? new Date(s).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '');
+const statusLabel: Record<string, string> = { offen: 'Offen', bestaetigt: 'Bestätigt', abgeholt: 'Abgeholt', storniert: 'Storniert' };
+
+const zeile = (b: Bestellung) => b;
+---
+
+<Basis titel="Vorbestellungen" beschreibung="Alle Vorbestellungen der Mitglieder.">
+  <MitgliedNav rollen={mitglied.rollen} />
+  <p class="eyebrow">Vereinsarbeit · nur Vorstand</p>
+  <UnterNav punkte={verwaltungTabs(Astro.locals.funktionen)} />
+  <h1 style="margin-bottom:0.4rem;">Vorbestellungen</h1>
+  <p class="einleitung">Alle Vorbestellungen der Mitglieder — nach Mitgliedsnummer. Bestätige, hake das Abholen ab oder storniere.</p>
+
+  {ok && <p class="hinweis" role="status">Aktualisiert.</p>}
+
+  {bestellungen.length === 0 ? (
+    <p style="color:var(--ink-soft);">Keine Vorbestellungen.</p>
+  ) : (
+    <table class="tabelle">
+      <thead><tr><th>Datum</th><th>Mitglied</th><th>Sorte</th><th class="r">Menge</th><th>Abholung</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {[...offen, ...rest].map((b) => (
+          <tr class:list={{ erledigt: (b.status ?? 'offen') !== 'offen' }}>
+            <td>{datum(b.created)}</td>
+            <td><strong>{nummer(b)}</strong></td>
+            <td>{b.sorte}{b.hinweis ? <span class="hint" title={b.hinweis}> ⓘ</span> : null}</td>
+            <td class="r">{b.menge_gramm} g</td>
+            <td>{b.abholdatum ? datum(b.abholdatum) : '—'}</td>
+            <td>{statusLabel[b.status ?? 'offen'] ?? b.status}</td>
+            <td class="akt">
+              {(b.status ?? 'offen') === 'offen' && (
+                <form method="post" action="/mitglieder/verwaltung/vorbestellungen/status">
+                  <input type="hidden" name="id" value={b.id} />
+                  <button class="mini" type="submit" name="status" value="bestaetigt">Bestätigen</button>
+                  <button class="mini" type="submit" name="status" value="storniert">Stornieren</button>
+                </form>
+              )}
+              {b.status === 'bestaetigt' && (
+                <form method="post" action="/mitglieder/verwaltung/vorbestellungen/status">
+                  <input type="hidden" name="id" value={b.id} />
+                  <button class="mini" type="submit" name="status" value="abgeholt">Abgeholt</button>
+                </form>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Basis>
+
+<style>
+  .tabelle { width: 100%; max-width: var(--mass); border-collapse: collapse; font-size: 0.95rem; }
+  .tabelle th, .tabelle td { text-align: left; padding: 0.45rem 0.55rem; border-bottom: 1px solid var(--line); }
+  .tabelle .r { text-align: right; }
+  .tabelle tr.erledigt { color: var(--ink-soft); }
+  .akt form { display: flex; gap: 0.35rem; margin: 0; flex-wrap: wrap; }
+  .mini { font: inherit; font-size: 0.82rem; padding: 0.2rem 0.55rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-rein); color: var(--ink); cursor: pointer; }
+  .mini:hover { background: var(--line-soft); }
+  .hint { color: var(--ink-soft); cursor: help; }
+</style>

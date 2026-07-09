@@ -17,6 +17,7 @@ if (!ergebnis) {
   return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 }
 const { pb, mitglied } = ergebnis;
+if (Astro.locals.funktionen?.wissen === false) return Astro.redirect('/mitglieder/bereich', 303);
 
 interface Bericht {
   id: string;

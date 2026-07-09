@@ -64,6 +64,16 @@ export interface Funktionen {
   bewertungen?: boolean;
   /** Schwarzes Brett (Beiträge + Antworten der Mitglieder). */
   brett?: boolean;
+  /** Aushang: durch den Vorstand pflegbare Ankündigungen (Nav-Punkt „Aushang"). */
+  aushang?: boolean;
+  /** Wissen-Bereich (Anleitungen, Sortenberichte, Prävention). */
+  wissen?: boolean;
+  /** Digitaler Mitgliedsausweis (QR). */
+  ausweis?: boolean;
+  /** Vereins-App-Downloadseite. */
+  app?: boolean;
+  /** Sicherheit: Zwei-Faktor-Anmeldung und Push-Verwaltung. */
+  sicherheit?: boolean;
 }
 
 /** Schlüssel der abschaltbaren Module (für generische Prüfungen). */
@@ -100,6 +110,14 @@ export interface SiteConfig {
   registereintrag?: string;
   /** Erlaubnis-/Aktenzeichen der zuständigen Behörde, falls vorhanden */
   erlaubnisHinweis?: string;
+
+  /**
+   * Anmelde-Modus. 'email' (Default) = Login per E-Mail-Adresse.
+   * 'mitgliedsnummer' = datensparsamer Login nur über die Mitgliedsnummer;
+   * intern wird eine synthetische Kennung `<nr>@<id>.local` genutzt, es werden
+   * keine personenbezogenen Daten (Name, echte E-Mail, Geburtsdatum) erhoben.
+   */
+  login_modus?: 'email' | 'mitgliedsnummer';
 
   /** Abschaltbare Funktions-Module (siehe Funktionen). Fehlt es, ist alles an. */
   funktionen?: Funktionen;
