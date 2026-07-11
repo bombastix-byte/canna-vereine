@@ -3,6 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAusgeben } from '../../../lib/rollen';
 import { berlinTag } from '../../../lib/ausgabe';
 import { protokolliere } from '../../../lib/audit';
+import { inReihe } from '../../../lib/serie';
 
 // Storniert einen kompletten Abgabe-Vorgang (Beleg): alle Positionen werden als
 // storniert markiert (append-only, bleiben erhalten) und der Chargenbestand
@@ -56,14 +57,21 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     } catch {
       /* naechste Position trotzdem versuchen */
     }
-    // Bestand zurueckbuchen (best-effort).
+    // Bestand zurueckbuchen per PB-Feld-Modifier "verfuegbar_g+" (T4, fixt
+    // F4-Szenario B) statt Lesen-Addieren-Schreiben, zusaetzlich per Charge
+    // serialisiert (inReihe) - der Modifier allein ist bei echt gleich-
+    // zeitigen Requests auf denselben Datensatz nicht verlustfrei (siehe
+    // Kommentar in buchen.ts). Die Status-Reaktivierung (aufgebraucht ->
+    // freigegeben) richtet sich nach dem vom Update zurueckgegebenen
+    // (also aktuellen) Datensatz.
     if (p.charge_ref) {
       try {
-        const c = await pb.collection('chargen').getOne(p.charge_ref);
-        const rest = (Number(c.verfuegbar_g) || 0) + (Number(p.menge_gramm) || 0);
-        const patch: Record<string, unknown> = { verfuegbar_g: rest };
-        if (c.status === 'aufgebraucht' && rest > 0) patch.status = 'freigegeben';
-        await pb.collection('chargen').update(p.charge_ref, patch);
+        const aktualisiert = await inReihe(`charge:${p.charge_ref}`, () =>
+          pb.collection('chargen').update(p.charge_ref, { 'verfuegbar_g+': Number(p.menge_gramm) || 0 }),
+        );
+        if (aktualisiert.status === 'aufgebraucht' && Number(aktualisiert.verfuegbar_g) > 0) {
+          await pb.collection('chargen').update(p.charge_ref, { status: 'freigegeben' });
+        }
       } catch {
         /* Bestand ggf. von Hand korrigieren */
       }

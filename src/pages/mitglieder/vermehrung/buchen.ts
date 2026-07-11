@@ -3,6 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAusgeben } from '../../../lib/rollen';
 import { berlinTag, berlinMonat } from '../../../lib/ausgabe';
 import { pruefeVermehrung, summeStueck, ART_LABEL } from '../../../lib/vermehrung';
+import { inReihe } from '../../../lib/serie';
 
 // Bucht die Weitergabe von Vermehrungsmaterial an ein Mitglied. Samen und
 // Stecklinge koennen in EINEM Vorgang zusammen gebucht werden (je Art eigene
@@ -46,52 +47,58 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return zurueck(redirect, mitgliedId, 'Mitglied nicht gefunden.');
   }
 
-  const tag = berlinTag();
-  const monat = berlinMonat(tag);
+  // T5 (fixt F4-Szenario A im Normalbetrieb): Pruef+Buchungsblock je
+  // Mitglied serialisieren (siehe ausgabe/buchen.ts fuer Details).
+  return inReihe(mitgliedId, async () => {
+    const tag = berlinTag();
+    const monat = berlinMonat(tag);
 
-  // ERST beide Grenzen pruefen, DANN buchen (keine halben Vorgaenge).
-  for (const p of posten) {
-    let bisher = [];
-    try {
-      bisher = await pb.collection('vermehrung_ausgaben').getFullList({
-        filter: `mitglied="${mitgliedId}" && monat="${monat}" && art="${p.art}"`,
-      });
-    } catch {
-      bisher = [];
+    // ERST beide Grenzen pruefen, DANN buchen (keine halben Vorgaenge).
+    for (const p of posten) {
+      let bisher: Array<Record<string, any>>;
+      try {
+        bisher = await pb.collection('vermehrung_ausgaben').getFullList({
+          filter: `mitglied="${mitgliedId}" && monat="${monat}" && art="${p.art}"`,
+        });
+      } catch {
+        // Fail-closed (T3, fixt F5): siehe buchen.ts - bei Fehler abbrechen
+        // statt mit leerer Liste gegen 0 zu pruefen.
+        return zurueck(redirect, mitgliedId, 'Limit-Prüfung nicht möglich - Weitergabe abgebrochen.');
+      }
+      const pruefung = pruefeVermehrung({ art: p.art, bisherMonat: summeStueck(bisher), anzahlNeu: p.anzahl });
+      if (!pruefung.ok) {
+        return zurueck(redirect, mitgliedId, `${ART_LABEL[p.art as keyof typeof ART_LABEL] ?? p.art}: ${pruefung.meldung ?? 'nicht zulaessig.'} Es wurde nichts gebucht.`);
+      }
     }
-    const pruefung = pruefeVermehrung({ art: p.art, bisherMonat: summeStueck(bisher), anzahlNeu: p.anzahl });
-    if (!pruefung.ok) {
-      return zurueck(redirect, mitgliedId, `${ART_LABEL[p.art as keyof typeof ART_LABEL] ?? p.art}: ${pruefung.meldung ?? 'nicht zulaessig.'} Es wurde nichts gebucht.`);
-    }
-  }
 
-  const belegnr = 'V-' + tag.replaceAll('-', '') + '-' + String(Date.now()).slice(-5);
-  let gebucht = 0;
-  for (const p of posten) {
-    try {
-      await pb.collection('vermehrung_ausgaben').create({
-        mitglied: mitgliedId,
-        mitgliedsnummer: empfaenger.mitgliedsnummer || '',
-        art: p.art,
-        anzahl: p.anzahl,
-        tag,
-        monat,
-        abgegeben_von: personal.id,
-        belegnr,
-        notiz: '',
-      });
-      gebucht++;
-    } catch {
-      return zurueck(
-        redirect,
-        mitgliedId,
-        gebucht
-          ? `Nur ${gebucht} von ${posten.length} Posten gebucht (Beleg ${belegnr}) - Rest bitte erneut buchen.`
-          : 'Buchung fehlgeschlagen.',
-      );
+    const belegnr = 'V-' + tag.replaceAll('-', '') + '-' + String(Date.now()).slice(-5);
+    let gebucht = 0;
+    for (const p of posten) {
+      try {
+        await pb.collection('vermehrung_ausgaben').create({
+          mitglied: mitgliedId,
+          mitgliedsnummer: empfaenger.mitgliedsnummer || '',
+          art: p.art,
+          anzahl: p.anzahl,
+          tag,
+          monat,
+          abgegeben_von: personal.id,
+          belegnr,
+          notiz: '',
+        });
+        gebucht++;
+      } catch {
+        return zurueck(
+          redirect,
+          mitgliedId,
+          gebucht
+            ? `Nur ${gebucht} von ${posten.length} Posten gebucht (Beleg ${belegnr}) - Rest bitte erneut buchen.`
+            : 'Buchung fehlgeschlagen.',
+        );
+      }
     }
-  }
 
-  const q = new URLSearchParams({ mitglied: mitgliedId, ok: 'vermehrung' });
-  return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
+    const q = new URLSearchParams({ mitglied: mitgliedId, ok: 'vermehrung' });
+    return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
+  });
 };
