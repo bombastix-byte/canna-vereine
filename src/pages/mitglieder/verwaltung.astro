@@ -28,6 +28,7 @@ if (!darfVerwalten(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?
 interface UserRow {
   id: string;
   name?: string;
+  alias?: string;
   email: string;
   mitgliedsnummer?: string;
   rollen?: string[];
@@ -63,10 +64,35 @@ const treffer = q
   : alle;
 
 // Ein einziger, exakter Nummern-Treffer (typischer Scan) -> direkt zur Person.
-const exakt = q
-  ? alle.find((m) => norm(m.mitgliedsnummer ?? '') === norm(q))
-  : null;
-if (exakt) return Astro.redirect(`/mitglieder/verwaltung/${exakt.id}`, 303);
+const exakteTreffer = q
+  ? alle.filter((m) => norm(m.mitgliedsnummer ?? '') === norm(q))
+  : [];
+if (exakteTreffer.length === 1) return Astro.redirect(`/mitglieder/verwaltung/${exakteTreffer[0].id}`, 303);
+
+// Altbestände sichtbar machen, statt bei einem Scan willkürlich einen von
+// mehreren Datensätzen zu öffnen. Neue Dubletten verhindert die Datenbank.
+const nachNummer = new Map<string, UserRow[]>();
+for (const m of alle) {
+  const nummer = (m.mitgliedsnummer ?? '').trim().toUpperCase();
+  if (!nummer) continue;
+  nachNummer.set(nummer, [...(nachNummer.get(nummer) ?? []), m]);
+}
+const doppelteNummern = [...nachNummer.entries()].filter(([, mitglieder]) => mitglieder.length > 1);
+const ohneNummer = alle.filter((m) => !(m.mitgliedsnummer ?? '').trim());
+
+const proSeite = 50;
+const seitenGesamt = Math.max(1, Math.ceil(treffer.length / proSeite));
+const seiteGewuenscht = Number.parseInt(Astro.url.searchParams.get('seite') ?? '1', 10);
+const seite = Number.isFinite(seiteGewuenscht)
+  ? Math.min(Math.max(seiteGewuenscht, 1), seitenGesamt)
+  : 1;
+const trefferSeite = treffer.slice((seite - 1) * proSeite, seite * proSeite);
+const seitenUrl = (ziel: number) => {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  params.set('seite', String(ziel));
+  return `/mitglieder/verwaltung?${params.toString()}`;
+};
 
 const rollenKurz = (r?: string[]) =>
   (r ?? []).filter((x) => x !== 'mitglied').map((x) => ROLLEN_LABEL[x as Rolle] ?? x);
@@ -77,6 +103,8 @@ const fehlertext: Record<string, string> = {
   email: 'Bitte eine gültige E-Mail-Adresse angeben.',
   name: 'Bitte mindestens einen Namen angeben.',
   existiert: 'Diese E-Mail-Adresse ist bereits vergeben.',
+  nummer: 'Bitte eine gültige Mitgliedsnummer aus Buchstaben, Zahlen und Bindestrichen angeben.',
+  nummer_existiert: 'Diese Mitgliedsnummer ist bereits vergeben.',
   fehlgeschlagen: 'Anlegen fehlgeschlagen. Bitte erneut versuchen.',
 };
 const fmeldung = fehler ? fehlertext[fehler] ?? 'Es ist ein Fehler aufgetreten.' : null;
@@ -95,6 +123,19 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
 
   {geloescht && <p class="hinweis" role="status">Mitglied gelöscht.</p>}
   {fmeldung && <p class="hinweis hinweis--fehler" role="alert">{fmeldung}</p>}
+  {(doppelteNummern.length > 0 || ohneNummer.length > 0) && (
+    <details class="hinweis hinweis--fehler datenwarnung" open={doppelteNummern.length > 0}>
+      <summary>Datenbestand prüfen: {doppelteNummern.length} doppelte Nummer(n), {ohneNummer.length} Mitglied(er) ohne Nummer</summary>
+      {doppelteNummern.length > 0 && (
+        <ul>
+          {doppelteNummern.map(([nummer, eintraege]) => (
+            <li><strong>{nummer}</strong>: {eintraege.map((m, index) => <>{index > 0 && ' · '}<a href={`/mitglieder/verwaltung/${m.id}`}>{anzeigeName(m)}</a></>)}</li>
+          ))}
+        </ul>
+      )}
+      {ohneNummer.length > 0 && <p>Fehlende Nummern bitte in den jeweiligen Mitgliedsdatensätzen ergänzen.</p>}
+    </details>
+  )}
 
   <details class="klappe" open={!!fmeldung}>
     <summary>＋ Mitglied anlegen</summary>
@@ -168,7 +209,7 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
     <p style="color:var(--ink-soft);">Keine Treffer. Anderen Suchbegriff versuchen.</p>
   ) : (
     <ul class="liste">
-      {treffer.map((m) => (
+      {trefferSeite.map((m) => (
         <li>
           <a class="zeile" href={`/mitglieder/verwaltung/${m.id}`}>
             <span class="zeile-nr">{m.mitgliedsnummer || '—'}</span>
@@ -188,6 +229,13 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
         </li>
       ))}
     </ul>
+  )}
+  {seitenGesamt > 1 && (
+    <nav class="seiten" aria-label="Mitgliederliste Seiten">
+      {seite > 1 ? <a class="knopf-sek" href={seitenUrl(seite - 1)}>‹ Zurück</a> : <span />}
+      <span>Seite {seite} von {seitenGesamt}</span>
+      {seite < seitenGesamt ? <a class="knopf-sek" href={seitenUrl(seite + 1)}>Weiter ›</a> : <span />}
+    </nav>
   )}
 </Basis>
 
@@ -259,6 +307,13 @@ const ROLLEN_WAEHLBAR = ['ausgabe', 'anbau', 'praevention', 'vorstand'] as const
   }
   .suche-reset { display: inline-block; margin-top: 0.5rem; font-size: 0.9rem; color: var(--ink-soft); }
   .anzahl { color: var(--ink-soft); font-size: 0.92rem; margin: 0 0 0.8rem; }
+  .datenwarnung { max-width: var(--mass); }
+  .datenwarnung summary { cursor: pointer; font-weight: 700; }
+  .datenwarnung ul { margin-bottom: 0; }
+  .datenwarnung p { margin-bottom: 0; }
+  .datenwarnung a { min-height: 44px; display: inline-flex; align-items: center; }
+  .seiten { max-width: var(--mass); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.8rem; margin-top: 1rem; }
+  .seiten > :last-child { justify-self: end; }
   .liste { list-style: none; padding: 0; margin: 0; max-width: var(--mass); }
   .zeile {
     display: flex; align-items: center; gap: 0.9rem;

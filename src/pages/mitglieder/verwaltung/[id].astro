@@ -3,10 +3,10 @@ import Basis from '../../../layouts/Basis.astro';
 import MitgliedNav from '../../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten, ROLLEN, ROLLEN_LABEL } from '../../../lib/rollen';
-import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus } from '../../../lib/status';
+import { MITGLIED_STATUS, STATUS_LABEL, effektiverStatus, type StatusMitglied } from '../../../lib/status';
 import { berlinTag } from '../../../lib/ausgabe';
 import { site } from '../../../config';
-import { anzeigeName } from '../../../lib/mitglied-anzeige';
+import { anzeigeName, type AnzeigePerson } from '../../../lib/mitglied-anzeige';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 // Datensparsamer Modus: keine Personendaten (Name/Geburtsdatum), nur Mitgliedsnummer.
@@ -34,6 +34,8 @@ const startpw = Astro.url.searchParams.get('pw') ?? '';
 const pwreset = Astro.url.searchParams.get('pwreset') ?? '';
 const fehler = Astro.url.searchParams.get('fehler');
 const fehlertext: Record<string, string> = {
+  nummer: 'Bitte eine gültige Mitgliedsnummer aus Buchstaben, Zahlen und Bindestrichen angeben.',
+  nummer_existiert: 'Diese Mitgliedsnummer ist bereits vergeben.',
   selbst: 'Das eigene Konto kann nicht gelöscht werden.',
   loeschen: 'Löschen fehlgeschlagen. Bitte erneut versuchen.',
   status: 'Status konnte nicht gesetzt werden.',
@@ -43,10 +45,10 @@ const fmeldung = fehler ? (fehlertext[fehler] ?? 'Speichern fehlgeschlagen.') : 
 const isoTag = (s?: string) => (s ? s.slice(0, 10) : '');
 const rollen: string[] = Array.isArray(m.rollen) ? m.rollen : [];
 const heute = berlinTag();
-const statusJetzt = effektiverStatus(m, heute);
+const statusJetzt = effektiverStatus(m as unknown as StatusMitglied, heute);
 const statusGesetzt = (m.mitglied_status as string) || 'aktiv';
 // Anzeigename: Alias oder „Mitglied M-…" (nie Klarname/synthetische Kennung).
-const anzeige = anzeigeName(m);
+const anzeige = anzeigeName(m as unknown as AnzeigePerson);
 ---
 
 <Basis titel={anzeige} beschreibung="Mitglied bearbeiten.">

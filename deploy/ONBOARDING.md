@@ -35,9 +35,9 @@ Die vom Skript ausgegebenen Bausteine einarbeiten:
   vor dem `volumes:`-Block einfügen und dort `pb_<slug>:` ergänzen. Diese Datei
   wird per Deploy synchronisiert.
 - **`deploy/.env` auf dem Server**: `DOMAIN_<SLUG>=<domain>` ergänzen.
-- **`deploy/Caddyfile` auf dem Server**: den Domain-Block anhängen.
-  ⚠️ Der Caddyfile wird **nie per Deploy kopiert** (er trägt auch Blöcke anderer
-  Zellen). Von Hand ergänzen, dann den Caddy-Container neu erstellen.
+- **`deploy/sites/cvms.caddy`**: den Domain-Block versioniert ergänzen. Der
+  gemeinsame `deploy/Caddyfile` importiert alle `sites/*.caddy`-Snippets;
+  weitere VPS-Zellen erhalten eigene Snippets statt manuell angehängter Blöcke.
 - **DNS**: A-/AAAA-Record der Domain auf den VPS zeigen lassen (für Auto-HTTPS).
 
 ## 3. Container bauen & starten (Server)
@@ -112,6 +112,13 @@ docker compose up -d pb-<slug>
 ```
 
 Die Backups liegen dann unter `/opt/canna-vereine/deploy/backups/<slug>/`.
+
+Nach dem ersten Backup und danach regelmaessig einen echten Restore in ein
+temporaeres Docker-Volume pruefen:
+
+```bash
+./restore-verify.sh
+```
 **Off-site empfohlen:** dieses Verzeichnis zusätzlich weg vom Server sichern
 (z. B. `rsync`/`borg` auf externen Speicher oder S3 in den PocketBase-
 Backup-Einstellungen hinterlegen).

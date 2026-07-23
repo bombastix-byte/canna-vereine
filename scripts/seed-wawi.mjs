@@ -140,6 +140,15 @@ await ensureCollection({
 
 // ---------- Anbau-Demo-Nutzer ----------
 async function ensureUser(email, password, patch) {
+  if (patch.mitgliedsnummer) {
+    try {
+      const u = await pb.collection('users').getFirstListItem(
+        pb.filter('mitgliedsnummer = {:nummer}', { nummer: patch.mitgliedsnummer }),
+      );
+      await pb.collection('users').update(u.id, patch);
+      return u;
+    } catch { /* noch nicht ueber die Nummer vorhanden */ }
+  }
   try {
     const u = await pb.collection('users').getFirstListItem(`email="${email}"`);
     await pb.collection('users').update(u.id, patch);

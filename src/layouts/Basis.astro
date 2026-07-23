@@ -32,6 +32,11 @@ const robotsWert = site.indexierbar ? robots : 'noindex, nofollow';
 const seitentitel = anonym ? titel : `${titel} | ${produkt.name}`;
 const hatHero = Astro.slots.has('hero');
 const layout = site.layout ?? 'standard';
+const topbarZiel = anonym
+  ? '/mitglieder'
+  : Astro.url.pathname.startsWith('/mitglieder')
+    ? '/mitglieder/bereich'
+    : pfad('/');
 ---
 
 <!doctype html>
@@ -75,7 +80,7 @@ const layout = site.layout ?? 'standard';
           <input type="checkbox" id="nav-toggle" class="sb-toggle" tabindex="-1" />
           <div class="sb-shell">
             <header class="sb-topbar">
-              <a class="sb-brand sb-brand--top" href={anonym ? '/mitglieder' : pfad('/')}>
+              <a class="sb-brand sb-brand--top" href={topbarZiel}>
                 <Mark class="sb-mark" />
                 <span class="sb-name">{anonym ? 'Mitgliederbereich' : produkt.name}</span>
               </a>

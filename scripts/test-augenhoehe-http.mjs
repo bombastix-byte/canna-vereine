@@ -23,7 +23,7 @@ function pruefe(name, bed, info) {
 async function anmelden(email, pw) {
   const r = await fetch(`${BASE}/mitglieder/anmelden`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ email, passwort: pw }),
   });
   return (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -31,7 +31,7 @@ async function anmelden(email, pw) {
 const post = (pfad, felder, cookie) =>
   fetch(`${BASE}${pfad}`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}) },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}) },
     body: new URLSearchParams(felder),
   });
 
@@ -87,7 +87,7 @@ const tLoc = (await post('/mitglieder/wawi/transport', {
   charge: charge.id, menge_gramm: '50', von: 'Anbauraum 1', nach: 'Ausgabestelle Vereinsheim', zweck: 'Umlagerung',
 }, anbau)).headers.get('location') ?? '';
 pruefe('Transport -> Bescheinigungs-Seite', tLoc.includes('/mitglieder/wawi/transport/'), tLoc);
-const tSeite = await fetch(`${BASE}${tLoc}`, { headers: { cookie: anbau } });
+const tSeite = await fetch(`${BASE}${tLoc}`, { headers: { origin: BASE, cookie: anbau } });
 const tHtml = await tSeite.text();
 pruefe('Bescheinigung 200 + Paragraf 22', tSeite.status === 200 && tHtml.includes('22'), String(tSeite.status));
 const verfNachher = (await pb.collection('chargen').getOne(charge.id)).verfuegbar_g;
@@ -98,7 +98,7 @@ const fd = new FormData();
 fd.set('charge', charge.id);
 fd.set('coa', new File(['%PDF-1.4 test'], 'coa-test.pdf', { type: 'application/pdf' }));
 fd.set('testergebnis_url', 'https://beispiel-messapp.de/probe/123');
-const labor = await fetch(`${BASE}/mitglieder/wawi/labor`, { method: 'POST', redirect: 'manual', headers: { cookie: anbau }, body: fd });
+const labor = await fetch(`${BASE}/mitglieder/wawi/labor`, { method: 'POST', redirect: 'manual', headers: { origin: BASE, cookie: anbau }, body: fd });
 pruefe('Labor-Upload -> ok', (labor.headers.get('location') ?? '').includes('ok=labor'));
 const chargeNach = await pb.collection('chargen').getOne(charge.id);
 pruefe('COA-Datei an Charge', !!chargeNach.coa, chargeNach.coa);
@@ -106,24 +106,24 @@ pruefe('Testergebnis-Link an Charge', chargeNach.testergebnis_url === 'https://b
 
 // ---------- 5. CSV-Exporte ----------
 for (const art of ['jahresmeldung', 'abgaben', 'vernichtungen', 'transporte']) {
-  const r = await fetch(`${BASE}/mitglieder/exporte/${art}?jahr=2026`, { headers: { cookie: vorstand } });
+  const r = await fetch(`${BASE}/mitglieder/exporte/${art}?jahr=2026`, { headers: { origin: BASE, cookie: vorstand } });
   const text = await r.text();
   pruefe(`Export ${art} -> CSV`, r.status === 200 && (r.headers.get('content-type') ?? '').includes('csv') && text.length > 10, String(r.status));
 }
 // Mitglied darf nicht exportieren
 const evaCookie = await anmelden('eva@dummy.local', DUMMY_PW);
-const evaExp = await fetch(`${BASE}/mitglieder/exporte/abgaben`, { headers: { cookie: evaCookie }, redirect: 'manual' });
+const evaExp = await fetch(`${BASE}/mitglieder/exporte/abgaben`, { headers: { origin: BASE, cookie: evaCookie }, redirect: 'manual' });
 pruefe('Export als Mitglied -> blockiert', evaExp.status === 303);
 
 // ---------- 6. Tresen-Schnellauswahl + Beitrag-Hinweis ----------
-const tresenNr = await (await fetch(`${BASE}/mitglieder/ausgabe?nr=M-101`, { headers: { cookie: vorstand } })).text();
+const tresenNr = await (await fetch(`${BASE}/mitglieder/ausgabe?nr=M-101`, { headers: { origin: BASE, cookie: vorstand } })).text();
 pruefe('Tresen ?nr=M-101 waehlt Anna', tresenNr.includes('Anna Berg') && tresenNr.includes('Darf jetzt noch'));
 pruefe('Beitrag-Hinweis (kein Eintrag)', tresenNr.includes('Beitragsstatus'));
-const tresenFalsch = await (await fetch(`${BASE}/mitglieder/ausgabe?nr=M-999`, { headers: { cookie: vorstand } })).text();
+const tresenFalsch = await (await fetch(`${BASE}/mitglieder/ausgabe?nr=M-999`, { headers: { origin: BASE, cookie: vorstand } })).text();
 pruefe('Tresen ?nr=M-999 -> nicht gefunden', tresenFalsch.includes('nicht gefunden'));
 
 // ---------- 7. Mitgliedsausweis ----------
-const ausweis = await (await fetch(`${BASE}/mitglieder/ausweis`, { headers: { cookie: evaCookie } })).text();
+const ausweis = await (await fetch(`${BASE}/mitglieder/ausweis`, { headers: { origin: BASE, cookie: evaCookie } })).text();
 pruefe('Ausweis zeigt QR (svg) + Nummer', ausweis.includes('<svg') && ausweis.includes('M-105'));
 
 console.log(`\n${fehler === 0 ? 'HTTP-E2E AUGENHOEHE BESTANDEN' : fehler + ' FEHLGESCHLAGEN'}`);

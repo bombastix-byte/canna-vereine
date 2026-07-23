@@ -10,7 +10,7 @@ import {
   summeGramm,
 } from '../../../lib/ausgabe';
 import { produktTyp } from '../../../lib/verarbeitung';
-import { abgabeErlaubt, abgabeSperrGrund } from '../../../lib/status';
+import { abgabeErlaubt, abgabeSperrGrund, type StatusMitglied } from '../../../lib/status';
 import { erfasseVorgang } from '../../../lib/kassen-konnektor';
 import { inReihe } from '../../../lib/serie';
 
@@ -23,7 +23,7 @@ export const prerender = false;
 
 const MAX_POSITIONEN = 10;
 
-function zurueck(redirect: (u: string, s?: number) => Response, mitgliedId: string, meldung: string) {
+function zurueck(redirect: (u: string, s?: 303) => Response, mitgliedId: string, meldung: string) {
   const q = new URLSearchParams({ mitglied: mitgliedId, fehler: '1', msg: meldung });
   return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
 }
@@ -74,8 +74,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   }
 
   // Lebenszyklus: ruhende/ausgetretene Mitglieder erhalten keine Abgabe.
-  if (!abgabeErlaubt(empfaenger, berlinTag())) {
-    const grund = abgabeSperrGrund(empfaenger, berlinTag());
+  const statusMitglied = empfaenger as unknown as StatusMitglied;
+  if (!abgabeErlaubt(statusMitglied, berlinTag())) {
+    const grund = abgabeSperrGrund(statusMitglied, berlinTag());
     return zurueck(redirect, mitgliedId, `Abgabe nicht möglich: ${grund}. Bitte an den Vorstand wenden.`);
   }
 

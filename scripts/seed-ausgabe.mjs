@@ -141,6 +141,16 @@ async function setzeMitgliedsdaten(email, patch) {
 }
 
 async function ensureUser(email, password, patch) {
+  if (patch.mitgliedsnummer) {
+    try {
+      const u = await pb.collection('users').getFirstListItem(
+        pb.filter('mitgliedsnummer = {:nummer}', { nummer: patch.mitgliedsnummer }),
+      );
+      await pb.collection('users').update(u.id, patch);
+      console.log('Nutzer ueber Mitgliedsnummer vorhanden/aktualisiert:', patch.mitgliedsnummer);
+      return u;
+    } catch { /* noch nicht ueber die Nummer vorhanden */ }
+  }
   try {
     const u = await pb.collection('users').getFirstListItem(`email="${email}"`);
     await pb.collection('users').update(u.id, patch);

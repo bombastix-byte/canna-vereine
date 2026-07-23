@@ -4,6 +4,7 @@ import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { darfAusgeben } from '../../lib/rollen';
 import { uebersetzer } from '../../lib/i18n';
+import { aktuelleAngebote, redaktionellerHinweis, redaktionellerTitel } from '../../lib/angebot';
 
 // Geschützt. Sachliche Info zur aktuellen Abgabe an Mitglieder (KCanG Paragraf 6:
 // kein öffentliches Marketing, rein interne Vereinsinformation).
@@ -41,6 +42,7 @@ try {
 } catch {
   angebote = [];
 }
+angebote = aktuelleAngebote(angebote);
 
 const datum = (iso?: string) =>
   iso
@@ -84,7 +86,7 @@ const sortiere = (sorten: Sorte[]) =>
     ) : (
       angebote.map((a) => (
         <div class="kasten">
-          <h3 style="margin-top:0;">{a.titel}</h3>
+          <h3 style="margin-top:0;">{redaktionellerTitel(a.titel)}</h3>
           {zeitraum(a) && (
             <p style="color:var(--ink-soft);font-size:0.82rem;margin:0 0 0.8rem;">
               {zeitraum(a)}
@@ -103,18 +105,18 @@ const sortiere = (sorten: Sorte[]) =>
               <tbody>
                 {sortiere(a.sorten).map((s) => (
                   <tr>
-                    <td>{s.name}</td>
-                    <td><span class="typ">{s.typ}</span></td>
-                    <td class="num">{s.thc}</td>
-                    <td class="num">{s.cbd}</td>
+                    <td data-label={t('angebot.th_sorte')}>{s.name}</td>
+                    <td data-label={t('angebot.th_typ')}><span class="typ">{s.typ || '—'}</span></td>
+                    <td data-label="THC" class="num">{s.thc || '—'}</td>
+                    <td data-label="CBD" class="num">{s.cbd || '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-          {a.inhalt && (
+          {redaktionellerHinweis(a.inhalt) && (
             <p style="margin:0 0 1rem;white-space:pre-line;color:var(--ink-soft);font-size:0.92rem;">
-              {a.inhalt}
+              {redaktionellerHinweis(a.inhalt)}
             </p>
           )}
           <a class="knopf" href="/mitglieder/vorbestellung">{t('angebot.zur_vorbe')}</a>
@@ -139,5 +141,39 @@ const sortiere = (sorten: Sorte[]) =>
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--accent);
+  }
+  @media (max-width: 560px) {
+    .sortentabelle,
+    .sortentabelle tbody,
+    .sortentabelle tr,
+    .sortentabelle td {
+      display: block;
+      width: 100%;
+    }
+    .sortentabelle thead { display: none; }
+    .sortentabelle tr {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .sortentabelle td,
+    .sortentabelle .num {
+      display: grid;
+      grid-template-columns: minmax(5rem, 0.8fr) 1.2fr;
+      gap: 0.75rem;
+      max-width: none;
+      padding: 0.25rem 0;
+      border: 0;
+      text-align: left;
+      white-space: normal;
+      overflow: visible;
+    }
+    .sortentabelle td::before {
+      content: attr(data-label);
+      color: var(--ink-soft);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
   }
 </style>

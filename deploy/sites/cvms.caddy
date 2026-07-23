@@ -1,0 +1,35 @@
+# CVMS: pro Verein Astro und PocketBase unter derselben Origin. Direkte
+# Passwort-/Refresh-Endpunkte von PocketBase bleiben extern gesperrt; Login
+# und Zwei-Faktor-Pruefung laufen ueber die Astro-Anwendung.
+
+{$DOMAIN_GOERLITZ} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth { respond "Anmeldung nur ueber die Website." 403 }
+	@pb path /api/* /_/*
+	handle @pb { reverse_proxy pb-goerlitz:8090 }
+	handle { reverse_proxy astro-goerlitz:4321 }
+}
+
+{$DOMAIN_CVG} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth { respond "Anmeldung nur ueber die Website." 403 }
+	@pb path /api/* /_/*
+	handle @pb { reverse_proxy pb-cvg:8090 }
+	handle { reverse_proxy astro-cvg:4321 }
+}
+
+{$DOMAIN_GOERLITZ2} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth { respond "Anmeldung nur ueber die Website." 403 }
+	@pb path /api/* /_/*
+	handle @pb { reverse_proxy pb-goerlitz2:8090 }
+	handle { reverse_proxy astro-goerlitz2:4321 }
+}
+
+{$DOMAIN_LEIPZIG} {
+	@userauth path /api/collections/users/auth-with-password /api/collections/users/auth-refresh /api/collections/users/request-password-reset
+	handle @userauth { respond "Anmeldung nur ueber die Website." 403 }
+	@pb path /api/* /_/*
+	handle @pb { reverse_proxy pb-leipzig:8090 }
+	handle { reverse_proxy astro-leipzig:4321 }
+}

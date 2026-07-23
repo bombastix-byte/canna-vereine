@@ -19,10 +19,10 @@ let fehler = 0;
 function pruefe(name, ist, soll) { const ok = ist === soll; if (!ok) fehler++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : `  (ist=${ist}, soll=${soll})`}`); }
 function pruefeWahr(name, bed, info) { if (!bed) fehler++; console.log(`${bed ? 'PASS' : 'FAIL'}  ${name}${bed ? '' : `  ${info ?? ''}`}`); }
 const anmelden = async (email, pw) => {
-  const r = await fetch(`${BASE}/mitglieder/anmelden`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ email, passwort: pw }) });
+  const r = await fetch(`${BASE}/mitglieder/anmelden`, { method: 'POST', redirect: 'manual', headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ email, passwort: pw }) });
   return (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
 };
-const jsonPost = (pfad, obj, cookie) => fetch(`${BASE}${pfad}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify(obj) });
+const jsonPost = (pfad, obj, cookie) => fetch(`${BASE}${pfad}`, { method: 'POST', headers: { origin: BASE, 'content-type': 'application/json', cookie }, body: JSON.stringify(obj) });
 
 // --- PWA-Basics ---
 const man = await fetch(`${BASE}/manifest.webmanifest`);
@@ -56,15 +56,15 @@ pruefe('Erneutes Anmelden -> weiterhin 1 Abo', (await pb.collection('push_abos')
 
 // --- Vorstand: Nachricht senden ---
 const vorstand = await anmelden(STAFF, STAFF_PW);
-pruefe('Nachricht-Seite -> 200', (await fetch(`${BASE}/mitglieder/nachricht`, { headers: { cookie: vorstand } })).status, 200);
-const sendeR = await fetch(`${BASE}/mitglieder/push/senden`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: vorstand }, body: new URLSearchParams({ titel: 'E2E-Test', text: 'hallo' }) });
+pruefe('Nachricht-Seite -> 200', (await fetch(`${BASE}/mitglieder/nachricht`, { headers: { origin: BASE, cookie: vorstand } })).status, 200);
+const sendeR = await fetch(`${BASE}/mitglieder/push/senden`, { method: 'POST', redirect: 'manual', headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie: vorstand }, body: new URLSearchParams({ titel: 'E2E-Test', text: 'hallo' }) });
 const sendeLoc = sendeR.headers.get('location') ?? '';
 // Mit VAPID: Versand an Fake-Endpoint schlaegt fehl -> ok=1&n=0. Ohne VAPID: push_aus.
 pruefeWahr('Senden reagiert sauber', hatVapid ? sendeLoc.includes('ok=1') : sendeLoc.includes('push_aus'), sendeLoc);
 
 // --- Rollen-Gate ---
-pruefe('Nachricht-Seite als Mitglied -> 303', (await fetch(`${BASE}/mitglieder/nachricht`, { headers: { cookie: eva }, redirect: 'manual' })).status, 303);
-const evaSenden = await fetch(`${BASE}/mitglieder/push/senden`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: eva }, body: new URLSearchParams({ titel: 'x' }) });
+pruefe('Nachricht-Seite als Mitglied -> 303', (await fetch(`${BASE}/mitglieder/nachricht`, { headers: { origin: BASE, cookie: eva }, redirect: 'manual' })).status, 303);
+const evaSenden = await fetch(`${BASE}/mitglieder/push/senden`, { method: 'POST', redirect: 'manual', headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie: eva }, body: new URLSearchParams({ titel: 'x' }) });
 pruefeWahr('Senden als Mitglied -> keinzugriff', (evaSenden.headers.get('location') ?? '').includes('keinzugriff'));
 
 // --- Abo abmelden ---

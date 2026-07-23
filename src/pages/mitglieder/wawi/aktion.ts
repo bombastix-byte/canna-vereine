@@ -21,8 +21,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const daten = await request.formData();
   const chargeId = String(daten.get('charge') ?? '').trim();
-  const aktion = String(daten.get('aktion') ?? '').trim();
-  const zurueck = (q) => redirect(`/mitglieder/wawi?${q}#c-${chargeId}`, 303);
+  type Aktion = ReturnType<typeof moeglicheAktionen>[number];
+  const aktion = String(daten.get('aktion') ?? '').trim() as Aktion;
+  const zurueck = (q: string) => redirect(`/mitglieder/wawi?${q}#c-${chargeId}`, 303);
 
   if (!chargeId || !aktion) return zurueck('fehler=fehlend');
 
@@ -36,7 +37,15 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return zurueck('fehler=status');
   }
 
-  const patch = {};
+  const patch: {
+    status?: string;
+    frischgewicht_g?: number;
+    ernte_datum?: string | null;
+    trockengewicht_g?: number;
+    verfuegbar_g?: number;
+    thc_prozent?: number;
+    cbd_prozent?: number;
+  } = {};
   if (aktion === 'ernte') {
     const frisch = zahl(daten.get('frischgewicht_g'));
     const datum = String(daten.get('ernte_datum') ?? '').trim();

@@ -15,10 +15,12 @@ services:
     env_file: .env
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - astro-goerlitz
+      - astro-cvg
       - astro-goerlitz2
       - astro-leipzig
 
@@ -35,6 +37,7 @@ services:
       SITE_ID: goerlitz
       PB_URL: http://pb-goerlitz:8090
       PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ}
+      TRUSTED_ORIGINS: https://${DOMAIN_GOERLITZ}
       APK_PFAD: /downloads/canna-verein.apk
     volumes:
       # Android-APK fuer den Mitglieder-Download (Seite /mitglieder/app).
@@ -53,8 +56,7 @@ services:
       ERINNERUNG_TARGET: http://astro-goerlitz:4321
     volumes:
       - pb_goerlitz:/pb/pb_data
-      # JS-Hooks (u. a. Erinnerungs-Cron). Nur lesend eingebunden.
-      - ./pb_hooks:/pb/pb_hooks:ro
+      # JS-Hooks (KCanG-Grenzen + Erinnerungs-Cron) stecken im Image.
       # Automatische PocketBase-Backups landen auf dem Host (überleben so einen
       # Verlust des pb_data-Volumes). Off-site zusätzlich sichern.
       - ./backups/goerlitz:/pb/pb_data/backups
@@ -72,6 +74,7 @@ services:
       SITE_ID: cvg
       PB_URL: http://pb-cvg:8090
       PB_PUBLIC_URL: https://${DOMAIN_CVG}
+      TRUSTED_ORIGINS: https://${DOMAIN_CVG}
     depends_on:
       - pb-cvg
   pb-cvg:
@@ -84,7 +87,6 @@ services:
       ERINNERUNG_TARGET: http://astro-cvg:4321
     volumes:
       - pb_cvg:/pb/pb_data
-      - ./pb_hooks:/pb/pb_hooks:ro
       - ./backups/cvg:/pb/pb_data/backups
 
   # ---------- Goerlitz 2 (CSC) ----------
@@ -100,6 +102,7 @@ services:
       SITE_ID: goerlitz2
       PB_URL: http://pb-goerlitz2:8090
       PB_PUBLIC_URL: https://${DOMAIN_GOERLITZ2}
+      TRUSTED_ORIGINS: https://${DOMAIN_GOERLITZ2}
     depends_on:
       - pb-goerlitz2
   pb-goerlitz2:
@@ -123,6 +126,7 @@ services:
       SITE_ID: leipzig
       PB_URL: http://pb-leipzig:8090
       PB_PUBLIC_URL: https://${DOMAIN_LEIPZIG}
+      TRUSTED_ORIGINS: https://${DOMAIN_LEIPZIG}
     depends_on:
       - pb-leipzig
   pb-leipzig:

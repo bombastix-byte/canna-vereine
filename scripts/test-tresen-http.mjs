@@ -36,7 +36,7 @@ await pb.collection('ausgaben').create({
 
 const login = await fetch(`${BASE}/mitglieder/anmelden`, {
   method: 'POST', redirect: 'manual',
-  headers: { 'content-type': 'application/x-www-form-urlencoded' },
+  headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams({ email: STAFF, passwort: STAFF_PW }),
 });
 const cookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -46,7 +46,7 @@ console.log('Personal angemeldet.\n');
 async function buchen(mitglied, charge, menge) {
   const r = await fetch(`${BASE}/mitglieder/ausgabe/buchen`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: new URLSearchParams({ mitglied, charge, menge_gramm: String(menge) }),
   });
   return r.headers.get('location') ?? '';
@@ -60,7 +60,7 @@ async function buchenMulti(mitglied, positionen) {
   });
   const r = await fetch(`${BASE}/mitglieder/ausgabe/buchen`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body,
   });
   return r.headers.get('location') ?? '';

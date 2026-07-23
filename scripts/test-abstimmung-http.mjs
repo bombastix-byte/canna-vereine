@@ -25,10 +25,10 @@ function pruefe(name, ist, soll) {
 }
 function pruefeWahr(name, bed, info) { if (!bed) fehler++; console.log(`${bed ? 'PASS' : 'FAIL'}  ${name}${bed ? '' : `  ${info ?? ''}`}`); }
 const anmelden = async (email, pw) => {
-  const r = await fetch(`${BASE}/mitglieder/anmelden`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ email, passwort: pw }) });
+  const r = await fetch(`${BASE}/mitglieder/anmelden`, { method: 'POST', redirect: 'manual', headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ email, passwort: pw }) });
   return (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
 };
-const post = (pfad, felder, cookie) => fetch(`${BASE}${pfad}`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie }, body: new URLSearchParams(felder) });
+const post = (pfad, felder, cookie) => fetch(`${BASE}${pfad}`, { method: 'POST', redirect: 'manual', headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie }, body: new URLSearchParams(felder) });
 
 // Aufraeumen
 for (const a of await pb.collection('abstimmungen').getFullList({ filter: 'titel~"E2E-Abstimmung"' })) await pb.collection('abstimmungen').delete(a.id);
@@ -62,7 +62,7 @@ pruefeWahr('Direkte API-Zweitstimme blockiert (Unique-Index)', stuffBlocked);
 pruefe('Gesamt genau 2 Stimmen', (await pb.collection('stimmen').getFullList({ filter: `abstimmung="${ab.id}"` })).length, 2);
 
 // Ergebnis auf der Seite (Eva hat abgestimmt -> sieht Ergebnis)
-const html = await (await fetch(`${BASE}/mitglieder/abstimmungen`, { headers: { cookie: eva } })).text();
+const html = await (await fetch(`${BASE}/mitglieder/abstimmungen`, { headers: { origin: BASE, cookie: eva } })).text();
 pruefeWahr('Ergebnis zeigt 2 Stimmen', html.includes('2 Stimmen'));
 
 // --- 3. Schliessen (Vorstand) + Abstimmen danach gesperrt ---
@@ -77,16 +77,16 @@ await pb.collection('abstimmungen').delete(ab.id);
 const charge = await pb.collection('chargen').getFirstListItem('status="anbau"', { sort: '-created' }).catch(() => null);
 if (charge) {
   const anzahl = (await pb.collection('pflanzen').getFullList({ filter: `charge_ref="${charge.id}" && status!="vernichtet"` })).length;
-  const seite = await fetch(`${BASE}/mitglieder/wawi/etiketten/${charge.id}`, { headers: { cookie: anbau } });
+  const seite = await fetch(`${BASE}/mitglieder/wawi/etiketten/${charge.id}`, { headers: { origin: BASE, cookie: anbau } });
   const shtml = await seite.text();
   pruefe('Etiketten-Seite -> 200', seite.status, 200);
   pruefeWahr('Etiketten-Seite zeigt QR (svg)', shtml.includes('<svg') && shtml.includes(charge.charge_nr));
-  const zplR = await fetch(`${BASE}/mitglieder/wawi/etiketten/${charge.id}/zpl`, { method: 'POST', headers: { cookie: anbau }, redirect: 'manual' });
+  const zplR = await fetch(`${BASE}/mitglieder/wawi/etiketten/${charge.id}/zpl`, { method: 'POST', headers: { origin: BASE, cookie: anbau }, redirect: 'manual' });
   const zplBody = await zplR.text();
   pruefe('ZPL-Etiketten -> 200 Download', zplR.status, 200);
   pruefeWahr('ZPL enthaelt QR-Befehle', zplBody.includes('^BQN') && (zplBody.match(/\^XZ/g) ?? []).length === anzahl && anzahl > 0);
   // Rollen-Gate
-  const evaEt = await fetch(`${BASE}/mitglieder/wawi/etiketten/${charge.id}`, { headers: { cookie: eva }, redirect: 'manual' });
+  const evaEt = await fetch(`${BASE}/mitglieder/wawi/etiketten/${charge.id}`, { headers: { origin: BASE, cookie: eva }, redirect: 'manual' });
   pruefe('Etiketten als Mitglied -> blockiert', evaEt.status, 303);
 } else {
   console.log('(keine Anbau-Charge fuer Etiketten-Test)');

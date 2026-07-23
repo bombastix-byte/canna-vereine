@@ -20,9 +20,8 @@ export default defineConfig({
   // Hinter einem TLS-terminierenden Reverse-Proxy (Caddy) sieht der Node-Server
   // die Anfrage als http://, der Browser sendet aber Origin: https:// -> Astros
   // checkOrigin (Standard an) blockt sonst jeden Formular-POST faelschlich mit
-  // "Cross-site POST form submissions are forbidden". CSRF-Schutz tragen wir
-  // ueber das httpOnly + sameSite=lax Auth-Cookie (wird bei fremd-initiierten
-  // POSTs nicht mitgesendet).
+  // "Cross-site POST form submissions are forbidden". Stattdessen erzwingt
+  // src/middleware.ts eine explizite Origin-Allowlist fuer mutierende Routen.
   security: { checkOrigin: false },
   ...(statisch ? {} : { adapter: node({ mode: 'standalone' }) }),
 });

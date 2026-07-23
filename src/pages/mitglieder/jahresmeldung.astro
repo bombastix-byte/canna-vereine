@@ -6,6 +6,7 @@ import { darfBerichte, istSystemkonto } from '../../lib/rollen';
 import { aggregiereJahr, gramm } from '../../lib/jahresmeldung';
 import { berlinTag } from '../../lib/ausgabe';
 import { site } from '../../config';
+import type { ListOptions } from 'pocketbase';
 
 // Jahresmeldung: Aggregat als Grundlage der behoerdlichen Mitteilung nach KCanG.
 // Einsicht fuer Vorstand und Praeventionsperson.
@@ -16,9 +17,9 @@ if (!ergebnis) return Astro.redirect('/mitglieder?fehler=anmeldung', 303);
 const { pb, mitglied } = ergebnis;
 if (!darfBerichte(mitglied.rollen)) return Astro.redirect('/mitglieder/bereich?fehler=keinzugriff', 303);
 
-async function ladeListe<T>(collection: string): Promise<T[]> {
+async function ladeListe<T>(collection: string, options: ListOptions = {}): Promise<T[]> {
   try {
-    return (await pb.collection(collection).getFullList()) as T[];
+    return (await pb.collection(collection).getFullList(options)) as T[];
   } catch {
     return [];
   }

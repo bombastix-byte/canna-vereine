@@ -32,7 +32,7 @@ for (const uid of [eva.id, anbauUser.id]) {
 async function anmelden(email, pw) {
   const r = await fetch(`${BASE}/mitglieder/anmelden`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ email, passwort: pw }),
   });
   return (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -40,7 +40,7 @@ async function anmelden(email, pw) {
 const eintragen = (cookie, dienst, datum) =>
   fetch(`${BASE}/mitglieder/helferplan/eintragen`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: new URLSearchParams({ dienst, datum }),
   }).then((r) => r.headers.get('location') ?? '');
 
@@ -53,7 +53,7 @@ function pruefe(name, bed, info) {
 // 1. Als einfaches Mitglied (Eva): Bibliothek lesbar, auch rollen-beschraenkte SOPs
 const evaCookie = await anmelden(eva.email, DUMMY_PW);
 if (!evaCookie) { console.log('LOGIN Eva fehlgeschlagen'); process.exit(1); }
-const seite = await fetch(`${BASE}/mitglieder/anleitungen`, { headers: { cookie: evaCookie } });
+const seite = await fetch(`${BASE}/mitglieder/anleitungen`, { headers: { origin: BASE, cookie: evaCookie } });
 const html = await seite.text();
 pruefe('Anleitungen-Seite -> 200', seite.status === 200, String(seite.status));
 pruefe('SOP "Bestand wiegen" fuer Mitglied lesbar', html.includes('Bestand wiegen'));
@@ -68,7 +68,7 @@ const ersteLoc = await eintragen(evaCookie, giessen.id, '2027-01-05');
 pruefe('Eva in Giessen -> ok', ersteLoc.includes('ok=1'), ersteLoc);
 pruefe('Erste Uebernahme -> erstesmal-Param', ersteLoc.includes(`erstesmal=${giessen.id}`), ersteLoc);
 // Der Helferplan zeigt daraufhin den Anleitungs-Kasten:
-const planHtml = await (await fetch(`${BASE}${ersteLoc}`, { headers: { cookie: evaCookie } })).text();
+const planHtml = await (await fetch(`${BASE}${ersteLoc}`, { headers: { origin: BASE, cookie: evaCookie } })).text();
 pruefe('Helferplan zeigt Erste-Mal-Kasten mit Anleitung', planHtml.includes('zum ersten Mal'), '');
 // 4. Zweite Uebernahme (anderer Tag) -> ok OHNE erstesmal
 const zweiteLoc = await eintragen(evaCookie, giessen.id, '2027-01-06');
@@ -91,7 +91,7 @@ try {
 const speichern = (cookie, felder) =>
   fetch(`${BASE}/mitglieder/anleitungen/speichern`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: new URLSearchParams(felder),
   }).then((r) => r.headers.get('location') ?? '');
 const neuLoc = await speichern(vorstandCookie, {

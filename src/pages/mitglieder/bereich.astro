@@ -9,6 +9,7 @@ import { berlinTag } from '../../lib/ausgabe';
 import { mussBestaetigen } from '../../lib/einwilligung';
 import { uebersetzer } from '../../lib/i18n';
 import { anzeigeName } from '../../lib/mitglied-anzeige';
+import { aktuelleAngebote, redaktionellerTitel } from '../../lib/angebot';
 const __fn = Astro.locals.funktionen;
 const hatBeitraege = __fn ? __fn.beitraege !== false : true;
 const hatKasse = __fn ? __fn.kasse !== false : true;
@@ -78,10 +79,10 @@ const bestellungen = await ladeListe<Bestellung>('vorbestellungen', '-created');
 const dienste = await ladeListe<Dienst>('helferdienste', 'titel');
 const helferEintraege = await ladeListe<Eintrag>('helfer_eintragungen', 'created');
 
-const jetzt = new Date();
-const naechsterTermin = termine.find((t) => new Date(t.datum) >= jetzt) ?? termine[0];
+const aktuelleTermine = termine.filter((t) => t.datum.slice(0, 10) >= berlinTag());
+const naechsterTermin = aktuelleTermine[0];
 const neuesteMitteilung = mitteilungen[0];
-const aktuellesAngebot = angebote[0];
+const aktuellesAngebot = aktuelleAngebote(angebote)[0];
 const offeneBestellungen = bestellungen.filter((b) => b.status === 'offen').length;
 const heuteTag = tagVon(new Date());
 const offeneDienste = dienste.filter(
@@ -124,7 +125,7 @@ const tr = uebersetzer(Astro.locals.sprache ?? 'de');
         </svg>
         <span class="uk__label">{tr('nav.angebot')}</span>
       </span>
-      <span class="uk__wert">{aktuellesAngebot ? aktuellesAngebot.titel : tr('bereich.angebot_leer')}</span>
+      <span class="uk__wert">{aktuellesAngebot ? redaktionellerTitel(aktuellesAngebot.titel) : tr('bereich.angebot_leer')}</span>
     </a>
 
     {hatTermine && (
@@ -299,11 +300,11 @@ const tr = uebersetzer(Astro.locals.sprache ?? 'de');
 
   <h2 id="termine">{tr('bereich.h.termine')}</h2>
   {
-    termine.length === 0 ? (
+    aktuelleTermine.length === 0 ? (
       <p style="color:var(--ink-soft);">{tr('bereich.keine_termine_lang')}</p>
     ) : (
       <ul class="terminliste">
-        {termine.map((t) => (
+        {aktuelleTermine.map((t) => (
           <li>
             <span class="termin__datum">{datum(t.datum)}</span>
             <span class="termin__inhalt">

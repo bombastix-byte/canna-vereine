@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const grund = String(daten.get('grund') ?? '').trim();
   const zeuge = String(daten.get('zeuge') ?? '').trim();
   const notiz = String(daten.get('notiz') ?? '').trim();
-  const zurueck = (q) => redirect(`/mitglieder/wawi?${q}#c-${chargeId}`, 303);
+  const zurueck = (q: string) => redirect(`/mitglieder/wawi?${q}#c-${chargeId}`, 303);
 
   if (!chargeId) return zurueck('fehler=fehlend');
   if (!Number.isFinite(menge) || menge <= 0) return zurueck('fehler=menge');
@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   if (charge.status === 'freigegeben' && charge.verfuegbar_g != null) {
     try {
       const rest = Math.max(0, Number(charge.verfuegbar_g) - menge);
-      const patch = { verfuegbar_g: rest };
+      const patch: { verfuegbar_g: number; status?: string } = { verfuegbar_g: rest };
       if (rest === 0) patch.status = 'aufgebraucht';
       await pb.collection('chargen').update(chargeId, patch);
     } catch {

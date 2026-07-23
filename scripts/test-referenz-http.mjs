@@ -26,13 +26,13 @@ const cookieVon = (r, name) =>
 const anmeldenRoh = (email, pw) =>
   fetch(`${BASE}/mitglieder/anmelden`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ email, passwort: pw }),
   });
 const post = (pfad, felder, cookie) =>
   fetch(`${BASE}${pfad}`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: new URLSearchParams(felder),
   });
 
@@ -45,7 +45,7 @@ for (const z of await pb.collection('zweifaktor').getFullList({ filter: `user="$
 // ---------- 1. Zwei-Faktor einrichten ----------
 let evaCookie = cookieVon(await anmeldenRoh(eva.email, DUMMY_PW), 'pb_token');
 pruefe('Login ohne 2FA -> direkt Token', !!evaCookie);
-const setupHtml = await (await fetch(`${BASE}/mitglieder/sicherheit`, { headers: { cookie: evaCookie } })).text();
+const setupHtml = await (await fetch(`${BASE}/mitglieder/sicherheit`, { headers: { origin: BASE, cookie: evaCookie } })).text();
 const secret = /name="secret" value="([A-Z2-7]+)"/.exec(setupHtml)?.[1];
 pruefe('Setup-Seite liefert Geheimnis + QR', !!secret && setupHtml.includes('<svg'));
 const aktLoc = (await post('/mitglieder/sicherheit/aktivieren', { secret, code: hotp(secret, zeitschritt()) }, evaCookie)).headers.get('location') ?? '';
@@ -60,7 +60,7 @@ const login2 = await anmeldenRoh(eva.email, DUMMY_PW);
 const pending = cookieVon(login2, 'pb_pending');
 pruefe('Login mit 2FA -> Code-Schritt (pending, kein Token)', (login2.headers.get('location') ?? '').includes('/mitglieder/code') && !!pending && !cookieVon(login2, 'pb_token'));
 // Geschuetzte Seite mit nur-pending -> abgewiesen
-const bereichOhne = await fetch(`${BASE}/mitglieder/bereich`, { headers: { cookie: pending }, redirect: 'manual' });
+const bereichOhne = await fetch(`${BASE}/mitglieder/bereich`, { headers: { origin: BASE, cookie: pending }, redirect: 'manual' });
 pruefe('Pending-Cookie reicht NICHT fuer den Bereich', bereichOhne.status === 303);
 // Falscher Code
 const falsch = (await post('/mitglieder/code/pruefen', { code: '000001' }, pending)).headers.get('location') ?? '';
@@ -69,7 +69,7 @@ pruefe('Falscher Code -> abgelehnt', falsch.includes('fehler=code'), falsch);
 const richtig = await post('/mitglieder/code/pruefen', { code: hotp(secret, zeitschritt()) }, pending);
 const echterToken = cookieVon(richtig, 'pb_token');
 pruefe('Richtiger Code -> Token', (richtig.headers.get('location') ?? '').includes('/mitglieder/bereich') && !!echterToken);
-const bereichMit = await fetch(`${BASE}/mitglieder/bereich`, { headers: { cookie: echterToken }, redirect: 'manual' });
+const bereichMit = await fetch(`${BASE}/mitglieder/bereich`, { headers: { origin: BASE, cookie: echterToken }, redirect: 'manual' });
 pruefe('Bereich mit Token -> 200', bereichMit.status === 200, String(bereichMit.status));
 // Replay: derselbe Code nochmal (frisches pending)
 const login3 = await anmeldenRoh(eva.email, DUMMY_PW);

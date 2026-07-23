@@ -6,7 +6,7 @@ import { darfAusgeben } from '../../../lib/rollen';
 import { produktTyp, produktLabel } from '../../../lib/verarbeitung';
 import { berlinTag } from '../../../lib/ausgabe';
 
-// Editor fuer das "Angebot der Woche". Nur Ausgabe/Vorstand.
+// Editor fuer die aktuelle Abgabe. Nur Ausgabe/Vorstand.
 export const prerender = false;
 
 const ergebnis = await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value);
@@ -25,6 +25,12 @@ async function ladeListe<T>(collection: string, opts: Record<string, unknown> = 
 }
 
 const fehler = Astro.url.searchParams.get('fehler');
+const fehlertext: Record<string, string> = {
+  titel: 'Bitte einen aussagekräftigen Titel angeben.',
+  sorten: 'Bitte mindestens ein aktuell verfügbares Produkt auswählen.',
+  zeitraum: 'Das Enddatum darf nicht vor dem Startdatum liegen.',
+  '1': 'Speichern fehlgeschlagen. Bitte erneut versuchen.',
+};
 const ausBestand = Astro.url.searchParams.get('ausBestand') === '1';
 
 // Vorhandenes Angebot laden (zum Vorbefuellen).
@@ -84,17 +90,17 @@ const heute = berlinTag();
 const TYPEN = ['', 'Indica', 'Sativa', 'Hybrid'];
 ---
 
-<Basis titel="Angebot der Woche bearbeiten" beschreibung="Aktuelles Abgabe-Angebot pflegen.">
+<Basis titel="Aktuelle Abgabe bearbeiten" beschreibung="Aktuelles Abgabe-Angebot pflegen.">
   <MitgliedNav rollen={mitglied.rollen} />
   <p class="eyebrow">Vereinsarbeit</p>
   <p class="zurueck"><a href="/mitglieder/wochenangebot">‹ Zurück zur Ansicht</a></p>
-  <h1 style="margin-bottom:0.4rem;">Angebot der Woche</h1>
+  <h1 style="margin-bottom:0.4rem;">Aktuelle Abgabe</h1>
   <p class="einleitung">
     Was diese Woche zur Abgabe steht. Zeig es Mitgliedern an — rein interne
     Information, keine Werbung (§ 6 KCanG).
   </p>
 
-  {fehler && <p class="hinweis hinweis--fehler" role="alert">Speichern fehlgeschlagen. Bitte erneut versuchen.</p>}
+  {fehler && <p class="hinweis hinweis--fehler" role="alert">{fehlertext[fehler] ?? fehlertext['1']}</p>}
 
   <p class="bestand-hinweis">
     <a class="knopf-sek" href="/mitglieder/wochenangebot/bearbeiten?ausBestand=1">Aus aktuellem Bestand füllen</a>

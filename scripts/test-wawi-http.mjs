@@ -17,7 +17,7 @@ const sorteId = (await pb.collection('sorten').getFirstListItem('name="CBD Auror
 
 const login = await fetch(`${BASE}/mitglieder/anmelden`, {
   method: 'POST', redirect: 'manual',
-  headers: { 'content-type': 'application/x-www-form-urlencoded' },
+  headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams({ email: ANBAU, passwort: ANBAU_PW }),
 });
 const cookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -27,7 +27,7 @@ console.log('Anbau angemeldet.\n');
 const post = (pfad, felder) =>
   fetch(`${BASE}${pfad}`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: new URLSearchParams(felder),
   });
 

@@ -47,6 +47,7 @@ const SEEDS = [
   'seed-sepa.mjs',
   'seed-erweiterung.mjs',
   'seed-selbstverwaltung.mjs', // Feature 7 - NACH erweiterung (setzt users.updateRule final)
+  'seed-mitgliedsnummer.mjs',  // zuletzt: belegte Mitgliedsnummern eindeutig
 ];
 
 if (!process.env.PB_URL || !process.env.PB_ADMIN_EMAIL || !process.env.PB_ADMIN_PW) {

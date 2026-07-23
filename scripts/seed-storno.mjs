@@ -28,12 +28,20 @@ if (neu.length) {
   console.log('ausgaben: Storno-Felder bereits vorhanden.');
 }
 
-// Storno braucht eine updateRule: bisher war ausgaben append-only (updateRule null).
-// Personal (Ausgabe/Vorstand) darf Abgaben korrigieren/stornieren.
-const staffRegel = '@request.auth.rollen ~ "ausgabe" || @request.auth.rollen ~ "vorstand"';
-if (col.updateRule !== staffRegel) {
-  await pb.collections.update('ausgaben', { updateRule: staffRegel });
-  console.log('ausgaben: updateRule fuer Personal gesetzt (Storno/Korrektur).');
-} else {
-  console.log('ausgaben: updateRule bereits gesetzt.');
-}
+// Append-only: Personal darf ausschliesslich einen noch aktiven Satz stornieren.
+// Alle fachlichen Snapshot-Felder bleiben auch ueber die direkte PB-API gesperrt.
+const stornoRegel = '(@request.auth.rollen ~ "ausgabe" || @request.auth.rollen ~ "vorstand") && storniert != true && @request.body.storniert = true && @request.body.mitglied:isset = false && @request.body.mitgliedsnummer:isset = false && @request.body.sorte:isset = false && @request.body.sorte_name:isset = false && @request.body.charge:isset = false && @request.body.charge_ref:isset = false && @request.body.produkt_typ:isset = false && @request.body.thc_prozent:isset = false && @request.body.cbd_prozent:isset = false && @request.body.menge_gramm:isset = false && @request.body.beitrag_euro:isset = false && @request.body.tag:isset = false && @request.body.monat:isset = false && @request.body.abgegeben_von:isset = false && @request.body.belegnr:isset = false && @request.body.notiz:isset = false';
+
+const pflichtIndexe = [
+  'CREATE INDEX idx_ausgaben_mitglied_monat ON ausgaben (mitglied, monat)',
+  'CREATE INDEX idx_ausgaben_tag ON ausgaben (tag)',
+  'CREATE INDEX idx_ausgaben_belegnr ON ausgaben (belegnr)',
+];
+const fremdeIndexe = (col.indexes ?? []).filter((index) =>
+  !pflichtIndexe.some((pflicht) => index.includes(pflicht.split(' ')[2])),
+);
+await pb.collections.update('ausgaben', {
+  updateRule: stornoRegel,
+  indexes: [...fremdeIndexe, ...pflichtIndexe],
+});
+console.log('ausgaben: append-only-Stornoregel + Pflichtindexe gesetzt.');

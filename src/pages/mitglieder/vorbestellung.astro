@@ -3,6 +3,8 @@ import Basis from '../../layouts/Basis.astro';
 import MitgliedNav from '../../components/MitgliedNav.astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../lib/pb';
 import { uebersetzer } from '../../lib/i18n';
+import { berlinTag, LIMIT_TAG_G } from '../../lib/ausgabe';
+import { sortenAusAngeboten, type AngebotsDatensatz } from '../../lib/angebot';
 const __fn = Astro.locals.funktionen;
 const hatVorbestellung = __fn ? __fn.vorbestellung !== false : true;
 // Geschützt. Mitglieder reservieren eine Sorte zur späteren Abholung.
@@ -24,10 +26,6 @@ interface Bestellung {
   status?: string;
   created: string;
 }
-interface Bericht {
-  sorte?: string;
-}
-
 let bestellungen: Bestellung[] = [];
 let sorten: string[] = [];
 try {
@@ -38,8 +36,8 @@ try {
   bestellungen = [];
 }
 try {
-  const berichte = (await pb.collection('sortenberichte').getFullList({ sort: 'sorte' })) as Bericht[];
-  sorten = [...new Set(berichte.map((b) => b.sorte).filter((s): s is string => !!s))];
+  const angebote = (await pb.collection('wochenangebot').getFullList({ sort: '-gueltig_von' })) as AngebotsDatensatz[];
+  sorten = sortenAusAngeboten(angebote);
 } catch {
   sorten = [];
 }
@@ -50,6 +48,8 @@ const t = uebersetzer(Astro.locals.sprache ?? 'de');
 const fehlertext: Record<string, string> = {
   fehlend: t('vorbe.fehler.fehlend'),
   menge: t('vorbe.fehler.menge'),
+  sorte: t('vorbe.fehler.sorte'),
+  datum: t('vorbe.fehler.datum'),
   fehlgeschlagen: t('vorbe.fehler.fehlgeschlagen'),
 };
 const meldung = fehler ? fehlertext[fehler] ?? fehlertext.fehlgeschlagen : null;
@@ -84,23 +84,28 @@ const statusLabel: Record<string, string> = {
     <p class="hinweis" role="status">{t('vorbe.ok')}</p>
   )}
 
+  {sorten.length === 0 ? (
+    <div class="hinweis leerstand" role="status">
+      <strong>{t('vorbe.nichts_verfuegbar')}</strong><br />
+      {t('vorbe.nichts_verfuegbar_hinweis')}
+    </div>
+  ) : (
   <form class="kasten" method="post" action="/mitglieder/vorbestellung/absenden">
     <div class="feld">
       <label for="sorte">{t('vorbe.sorte')}</label>
-      <input id="sorte" name="sorte" type="text" list="sortenliste" required />
-      {sorten.length > 0 && (
-        <datalist id="sortenliste">
-          {sorten.map((s) => <option value={s} />)}
-        </datalist>
-      )}
+      <select id="sorte" name="sorte" required>
+        <option value="">{t('vorbe.sorte_waehlen')}</option>
+        {sorten.map((s) => <option value={s}>{s}</option>)}
+      </select>
     </div>
     <div class="feld">
       <label for="menge_gramm">{t('vorbe.menge')}</label>
-      <input id="menge_gramm" name="menge_gramm" type="number" min="1" step="1" required />
+      <input id="menge_gramm" name="menge_gramm" type="number" min="1" max={LIMIT_TAG_G} step="1" required />
+      <small>{t('vorbe.menge_hinweis').replace('{x}', String(LIMIT_TAG_G))}</small>
     </div>
     <div class="feld">
       <label for="abholdatum">{t('vorbe.abholdatum')}</label>
-      <input id="abholdatum" name="abholdatum" type="date" />
+      <input id="abholdatum" name="abholdatum" type="date" min={berlinTag()} />
     </div>
     <div class="feld">
       <label for="hinweis">{t('vorbe.hinweis')}</label>
@@ -108,6 +113,7 @@ const statusLabel: Record<string, string> = {
     </div>
     <button class="knopf" type="submit">{t('vorbe.absenden')}</button>
   </form>
+  )}
 
   <h2>{t('vorbe.deine')}</h2>
   {
@@ -135,3 +141,8 @@ const statusLabel: Record<string, string> = {
     )
   }
 </Basis>
+
+<style>
+  .leerstand { line-height: 1.55; }
+  .feld small { display:block; color:var(--ink-soft); margin-top:0.35rem; }
+</style>

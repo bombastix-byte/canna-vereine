@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
+import { berlinTag, LIMIT_TAG_G } from '../../../lib/ausgabe';
+import { sortenAusAngeboten, type AngebotsDatensatz } from '../../../lib/angebot';
 
 // Nimmt eine Vorbestellung entgegen. Schreibt als das angemeldete Mitglied,
 // Status stets "offen". Aenderung/Stornierung uebernimmt der Vorstand im CMS.
@@ -25,8 +27,23 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     return redirect('/mitglieder/vorbestellung?fehler=fehlend', 303);
   }
   const menge = Number(mengeRoh);
-  if (!Number.isFinite(menge) || menge <= 0) {
+  if (!Number.isFinite(menge) || menge <= 0 || menge > LIMIT_TAG_G) {
     return redirect('/mitglieder/vorbestellung?fehler=menge', 303);
+  }
+  if (abholdatum && (!/^\d{4}-\d{2}-\d{2}$/.test(abholdatum) || abholdatum < berlinTag())) {
+    return redirect('/mitglieder/vorbestellung?fehler=datum', 303);
+  }
+
+  // Nur Produkte aus einer aktuell gueltigen Abgabe akzeptieren. Das verhindert
+  // freie Texte, veraltete Browserformulare und manipulierte POSTs.
+  try {
+    const angebote = (await pb.collection('wochenangebot').getFullList({ sort: '-gueltig_von' })) as AngebotsDatensatz[];
+    const erlaubt = sortenAusAngeboten(angebote);
+    if (!erlaubt.includes(sorte)) {
+      return redirect('/mitglieder/vorbestellung?fehler=sorte', 303);
+    }
+  } catch {
+    return redirect('/mitglieder/vorbestellung?fehler=sorte', 303);
   }
 
   try {

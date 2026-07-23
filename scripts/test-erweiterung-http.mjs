@@ -23,7 +23,7 @@ for (const v of await pb.collection('vermehrung_ausgaben').getFullList({ filter:
 
 const login = await fetch(`${BASE}/mitglieder/anmelden`, {
   method: 'POST', redirect: 'manual',
-  headers: { 'content-type': 'application/x-www-form-urlencoded' },
+  headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams({ email: STAFF, passwort: STAFF_PW }),
 });
 const cookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -33,7 +33,7 @@ console.log('Vorstand angemeldet.\n');
 const post = (pfad, felder) =>
   fetch(`${BASE}${pfad}`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: felder instanceof URLSearchParams ? felder : new URLSearchParams(felder),
   });
 
@@ -82,7 +82,7 @@ const nachher = await pb.collection('vermehrung_ausgaben').getFullList({ filter:
 pruefe('Dual ueber Limit: nichts gebucht (weiter 2 Zeilen)', nachher.length, 2);
 
 // 3. Jahresmeldung: Seite laedt (200)
-const jm = await fetch(`${BASE}/mitglieder/jahresmeldung`, { headers: { cookie }, redirect: 'manual' });
+const jm = await fetch(`${BASE}/mitglieder/jahresmeldung`, { headers: { origin: BASE, cookie }, redirect: 'manual' });
 pruefe('Jahresmeldung Seite -> 200', jm.status, 200);
 
 // 4. ZPL-Druck (Datei-Fallback, kein Drucker konfiguriert)

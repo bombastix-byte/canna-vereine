@@ -5,6 +5,7 @@ import { protokolliere } from '../../../lib/audit';
 import { bucheAufnahmebeitrag } from '../../../lib/kasse-buchung';
 import { site } from '../../../config';
 import { syntheticEmail } from '../../../lib/login';
+import { mitgliedsnummerGueltig, mitgliedsnummerVergeben, normalisiereMitgliedsnummer } from '../../../lib/mitgliedsnummer';
 
 // Legt ein Mitglied manuell an (Vorstand). Naechste freie M-Nummer, wenn keine
 // angegeben; Startpasswort automatisch, wenn keins gesetzt. Zeigt das Passwort
@@ -32,7 +33,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   const daten = await request.formData();
   const vorname = privacy ? '' : String(daten.get('vorname') ?? '').trim();
   const nachname = privacy ? '' : String(daten.get('nachname') ?? '').trim();
-  let mitgliedsnummer = String(daten.get('mitgliedsnummer') ?? '').trim();
+  let mitgliedsnummer = normalisiereMitgliedsnummer(daten.get('mitgliedsnummer'));
   const geburtsdatum = privacy ? '' : String(daten.get('geburtsdatum') ?? '').trim();
   const rollen = daten.getAll('rollen').map((r) => String(r)).filter((r) => (ROLLEN as string[]).includes(r));
   const passwort = String(daten.get('passwort') ?? '').trim() || startpasswort();
@@ -52,6 +53,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       /* Startwert */
     }
     mitgliedsnummer = 'M-' + String(nr).padStart(3, '0');
+  }
+  if (!mitgliedsnummerGueltig(mitgliedsnummer)) return fehler('nummer');
+  try {
+    if (await mitgliedsnummerVergeben(pb, mitgliedsnummer)) return fehler('nummer_existiert');
+  } catch {
+    return fehler('fehlgeschlagen');
   }
 
   // Identität: synthetisch (Privacy) oder echte E-Mail (Standard-Modus).

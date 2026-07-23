@@ -98,7 +98,10 @@ await pb.collection('_superusers').authWithPassword(ADMIN, ADMIN_PW);
 console.log(`Admin ok. ${daten.length} Zeilen in ${csvPfad}${dryRun ? ' (DRY-RUN)' : ''}.`);
 
 let maxNr = 0;
+const belegteNummern = new Set();
 for (const u of await pb.collection('users').getFullList({ fields: 'mitgliedsnummer' })) {
+  const nummer = String(u.mitgliedsnummer ?? '').trim().toUpperCase();
+  if (nummer) belegteNummern.add(nummer);
   const m = /^M-(\d+)$/.exec(String(u.mitgliedsnummer ?? ''));
   if (m) maxNr = Math.max(maxNr, Number(m[1]));
 }
@@ -117,12 +120,24 @@ for (const r of daten) {
   const vorname = wert(r, 'vorname');
   const nachname = wert(r, 'nachname');
   const name = wert(r, 'name') || [vorname, nachname].filter(Boolean).join(' ') || email;
-  let nummer = wert(r, 'mitgliedsnummer');
-  if (!nummer) nummer = 'M-' + String(++maxNr).padStart(3, '0');
+  let nummer = wert(r, 'mitgliedsnummer').trim().toUpperCase();
+  if (!nummer) {
+    do nummer = 'M-' + String(++maxNr).padStart(3, '0');
+    while (belegteNummern.has(nummer));
+  }
+  if (!/^[A-Z0-9][A-Z0-9-]{1,31}$/.test(nummer)) {
+    fehler++; report.push([nummer, name, email, '', 'ungültige Mitgliedsnummer']); continue;
+  }
+  if (belegteNummern.has(nummer)) {
+    fehler++; report.push([nummer, name, email, '', 'Mitgliedsnummer bereits vergeben']); continue;
+  }
   const rollen = wert(r, 'rollen').split(';').map((x) => x.trim()).filter((x) => ROLLEN.includes(x));
   const pw = startpasswort();
 
-  if (dryRun) { angelegt++; report.push([nummer, name, email, pw, 'würde angelegt']); continue; }
+  if (dryRun) {
+    belegteNummern.add(nummer);
+    angelegt++; report.push([nummer, name, email, pw, 'würde angelegt']); continue;
+  }
   try {
     await pb.collection('users').create({
       email, password: pw, passwordConfirm: pw,
@@ -131,6 +146,7 @@ for (const r of daten) {
       rollen: rollen.length ? rollen : ['mitglied'],
       mitglied_status: 'aktiv',
     });
+    belegteNummern.add(nummer);
     angelegt++; report.push([nummer, name, email, pw, 'angelegt']);
   } catch (e) {
     fehler++; report.push([nummer, name, email, '', 'FEHLER: ' + (e?.message ?? e)]);

@@ -12,7 +12,7 @@ import { inReihe } from '../../../lib/serie';
 export const prerender = false;
 
 // Die Vermehrung ist Teil der Tresen-Seite (/mitglieder/ausgabe).
-function zurueck(redirect: (u: string, s?: number) => Response, mitgliedId: string, meldung: string) {
+function zurueck(redirect: (u: string, s?: 303) => Response, mitgliedId: string, meldung: string) {
   const q = new URLSearchParams({ mitglied: mitgliedId, fehler: '1', msg: meldung });
   return redirect(`/mitglieder/ausgabe?${q.toString()}`, 303);
 }

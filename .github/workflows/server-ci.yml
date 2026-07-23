@@ -1,0 +1,84 @@
+name: Server-CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  build-und-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - name: Goerlitz bauen
+        run: npm run build
+        env:
+          SITE_ID: goerlitz
+      - name: CVG bauen
+        run: npm run build
+        env:
+          SITE_ID: cvg
+      - run: npm audit --omit=dev --audit-level=high
+      - name: PocketBase-Image bauen
+        run: docker build -f deploy/Dockerfile.pocketbase .
+
+  pocketbase-e2e:
+    runs-on: ubuntu-latest
+    env:
+      PB_URL: http://127.0.0.1:8090
+      PB_ADMIN_EMAIL: admin@ci.example
+      PB_ADMIN_PW: CI-Admin-Only-2026!
+      PB_MEMBER_EMAIL: mitglied@ci.example
+      PB_MEMBER_PW: CI-Member-Only-2026!
+      PB_STAFF_EMAIL: ausgabe@example.local
+      PB_STAFF_PW: change-me-staff
+      PB_DUMMY_PW: DummyDemo2026!
+      APP_URL: http://127.0.0.1:4321
+      SITE_ID: goerlitz
+      TRUSTED_ORIGINS: http://127.0.0.1:4321
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: PocketBase laden
+        run: |
+          curl -fsSL -o /tmp/pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.39.4/pocketbase_0.39.4_linux_amd64.zip
+          unzip -q /tmp/pb.zip -d /tmp/pocketbase
+          chmod +x /tmp/pocketbase/pocketbase
+      - name: Frische Datenbank starten
+        run: |
+          /tmp/pocketbase/pocketbase superuser upsert "$PB_ADMIN_EMAIL" "$PB_ADMIN_PW" --dir /tmp/cvms-ci
+          /tmp/pocketbase/pocketbase serve --http=127.0.0.1:8090 --dir /tmp/cvms-ci --automigrate=false --hooksDir "$GITHUB_WORKSPACE/pb/pb_hooks" >/tmp/pocketbase.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8090/api/health && break || sleep 1; done
+          curl -fsS http://127.0.0.1:8090/api/health
+      - name: Struktur und Testdaten einrichten
+        run: |
+          node scripts/seed-struktur.mjs
+          node scripts/seed-dummies.mjs
+      - name: Regeln und Indexe pruefen
+        run: node scripts/check-schema.mjs
+      - name: Astro-Testserver starten
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4321 >/tmp/astro.log 2>&1 &
+          for i in {1..60}; do curl -fsS -o /dev/null http://127.0.0.1:4321/ && break || sleep 1; done
+          curl -fsS -o /dev/null http://127.0.0.1:4321/
+      - name: Tresen- und Race-E2E
+        run: |
+          node scripts/test-kcang-hook-http.mjs
+          node scripts/test-tresen-http.mjs
+          node scripts/test-race-http.mjs
+      - name: Logs bei Fehlern
+        if: failure()
+        run: |
+          tail -200 /tmp/pocketbase.log || true
+          tail -200 /tmp/astro.log || true

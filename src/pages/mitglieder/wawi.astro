@@ -206,11 +206,19 @@ const statusVariante: Record<string, string> = {
   {fmeldung && <p class="hinweis hinweis--fehler" role="alert">{fmeldung}</p>}
   {omeldung && <p class="hinweis" role="status">{omeldung}</p>}
 
-  <h2>Bestand (freigegeben)</h2>
+  <nav class="sprungmarken" aria-label="Bereiche der Warenwirtschaft">
+    <a href="#bestand">Bestand</a>
+    <a href="#chargen">Chargen</a>
+    {hatVerarbeitung && <a href="#verarbeitung">Verarbeitung</a>}
+    <a href="#transporte">Transporte</a>
+    <a href="#vernichtungen">Vernichtungen</a>
+  </nav>
+
+  <h2 id="bestand">Bestand (freigegeben)</h2>
   {bestand.size === 0 ? (
     <p style="color:var(--ink-soft);">Kein freigegebener Bestand.</p>
   ) : (
-    <table class="tabelle">
+    <table class="tabelle bestand-tabelle">
       <thead><tr><th>Sorte</th><th style="text-align:right;">Verfügbar</th></tr></thead>
       <tbody>
         {[...bestand.entries()].map(([name, g]) => (
@@ -221,7 +229,7 @@ const statusVariante: Record<string, string> = {
     </table>
   )}
 
-  <h2>Chargen</h2>
+  <h2 id="chargen">Chargen</h2>
   <p class="ablauf">Ablauf je Charge: <strong>Anbau</strong> → <strong>Ernte</strong> (Frischgewicht wiegen) → <strong>Freigabe</strong> (Trockengewicht + THC eintragen) → am Tresen abgebbar.</p>
 
   <details class="klappe">
@@ -558,7 +566,7 @@ const statusVariante: Record<string, string> = {
 
   {hatVerarbeitung && (
   <Fragment>
-  <h2>Weiterverarbeitung (Haschisch / Rosin)</h2>
+  <h2 id="verarbeitung">Weiterverarbeitung (Haschisch / Rosin)</h2>
   <p class="ablauf">
     Aus einer <strong>oder mehreren</strong> freigegebenen Blüten-Chargen wird
     ein Konzentrat: je Quelle die Einsatzmenge wiegen, Gesamtertrag und THC/CBD
@@ -640,61 +648,70 @@ const statusVariante: Record<string, string> = {
   </details>
 
   {verarbeitungen.length > 0 && (
-    <table class="tabelle">
-      <thead><tr><th>Datum</th><th>Quelle</th><th>Produkt</th><th class="r">Einsatz</th><th class="r">Ertrag</th><th class="r">Ausbeute</th><th>Neue Charge</th></tr></thead>
-      <tbody>
-        {verarbeitungen.map((v) => (
-          <tr>
-            <td>{v.datum}</td>
-            <td>{v.quelle_nr} · {v.sorte_name}</td>
-            <td>{produktLabel(v.produkt_typ)}</td>
-            <td class="r">{v.einsatz_g} g</td>
-            <td class="r">{v.ertrag_g} g</td>
-            <td class="r">{ausbeuteProzent(v.einsatz_g ?? 0, v.ertrag_g ?? 0) ?? '—'} %</td>
-            <td>{v.produkt_nr}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <details class="klappe protokoll-klappe">
+      <summary>Verarbeitungsprotokoll ({verarbeitungen.length})</summary>
+      <table class="tabelle">
+        <thead><tr><th>Datum</th><th>Quelle</th><th>Produkt</th><th class="r">Einsatz</th><th class="r">Ertrag</th><th class="r">Ausbeute</th><th>Neue Charge</th></tr></thead>
+        <tbody>
+          {verarbeitungen.map((v) => (
+            <tr>
+              <td>{v.datum}</td>
+              <td>{v.quelle_nr} · {v.sorte_name}</td>
+              <td>{produktLabel(v.produkt_typ)}</td>
+              <td class="r">{v.einsatz_g} g</td>
+              <td class="r">{v.ertrag_g} g</td>
+              <td class="r">{ausbeuteProzent(v.einsatz_g ?? 0, v.ertrag_g ?? 0) ?? '—'} %</td>
+              <td>{v.produkt_nr}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   )}
   </Fragment>
   )}
 
-  <h2>Transporte</h2>
+  <h2 id="transporte">Transporte</h2>
   {transporte.length === 0 ? (
     <p style="color:var(--ink-soft);">Keine Transporte dokumentiert.</p>
   ) : (
-    <table class="tabelle">
-      <thead><tr><th>Datum</th><th>Charge</th><th>Sorte</th><th class="r">Menge</th><th>Strecke</th><th>Bescheinigung</th></tr></thead>
-      <tbody>
-        {transporte.map((t) => (
-          <tr>
-            <td>{t.datum}</td><td>{t.charge_nr}</td><td>{t.sorte_name}</td>
-            <td class="r">{t.menge_gramm} g</td>
-            <td>{t.von} → {t.nach}</td>
-            <td><a href={`/mitglieder/wawi/transport/${t.id}`}>{t.belegnr || 'öffnen'}</a></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <details class="klappe protokoll-klappe">
+      <summary>Transportprotokoll ({transporte.length})</summary>
+      <table class="tabelle">
+        <thead><tr><th>Datum</th><th>Charge</th><th>Sorte</th><th class="r">Menge</th><th>Strecke</th><th>Bescheinigung</th></tr></thead>
+        <tbody>
+          {transporte.map((t) => (
+            <tr>
+              <td>{t.datum}</td><td>{t.charge_nr}</td><td>{t.sorte_name}</td>
+              <td class="r">{t.menge_gramm} g</td>
+              <td>{t.von} → {t.nach}</td>
+              <td><a href={`/mitglieder/wawi/transport/${t.id}`}>{t.belegnr || 'öffnen'}</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   )}
 
-  <h2>Vernichtungen</h2>
+  <h2 id="vernichtungen">Vernichtungen</h2>
   {vernichtungen.length === 0 ? (
     <p style="color:var(--ink-soft);">Keine Vernichtungen dokumentiert.</p>
   ) : (
-    <table class="tabelle">
-      <thead><tr><th>Datum</th><th>Charge</th><th>Sorte</th><th style="text-align:right;">Menge</th><th>Grund</th><th>Zeuge</th></tr></thead>
-      <tbody>
-        {vernichtungen.map((v) => (
-          <tr>
-            <td>{v.datum}</td><td>{v.charge_nr}</td><td>{v.sorte_name}</td>
-            <td style="text-align:right;">{v.menge_gramm ? `${v.menge_gramm} g` : `${v.anzahl_pflanzen ?? '?'} Pflanze(n)${v.pflanzen_nrn ? ` (${v.pflanzen_nrn})` : ''}`}</td>
-            <td>{v.grund}</td><td>{v.zeuge || '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <details class="klappe protokoll-klappe">
+      <summary>Vernichtungsprotokoll ({vernichtungen.length})</summary>
+      <table class="tabelle">
+        <thead><tr><th>Datum</th><th>Charge</th><th>Sorte</th><th style="text-align:right;">Menge</th><th>Grund</th><th>Zeuge</th></tr></thead>
+        <tbody>
+          {vernichtungen.map((v) => (
+            <tr>
+              <td>{v.datum}</td><td>{v.charge_nr}</td><td>{v.sorte_name}</td>
+              <td style="text-align:right;">{v.menge_gramm ? `${v.menge_gramm} g` : `${v.anzahl_pflanzen ?? '?'} Pflanze(n)${v.pflanzen_nrn ? ` (${v.pflanzen_nrn})` : ''}`}</td>
+              <td>{v.grund}</td><td>{v.zeuge || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   )}
 </Basis>
 
@@ -712,6 +729,10 @@ const statusVariante: Record<string, string> = {
   .feld-reihe { display: flex; gap: 0.9rem; flex-wrap: wrap; }
   .feld-reihe .feld { flex: 1 1 8rem; }
   .ablauf { max-width: var(--mass); color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 1rem; }
+  .sprungmarken { display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: var(--mass); margin: 0 0 1.2rem; }
+  .sprungmarken a { display: inline-flex; align-items: center; min-height: 44px; padding: 0.35rem 0.75rem; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; background: var(--bg-rein); }
+  .protokoll-klappe { max-width: var(--mass); overflow: auto; }
+  .protokoll-klappe > summary { position: sticky; left: 0; }
   .charge {
     max-width: var(--mass);
     border: 1px solid var(--line);
@@ -747,4 +768,10 @@ const statusVariante: Record<string, string> = {
   .aktionen-det summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; padding: 0.45rem 0; }
   .aktion { display: flex; flex-direction: column; gap: 0.4rem; max-width: 22rem; margin: 0.8rem 0; padding: 0.8rem; border: 1px solid var(--line); border-radius: var(--radius); }
   .aktion label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9rem; color: var(--ink-soft); }
+  @media (max-width: 700px) {
+    .bestand-tabelle, .bestand-tabelle tbody, .bestand-tabelle tr { display: block; width: 100%; }
+    .bestand-tabelle thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .bestand-tabelle tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; border-bottom: 1px solid var(--line); }
+    .bestand-tabelle td { display: block; border: 0; min-width: 0; overflow-wrap: anywhere; }
+  }
 </style>

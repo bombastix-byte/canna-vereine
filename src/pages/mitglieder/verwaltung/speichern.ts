@@ -4,6 +4,7 @@ import { darfVerwalten, ROLLEN } from '../../../lib/rollen';
 import { protokolliere, feldDiff } from '../../../lib/audit';
 import { site } from '../../../config';
 import { syntheticEmail } from '../../../lib/login';
+import { mitgliedsnummerGueltig, mitgliedsnummerVergeben, normalisiereMitgliedsnummer } from '../../../lib/mitgliedsnummer';
 
 // Speichert Rollen/Stammdaten eines Mitglieds. Nur Vorstand.
 export const prerender = false;
@@ -20,7 +21,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   const id = String(daten.get('mitglied') ?? '').trim();
   const vorname = String(daten.get('vorname') ?? '').trim();
   const nachname = String(daten.get('nachname') ?? '').trim();
-  const mitgliedsnummer = String(daten.get('mitgliedsnummer') ?? '').trim();
+  const mitgliedsnummer = normalisiereMitgliedsnummer(daten.get('mitgliedsnummer'));
   const geburtsdatum = String(daten.get('geburtsdatum') ?? '').trim();
   const beitragBis = String(daten.get('beitrag_bis') ?? '').trim();
   const beitragMonatlich = Number(String(daten.get('beitrag_monatlich') ?? '').trim().replace(',', '.'));
@@ -34,6 +35,19 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     .filter((r) => (ROLLEN as string[]).includes(r));
 
   if (!id) return redirect('/mitglieder/verwaltung?fehler=fehlend', 303);
+  if (mitgliedsnummer && !mitgliedsnummerGueltig(mitgliedsnummer)) {
+    return redirect(`/mitglieder/verwaltung/${id}?fehler=nummer`, 303);
+  }
+  if (site.login_modus === 'mitgliedsnummer' && !mitgliedsnummer) {
+    return redirect(`/mitglieder/verwaltung/${id}?fehler=nummer`, 303);
+  }
+  try {
+    if (await mitgliedsnummerVergeben(pb, mitgliedsnummer, id)) {
+      return redirect(`/mitglieder/verwaltung/${id}?fehler=nummer_existiert`, 303);
+    }
+  } catch {
+    return redirect(`/mitglieder/verwaltung/${id}?fehler=fehlgeschlagen`, 303);
+  }
 
   // Vorzustand für das Protokoll laden (best-effort).
   let alt: Record<string, any> | null = null;

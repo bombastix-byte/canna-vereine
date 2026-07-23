@@ -27,7 +27,7 @@ await pb.collection('wochenangebot').create({
     { name: 'Gushers', typ: 'Indica', thc: '26,0 %', cbd: '2,0 %' },
     { name: 'Watermelon', typ: 'Indica', thc: '20,0 %', cbd: '2,0 %' },
   ],
-  gueltig_von: '2026-06-29 00:00:00.000Z',
-  gueltig_bis: '2026-07-05 00:00:00.000Z',
+  gueltig_von: new Date().toISOString().slice(0, 10) + ' 00:00:00.000Z',
+  gueltig_bis: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) + ' 23:59:59.999Z',
 });
-console.log('Angebot der Woche gesetzt (6 Sorten, Tabelle).');
+console.log('Aktuelle Abgabe gesetzt (6 Sorten, Tabelle).');

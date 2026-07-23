@@ -7,8 +7,12 @@ node_modules/
 # environment
 .env
 .env.production
-# pocketbase binary + daten (lokal, nie ins Repo)
-pb/
+# PocketBase-Binary/Daten bleiben lokal; Sicherheits-Hooks und Schema-Doku
+# muessen dagegen versioniert und Teil des Container-Builds sein.
+pb/*
+!pb/pb_hooks/
+!pb/pb_hooks/**
+!pb/SCHEMA.md
 pb_data/
 
 # build-artefakt
@@ -22,3 +26,6 @@ Thumbs.db
 
 # Lokale/Server-Backups nie ins Repo
 deploy/backups/
+
+# Scratch/Testlaeufe (Tarballs, PocketBase-Testdaten, PID/Log-Dateien)
+work/

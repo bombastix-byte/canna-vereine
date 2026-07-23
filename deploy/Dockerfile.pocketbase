@@ -7,6 +7,8 @@ RUN apk add --no-cache ca-certificates unzip wget && \
     unzip /tmp/pb.zip -d /pb && rm /tmp/pb.zip && \
     apk del unzip wget
 WORKDIR /pb
+COPY pb/pb_hooks/ /pb/pb_hooks/
+COPY deploy/pb_hooks/ /pb/pb_hooks/
 EXPOSE 8090
 VOLUME ["/pb/pb_data"]
-CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090"]
+CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--automigrate=false"]

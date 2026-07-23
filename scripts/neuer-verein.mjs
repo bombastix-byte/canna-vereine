@@ -7,7 +7,8 @@
 // Erzeugt src/config/<slug>.ts, registriert die Site in src/config/index.ts und
 // gibt fertige Bausteine für docker-compose.yml, Caddyfile und .env sowie eine
 // Schritt-für-Schritt-Checkliste aus. Fasst KEINE Server-Dateien direkt an
-// (Compose/Caddy werden bewusst von Hand nachgezogen — siehe deploy/ONBOARDING.md).
+// (Compose und das versionierte deploy/sites-Snippet werden kontrolliert
+// nachgezogen — siehe deploy/ONBOARDING.md).
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -169,7 +170,7 @@ console.log('\n════════ Bausteine für die Infrastruktur (von Ha
 console.log('\n① deploy/docker-compose.yml — Dienste einfügen (vor dem "volumes:"-Block):');
 console.log(compose);
 console.log(`\n   … und beim "volumes:"-Block ergänzen:\n  pb_${slug}:`);
-console.log('\n② deploy/Caddyfile auf dem Server — Block anhängen (NICHT per Deploy kopieren!):');
+console.log('\n② deploy/sites/cvms.caddy — versionierten Domain-Block ergänzen:');
 console.log(caddy);
 console.log(`\n③ deploy/.env auf dem Server — Zeile ergänzen:\n  DOMAIN_${SLUG_UP}=${args.domain}`);
 console.log('\n④ DNS: A-/AAAA-Record für ' + args.domain + ' auf den VPS zeigen lassen.');

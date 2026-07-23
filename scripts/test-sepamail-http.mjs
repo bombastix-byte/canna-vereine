@@ -23,7 +23,7 @@ function pruefe(name, bed, info) {
 const anmelden = async (email, pw) => {
   const r = await fetch(`${BASE}/mitglieder/anmelden`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ email, passwort: pw }),
   });
   return (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -31,7 +31,7 @@ const anmelden = async (email, pw) => {
 const post = (pfad, felder, cookie, raw = false) =>
   fetch(`${BASE}${pfad}`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: felder instanceof URLSearchParams ? felder : new URLSearchParams(felder),
   });
 
@@ -52,7 +52,7 @@ pruefe('Beitrag gespeichert', annaNeu.beitrag_monatlich === 15);
 pruefe('Mandatsref gespeichert', annaNeu.mandatsref === 'MANDAT-M-101');
 
 // --- Beitraege-Seite laedt ---
-const seite = await fetch(`${BASE}/mitglieder/beitraege`, { headers: { cookie: vorstand } });
+const seite = await fetch(`${BASE}/mitglieder/beitraege`, { headers: { origin: BASE, cookie: vorstand } });
 const html = await seite.text();
 pruefe('Beitraege-Seite -> 200', seite.status === 200, String(seite.status));
 pruefe('Mit-Mandat-Zaehler zeigt >=1', /Mit Mandat[\s\S]{0,80}[1-9]/.test(html));
@@ -60,7 +60,7 @@ pruefe('Mit-Mandat-Zaehler zeigt >=1', /Mit Mandat[\s\S]{0,80}[1-9]/.test(html))
 // --- SEPA-Datei erzeugen ---
 const r = await fetch(`${BASE}/mitglieder/beitraege/sepa`, {
   method: 'POST', redirect: 'manual',
-  headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: vorstand },
+  headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie: vorstand },
   body: new URLSearchParams({ ausfuehrungsdatum: '2026-08-01', seq_typ: 'RCUR', verwendungszweck: 'Mitgliedsbeitrag 2026-08' }),
 });
 const hasGlaeubiger = !!process.env.SEPA_GLAEUBIGER_IBAN;
@@ -75,9 +75,9 @@ if (hasGlaeubiger) {
 
 // --- Rollen-Gate ---
 const eva = await anmelden('eva@dummy.local', DUMMY_PW);
-const evaR = await fetch(`${BASE}/mitglieder/beitraege`, { headers: { cookie: eva }, redirect: 'manual' });
+const evaR = await fetch(`${BASE}/mitglieder/beitraege`, { headers: { origin: BASE, cookie: eva }, redirect: 'manual' });
 pruefe('Beitraege als Mitglied -> blockiert', evaR.status === 303, String(evaR.status));
-const evaSepa = await fetch(`${BASE}/mitglieder/beitraege/sepa`, { method: 'POST', headers: { cookie: eva, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ ausfuehrungsdatum: '2026-08-01' }), redirect: 'manual' });
+const evaSepa = await fetch(`${BASE}/mitglieder/beitraege/sepa`, { method: 'POST', headers: { origin: BASE, cookie: eva, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ ausfuehrungsdatum: '2026-08-01' }), redirect: 'manual' });
 pruefe('SEPA-Export als Mitglied -> blockiert', (evaSepa.headers.get('location') ?? '').includes('keinzugriff'));
 
 // --- Testmail-Endpoint (ohne SMTP -> testmail_aus, kein Crash) ---

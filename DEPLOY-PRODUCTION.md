@@ -90,7 +90,7 @@ cd deploy && docker compose up -d --build
 - Echte Vereinsdaten in `src/config/<verein>.ts` eintragen, dann neu bauen
   (Schritt 6). Theme je Verein ueber das Feld `theme`.
 - Eine weitere Vereinsseite: neue Config plus je ein `astro-`/`pb-`Dienst und
-  ein Domain-Block in `Caddyfile` und `docker-compose.yml`.
+  ein Domain-Block in `deploy/sites/cvms.caddy` und `docker-compose.yml`.
 
 ## Kostenrahmen (Richtwert 2026)
 

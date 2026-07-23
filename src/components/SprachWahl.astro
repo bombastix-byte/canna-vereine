@@ -26,16 +26,20 @@ const zurueck = Astro.url.pathname;
 <style>
   .sprachen {
     display: inline-flex;
-    gap: 0.4rem;
-    align-items: baseline;
+    gap: 0.15rem;
+    align-items: center;
     font-size: 0.82rem;
     color: var(--ink-soft);
   }
   .sprachen a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--ink-soft);
     text-decoration: none;
-    padding: 0.15rem 0.2rem;
-    min-height: 0;
+    padding: 0.35rem 0.5rem;
+    min-width: 44px;
+    min-height: 44px;
   }
   .sprachen a[aria-current='true'] {
     color: var(--ink);
@@ -46,5 +50,6 @@ const zurueck = Astro.url.pathname;
   }
   .trenner {
     color: var(--line);
+    margin: 0 -0.2rem;
   }
 </style>

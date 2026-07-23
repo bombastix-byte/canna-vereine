@@ -18,7 +18,7 @@ export function spracheAus(wert?: string): Sprache {
 const W: Record<string, [string, string, string]> = {
   // --- Navigation (Mitglieder) ---
   'nav.aktuelles': ['Aktuelles', 'News', 'Aktualności'],
-  'nav.angebot': ['Angebot der Woche', 'Weekly offer', 'Oferta tygodnia'],
+  'nav.angebot': ['Aktuelle Abgabe', 'Current dispensing', 'Aktualne wydawanie'],
   'nav.vorbestellung': ['Vorbestellung', 'Pre-order', 'Rezerwacja'],
   'nav.termine': ['Termine', 'Events', 'Terminy'],
   'nav.helferplan': ['Helferplan', 'Volunteer plan', 'Plan dyżurów'],
@@ -205,9 +205,9 @@ const W: Record<string, [string, string, string]> = {
   // --- Aktuelles / Dashboard (bereich) ---
   'bereich.willkommen': ['Willkommen zurück', 'Welcome back', 'Witaj ponownie'],
   'bereich.sub': [
-    'Aktuelle Mitteilungen, Termine, das Angebot der Woche und deine Vorbestellungen auf einen Blick.',
-    'Current announcements, events, the weekly offer and your pre-orders at a glance.',
-    'Aktualne ogłoszenia, terminy, oferta tygodnia i Twoje rezerwacje w jednym miejscu.',
+    'Aktuelle Mitteilungen, Termine, die aktuelle Abgabe und deine Vorbestellungen auf einen Blick.',
+    'Current announcements, events, current dispensing and your pre-orders at a glance.',
+    'Aktualne ogłoszenia, terminy, aktualne wydawanie i Twoje rezerwacje w jednym miejscu.',
   ],
   'bereich.angebot_leer': ['Keine Abgabe eingetragen', 'No offer entered', 'Brak wpisanej oferty'],
   'bereich.naechster_termin': ['Nächster Termin', 'Next event', 'Najbliższy termin'],
@@ -249,6 +249,8 @@ const W: Record<string, [string, string, string]> = {
   ],
   'vorbe.fehler.fehlend': ['Bitte Sorte und Menge angeben.', 'Please enter strain and amount.', 'Podaj odmianę i ilość.'],
   'vorbe.fehler.menge': ['Bitte eine gültige Menge in Gramm angeben.', 'Please enter a valid amount in grams.', 'Podaj prawidłową ilość w gramach.'],
+  'vorbe.fehler.sorte': ['Diese Sorte ist aktuell nicht zur Reservierung verfügbar.', 'This strain is not currently available for reservation.', 'Ta odmiana nie jest obecnie dostępna do rezerwacji.'],
+  'vorbe.fehler.datum': ['Das Abholdatum darf nicht in der Vergangenheit liegen.', 'The pickup date cannot be in the past.', 'Data odbioru nie może przypadać w przeszłości.'],
   'vorbe.fehler.fehlgeschlagen': ['Die Vorbestellung konnte nicht gespeichert werden. Bitte erneut versuchen.', 'The pre-order could not be saved. Please try again.', 'Nie udało się zapisać rezerwacji. Spróbuj ponownie.'],
   'vorbe.ok': [
     'Deine Vorbestellung wurde aufgenommen. Der Vorstand bestätigt sie zu den Vereinszeiten.',
@@ -256,12 +258,16 @@ const W: Record<string, [string, string, string]> = {
     'Twoja rezerwacja została przyjęta. Zarząd potwierdzi ją w godzinach otwarcia klubu.',
   ],
   'vorbe.sorte': ['Sorte', 'Strain', 'Odmiana'],
+  'vorbe.sorte_waehlen': ['— bitte wählen —', '— please select —', '— wybierz —'],
   'vorbe.menge': ['Menge in Gramm', 'Amount in grams', 'Ilość w gramach'],
+  'vorbe.menge_hinweis': ['Pro Reservierung höchstens {x} g. Die gesetzlichen Tages- und Monatsgrenzen werden bei der tatsächlichen Abgabe erneut geprüft.', 'Maximum {x} g per reservation. The statutory daily and monthly limits are checked again at dispensing.', 'Maksymalnie {x} g na rezerwację. Limity dzienne i miesięczne są ponownie sprawdzane przy wydaniu.'],
   'vorbe.abholdatum': ['Gewünschtes Abholdatum (optional)', 'Preferred pickup date (optional)', 'Preferowana data odbioru (opcjonalnie)'],
   'vorbe.hinweis': ['Hinweis (optional)', 'Note (optional)', 'Uwaga (opcjonalnie)'],
   'vorbe.absenden': ['Vorbestellung absenden', 'Submit pre-order', 'Wyślij rezerwację'],
   'vorbe.deine': ['Deine Vorbestellungen', 'Your pre-orders', 'Twoje rezerwacje'],
   'vorbe.keine': ['Du hast noch keine Vorbestellung aufgegeben.', 'You have not placed a pre-order yet.', 'Nie masz jeszcze żadnej rezerwacji.'],
+  'vorbe.nichts_verfuegbar': ['Derzeit ist keine Sorte reservierbar.', 'No strain is currently available for reservation.', 'Obecnie żadna odmiana nie jest dostępna do rezerwacji.'],
+  'vorbe.nichts_verfuegbar_hinweis': ['Sobald eine aktuelle Abgabe veröffentlicht ist, erscheint die Auswahl automatisch hier.', 'The selection will appear here automatically as soon as a current dispensing list is published.', 'Wybór pojawi się tutaj automatycznie po opublikowaniu aktualnej listy wydawania.'],
   'vorbe.abholung': ['Abholung:', 'Pickup:', 'Odbiór:'],
   'vorbe.status.offen': ['Offen', 'Open', 'Otwarta'],
   'vorbe.status.bestaetigt': ['Bestätigt', 'Confirmed', 'Potwierdzona'],
@@ -553,9 +559,9 @@ const W: Record<string, [string, string, string]> = {
 
   // --- Profil: Passwort + optionale Reset-Mail ---
   'profil.nur_passwort_intro': [
-    'Hier änderst du dein Passwort. Der Verein speichert bewusst keine personenbezogenen Daten — nur deine Mitgliedsnummer.',
-    'Here you change your password. The club deliberately stores no personal data — only your membership number.',
-    'Tutaj zmieniasz hasło. Klub celowo nie przechowuje danych osobowych — tylko Twój numer członkowski.',
+    'Hier verwaltest du Passwort, Anzeigename und die freiwillige Reset-E-Mail. Im datensparsamen Modus verwendet dieses Online-Konto als feste Kennung nur deine Mitgliedsnummer; gesetzlich erforderliche Vereins- und Abgabedaten werden davon getrennt verarbeitet.',
+    'Manage your password, display name and optional reset email here. In privacy mode, this online account uses only your membership number as its permanent identifier; legally required club and dispensing records are processed separately.',
+    'Tutaj zarządzasz hasłem, nazwą wyświetlaną i opcjonalnym adresem do resetowania hasła. W trybie oszczędzania danych stałym identyfikatorem konta online jest tylko numer członkowski; wymagane prawem dane klubowe i dotyczące wydawania są przetwarzane oddzielnie.',
   ],
   'profil.passwort_h': ['Passwort ändern', 'Change password', 'Zmień hasło'],
   'profil.passwort_alt': ['Aktuelles Passwort', 'Current password', 'Aktualne hasło'],

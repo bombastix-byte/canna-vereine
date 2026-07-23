@@ -17,7 +17,7 @@ OUT="$(pwd)/backups"
 mkdir -p "$OUT"
 
 erfolg=0
-for vol in canna_pb_goerlitz canna_pb_goerlitz2 canna_pb_leipzig; do
+for vol in canna_pb_goerlitz canna_pb_cvg canna_pb_goerlitz2 canna_pb_leipzig; do
 	if docker volume inspect "$vol" >/dev/null 2>&1; then
 		docker run --rm \
 			-v "$vol":/data:ro \

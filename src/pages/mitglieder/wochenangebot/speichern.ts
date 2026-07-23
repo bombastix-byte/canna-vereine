@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfAusgeben } from '../../../lib/rollen';
 
-// Speichert das "Angebot der Woche". Ein aktiver Eintrag: vorhandenen
+// Speichert die aktuelle Abgabe. Ein aktiver Eintrag: vorhandenen
 // aktualisieren, sonst neu anlegen. Nur Ausgabe/Vorstand.
 export const prerender = false;
 
@@ -32,9 +32,19 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     });
   }
 
+  if (titel.length < 4 || /^test\d*$/i.test(titel)) {
+    return redirect('/mitglieder/wochenangebot/bearbeiten?fehler=titel', 303);
+  }
+  if (sorten.length === 0) {
+    return redirect('/mitglieder/wochenangebot/bearbeiten?fehler=sorten', 303);
+  }
+  if (vonRaw && bisRaw && bisRaw < vonRaw) {
+    return redirect('/mitglieder/wochenangebot/bearbeiten?fehler=zeitraum', 303);
+  }
+
   const feld = {
     titel,
-    inhalt: inhalt || 'Die Abgabe erfolgt zum Selbstkostenbeitrag im Rahmen der Satzung.',
+    inhalt,
     sorten,
     gueltig_von: vonRaw ? `${vonRaw} 00:00:00.000Z` : null,
     gueltig_bis: bisRaw ? `${bisRaw} 00:00:00.000Z` : null,

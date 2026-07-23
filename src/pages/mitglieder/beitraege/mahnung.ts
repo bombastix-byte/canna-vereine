@@ -3,7 +3,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../../../lib/pb';
 import { darfVerwalten } from '../../../lib/rollen';
 
 import { berlinTag } from '../../../lib/ausgabe';
-import { beitragStatus, mahnstufeName } from '../../../lib/beitrag';
+import { beitragStatus, mahnstufeName, type BeitragMitglied } from '../../../lib/beitrag';
 import { sendePush } from '../../../lib/push';
 import { protokolliere } from '../../../lib/audit';
 
@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     return redirect('/mitglieder/beitraege/status?fehler=unbekannt', 303);
   }
 
-  const st = beitragStatus(u, berlinTag());
+  const st = beitragStatus(u as unknown as BeitragMitglied, berlinTag());
   if (!st.imRueckstand) {
     return redirect('/mitglieder/beitraege/status?fehler=nichtoffen', 303);
   }

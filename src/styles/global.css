@@ -696,6 +696,15 @@ thead th {
   background: var(--line-soft);
 }
 
+/* Textlinks, die als Aktionen in Tabellen/Karten dienen, brauchen am Handy
+   eine echte Tippflaeche statt nur die Zeilenhoehe des Textes. */
+.touch-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.35rem 0.2rem;
+}
+
 /* Rechtsbuendige Zahlen-Spalten in jeder Tabelle. */
 table .r {
   text-align: right;
@@ -762,6 +771,12 @@ table .r {
     max-width: 16rem;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  table a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.25rem 0;
   }
 
   /* Handy-Formulare: JEDES Eingabefeld mindestens 16px Schrift, sonst zoomt

@@ -23,7 +23,7 @@ function pruefe(name, bed, info) {
 const anmelden = async (email, pw) => {
   const r = await fetch(`${BASE}/mitglieder/anmelden`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ email, passwort: pw }),
   });
   return (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).find((c) => c.startsWith('pb_token='));
@@ -31,7 +31,7 @@ const anmelden = async (email, pw) => {
 const post = (pfad, felder, cookie) =>
   fetch(`${BASE}${pfad}`, {
     method: 'POST', redirect: 'manual',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+    headers: { origin: BASE, 'content-type': 'application/x-www-form-urlencoded', cookie },
     body: new URLSearchParams(felder),
   });
 
@@ -51,7 +51,7 @@ const charge = await pb.collection('chargen').getFirstListItem('herkunft="Cockpi
 pruefe('Charge mit Plan angelegt', charge.plan === plan.id);
 
 // Cockpit-Seite
-const html = await (await fetch(`${BASE}/mitglieder/anbau`, { headers: { cookie: anbauCookie } })).text();
+const html = await (await fetch(`${BASE}/mitglieder/anbau`, { headers: { origin: BASE, cookie: anbauCookie } })).text();
 pruefe('Anbau heute -> Tag 25 sichtbar', html.includes('Tag 25'));
 pruefe('Phase Vegetation sichtbar', html.includes('Vegetation'));
 pruefe('Topping heute faellig', html.includes('Topping'));
@@ -68,14 +68,14 @@ pruefe('Pflege-Log dokumentiert (Person + Tag)', logs.length === 1 && logs[0].zy
 // Doppelklick -> kein zweiter Eintrag
 await post('/mitglieder/anbau/erledigt', { charge: charge.id, schritt: topping.id, zyklustag: '25' }, anbauCookie);
 pruefe('Doppel-Quittung verhindert', (await pb.collection('pflege_log').getFullList({ filter: `charge_ref="${charge.id}" && schritt="${topping.id}"` })).length === 1);
-const html2 = await (await fetch(`${BASE}/mitglieder/anbau`, { headers: { cookie: anbauCookie } })).text();
+const html2 = await (await fetch(`${BASE}/mitglieder/anbau`, { headers: { origin: BASE, cookie: anbauCookie } })).text();
 pruefe('Topping nach Quittung nicht mehr faellig', !html2.includes('>Topping<') || !new RegExp('Topping[^<]*</span>[\\s\\S]{0,400}Erledigt').test(html2));
 
 // Wawi-Badge + Rollen-Gate
-const wawiHtml = await (await fetch(`${BASE}/mitglieder/wawi`, { headers: { cookie: anbauCookie } })).text();
+const wawiHtml = await (await fetch(`${BASE}/mitglieder/wawi`, { headers: { origin: BASE, cookie: anbauCookie } })).text();
 pruefe('Wawi zeigt Tag-Abzeichen', wawiHtml.includes('Tag 25'));
 const evaCookie = await anmelden('eva@dummy.local', DUMMY_PW);
-const evaR = await fetch(`${BASE}/mitglieder/anbau`, { headers: { cookie: evaCookie }, redirect: 'manual' });
+const evaR = await fetch(`${BASE}/mitglieder/anbau`, { headers: { origin: BASE, cookie: evaCookie }, redirect: 'manual' });
 pruefe('Mitglied ohne Anbau-Rolle -> blockiert', evaR.status === 303, String(evaR.status));
 
 // ---------- Plan-Editor ----------
@@ -91,7 +91,7 @@ const schrittLoc = (await post('/mitglieder/anbau/plaene/schritt', {
 pruefe('Schritt hinzufuegen -> ok', schrittLoc.includes('ok=schritt'), schrittLoc);
 const neuerSchritt = await pb.collection('plan_schritte').getFirstListItem(`plan="${neuerPlan.id}"`);
 pruefe('Schritt korrekt gespeichert (Tag 7, alle 2 Tage)', neuerSchritt.tag_von === 7 && neuerSchritt.wiederholung_tage === 2 && neuerSchritt.typ === 'duengung');
-const editorHtml = await (await fetch(`${BASE}/mitglieder/anbau/plaene`, { headers: { cookie: anbauCookie } })).text();
+const editorHtml = await (await fetch(`${BASE}/mitglieder/anbau/plaene`, { headers: { origin: BASE, cookie: anbauCookie } })).text();
 pruefe('Editor-Seite zeigt Plan + Schritt', editorHtml.includes('E2E-Testplan') && editorHtml.includes('E2E-Duengung'));
 const delLoc = (await post('/mitglieder/anbau/plaene/schritt', { aktion: 'loeschen', plan: neuerPlan.id, schritt: neuerSchritt.id }, anbauCookie)).headers.get('location') ?? '';
 pruefe('Schritt loeschen -> ok', delLoc.includes('ok=geloescht'), delLoc);
@@ -100,7 +100,7 @@ pruefe('Schritt weg', (await pb.collection('plan_schritte').getFullList({ filter
 await post('/mitglieder/anbau/plaene/speichern', { id: neuerPlan.id, name: 'E2E-Testplan v2', beschreibung: 'geaendert' }, anbauCookie);
 const planNach = await pb.collection('anbau_plaene').getOne(neuerPlan.id);
 pruefe('Plan umbenannt + deaktiviert (Checkbox aus)', planNach.name === 'E2E-Testplan v2' && planNach.aktiv === false);
-const evaPlanR = await fetch(`${BASE}/mitglieder/anbau/plaene`, { headers: { cookie: evaCookie }, redirect: 'manual' });
+const evaPlanR = await fetch(`${BASE}/mitglieder/anbau/plaene`, { headers: { origin: BASE, cookie: evaCookie }, redirect: 'manual' });
 pruefe('Editor als Mitglied -> blockiert', evaPlanR.status === 303, String(evaPlanR.status));
 await pb.collection('anbau_plaene').delete(neuerPlan.id);
 
@@ -115,9 +115,9 @@ const neueSorte = await pb.collection('sorten').getFirstListItem('name="E2E-Sort
 pruefe('Sorte korrekt (Komma-THC geparst, aktiv)', neueSorte.thc_prozent === 17.5 && neueSorte.cbd_prozent === 0.8 && neueSorte.aktiv === true && neueSorte.typ === 'Indica');
 const doppelt = (await post('/mitglieder/wawi/sorte-neu', { name: 'E2E-Sorte', typ: 'Indica' }, anbauCookie)).headers.get('location') ?? '';
 pruefe('Doppelte Sorte -> abgelehnt', doppelt.includes('sorte_existiert'), doppelt);
-const wawiSorten = await (await fetch(`${BASE}/mitglieder/wawi`, { headers: { cookie: anbauCookie } })).text();
+const wawiSorten = await (await fetch(`${BASE}/mitglieder/wawi`, { headers: { origin: BASE, cookie: anbauCookie } })).text();
 pruefe('Neue Sorte im Charge-Dropdown', wawiSorten.includes('E2E-Sorte'));
-const evaSorte = await fetch(`${BASE}/mitglieder/wawi/sorte-neu`, { method: 'POST', headers: { cookie: evaCookie, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ name: 'Boese' }), redirect: 'manual' });
+const evaSorte = await fetch(`${BASE}/mitglieder/wawi/sorte-neu`, { method: 'POST', headers: { origin: BASE, cookie: evaCookie, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ name: 'Boese' }), redirect: 'manual' });
 pruefe('Sorte anlegen als Mitglied -> blockiert', (evaSorte.headers.get('location') ?? '').includes('keinzugriff'));
 await pb.collection('sorten').delete(neueSorte.id);
 

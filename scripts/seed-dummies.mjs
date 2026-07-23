@@ -8,6 +8,8 @@ const URL = process.env.PB_URL ?? 'http://127.0.0.1:8090';
 const ADMIN = process.env.PB_ADMIN_EMAIL ?? 'admin@example.local';
 const ADMIN_PW = process.env.PB_ADMIN_PW ?? 'change-me-admin';
 const PW = process.env.PB_DUMMY_PW ?? 'DummyDemo2026!';
+const SITE_ID = process.env.SITE_ID ?? 'goerlitz';
+const loginEmail = (nummer) => `${String(nummer).trim().toLowerCase().replace(/[^a-z0-9-]/g, '')}@${SITE_ID}.local`;
 
 const pb = new PocketBase(URL);
 pb.autoCancellation(false);
@@ -30,6 +32,13 @@ const leute = [
 ];
 
 async function ensureUser(email, patch) {
+  // Aeltere Dummy-Daten hatten echte E-Mail-Kennungen. Ueber die eindeutige
+  // Mitgliedsnummer finden und auf die datensparsame Login-Kennung migrieren.
+  try {
+    const u = await pb.collection('users').getFirstListItem(`mitgliedsnummer="${patch.mitgliedsnummer}"`);
+    await pb.collection('users').update(u.id, { email, ...patch });
+    return u;
+  } catch { /* noch nicht ueber die Nummer vorhanden */ }
   try {
     const u = await pb.collection('users').getFirstListItem(`email="${email}"`);
     await pb.collection('users').update(u.id, patch);
@@ -47,10 +56,11 @@ async function ensureUser(email, patch) {
 
 const idVon = {};
 for (const [email, name, nr, gb] of leute) {
-  const u = await ensureUser(email, {
+  const u = await ensureUser(loginEmail(nr), {
     name,
     mitgliedsnummer: nr,
     rolle: 'mitglied',
+    rollen: ['mitglied'],
     geburtsdatum: gb ? `${gb} 00:00:00.000Z` : null,
   });
   idVon[nr] = u.id;

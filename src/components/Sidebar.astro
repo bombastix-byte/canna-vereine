@@ -6,6 +6,7 @@ import { mitgliedAusToken, AUTH_COOKIE } from '../lib/pb';
 import { mitgliedPunkte as baueMitgliedPunkte, arbeitPunkteFuer, istAktiv as punktAktiv } from '../lib/mitglied-nav';
 import { uebersetzer } from '../lib/i18n';
 import SprachWahl from './SprachWahl.astro';
+import { istVereinsarbeitPfad } from '../lib/vereinsarbeit';
 
 // Seitenleiste (Layout "sidebar"). Oeffentliche Navigation fuer Besucher;
 // fuer angemeldete Mitglieder zusaetzlich der komplette Mitgliederbereich
@@ -17,16 +18,19 @@ const istAktiv = (href: string) =>
   href === '/' ? hier === home : hier.startsWith(pfad(href));
 
 let mitglied: { rollen?: string[] } | null = null;
-try {
-  mitglied = (await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value))?.mitglied ?? null;
-} catch {
-  mitglied = null;
+if (hier.startsWith('/mitglieder')) {
+  try {
+    mitglied = (await mitgliedAusToken(Astro.cookies.get(AUTH_COOKIE)?.value))?.mitglied ?? null;
+  } catch {
+    mitglied = null;
+  }
 }
 const funktionen = Astro.locals.funktionen;
 const sprache = Astro.locals.sprache ?? 'de';
 const tNav = uebersetzer(sprache);
 const MITGLIED_PUNKTE = baueMitgliedPunkte(funktionen, sprache);
 const arbeitPunkte = mitglied ? arbeitPunkteFuer(mitglied.rollen, funktionen) : [];
+const aufVereinsarbeit = istVereinsarbeitPfad(hier);
 
 // Anonyme Eingangs-Ansicht: nicht angemeldet UND kein oeffentlicher Auftritt.
 // Dann verraet die Startseite weder Vereinsname noch Ort; Impressum/Daten-
@@ -89,7 +93,11 @@ const anonym = !mitglied && site.oeffentlich === false;
       {site.oeffentlich !== false && <a href={pfad('/')}>Zur Website</a>}
       <a href={pfad('/impressum')}>Impressum</a>
       <a href={pfad('/datenschutz')}>Datenschutz</a>
-      <SprachWahl aktuell={sprache} />
+      {aufVereinsarbeit ? (
+        <p class="sb-sprachhinweis">Vereinsarbeit ist derzeit nur auf Deutsch verfügbar.</p>
+      ) : (
+        <SprachWahl aktuell={sprache} />
+      )}
     </div>
   </>
 ) : anonym ? (
